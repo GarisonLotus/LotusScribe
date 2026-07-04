@@ -1,8 +1,10 @@
 # Team Handoff — LotusScribe
 
 > If you are a restarting orchestrator, this is your single entry point.
-> Read top to bottom. Then read the three role logs (architect-log.md,
-> reviewer-observations.md, tester-baselines.md). Then verify git state.
+> Read top to bottom. Then read the three role logs (phase-N-architect-log.md,
+> phase-N-reviewer-observations.md, phase-N-tester-baselines.md for the
+> active phase). Then verify git state. All docs/ files carry the phase
+> number in their names (user convention — see CLAUDE.md).
 
 **Last updated:** 2026-07-04, post-0B close — **Phase 0 complete**.
 
@@ -61,9 +63,9 @@ using templates in
 
 | Role | When to dispatch | Where state lives |
 |---|---|---|
-| architect | Spec creation, shape ruling, round-trip | docs/architect-log.md + spec docs |
-| reviewer | Each gate's execution review | docs/reviewer-observations.md |
-| tester | Each gate's independent verification | docs/tester-baselines.md |
+| architect | Spec creation, shape ruling, round-trip | docs/phase-N-architect-log.md + spec docs |
+| reviewer | Each gate's execution review | docs/phase-N-reviewer-observations.md |
+| tester | Each gate's independent verification | docs/phase-N-tester-baselines.md |
 | macos-engineer | Each sub-phase implementation | (no log — code is the artifact) |
 
 Engineer specialties: macos-engineer (Swift/AppKit/SwiftUI).
@@ -105,9 +107,9 @@ steps yet.
 - `PLAN.md` — authoritative architecture + phases
 - `RESEARCH.md` — research evidence
 - `docs/phase-0-spec.md` — active phase spec
-- `docs/architect-log.md` — locked decisions + open questions
-- `docs/reviewer-observations.md` — forward-looking review items
-- `docs/tester-baselines.md` — last-gate counts + flake registry
+- `docs/phase-0-architect-log.md` — locked decisions + open questions
+- `docs/phase-0-reviewer-observations.md` — forward-looking review items
+- `docs/phase-0-tester-baselines.md` — last-gate counts + flake registry
 - `CLAUDE.md` — behavioral guidelines
 - Test layout: TBD by phase-0 spec
 - Tooling: xcodegen + xcodebuild; Makefile recipes TBD

@@ -1,7 +1,7 @@
 # Phase 0 Spec — Scaffold
 
 > Authored by architect, 2026-07-04. Scope: PLAN.md §"Phase 0 — Scaffold".
-> Honors locked decisions D1–D7 (docs/architect-log.md).
+> Honors locked decisions D1–D7 (docs/phase-0-architect-log.md).
 > Phase verify criterion: app runs as menu-bar-only item; settings persist across relaunch.
 
 ## Repo layout
