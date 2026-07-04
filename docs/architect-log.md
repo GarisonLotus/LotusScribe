@@ -26,7 +26,7 @@
 
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
-| Q1 | 2026-07-04 | Signing team ID before Phase 1 (TCC grant stability) | open | user (Apple ID / dev account) |
+| Q1 | 2026-07-04 | Signing team ID before Phase 1 (TCC grant stability; also gates reliable Keychain reads — legacy-keychain ACLs key off code signature, and ad-hoc signing (D6) re-signs every build, so stored API keys may prompt/fail in later phases until Q1 closes; see reviewer R4) | open | user (Apple ID / dev account) |
 
 ## Notes
 

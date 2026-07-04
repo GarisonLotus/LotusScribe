@@ -4,7 +4,7 @@
 > Read top to bottom. Then read the three role logs (architect-log.md,
 > reviewer-observations.md, tester-baselines.md). Then verify git state.
 
-**Last updated:** 2026-07-04, post-0A close.
+**Last updated:** 2026-07-04, post-0B close — **Phase 0 complete**.
 
 ## §1. How to use this doc
 
@@ -34,17 +34,21 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are in implementation:** sub-phase 0A closed (scaffold + menu-bar
-presence); full 4-way gate passed (reviewer approved, architect shape
-approved + R1/R2 round-tripped, tester green, spot-checks clean).
+**Where we are in implementation:** Phase 0 complete. Both sub-phases closed
+with full 4-way gates. Phase-0 exit criteria verified: menu-bar-only app runs
+(programmatic checks green; human-visual remainder: status item visible, Quit
+from UI, Cmd-Tab absence), settings persist across relaunch (tester verified
+via defaults write → app launch/quit → defaults read).
 
-**Last code-carrying commit:** see `git log` — 0A bundled commit.
+**Last code-carrying commit:** 0B bundled commit (see `git log`).
 
-**Active sub-phase:** 0B — settings storage + tests. Pending: engineer dispatch.
+**Active sub-phase:** none. **What's next:** Phase 1 (core loop) — architect
+dispatch for phase-1 spec. Resolve Q1 (signing team ID) first if possible:
+it now gates BOTH TCC grant stability AND reliable Keychain reads (R4).
 
 **Sub-phase grid for Phase 0:**
 - 0A: CLOSED (scaffold, LSUIElement, NSStatusItem, test target, Makefile)
-- 0B: NEXT (SettingsStore, KeychainStore, Swift Testing suites)
+- 0B: CLOSED (SettingsStore, KeychainStore, 12 tests green)
 
 **Working tree at handoff time:** untracked PLAN.md, RESEARCH.md, claude.md
 (user's files — not committed without user say-so).
