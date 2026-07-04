@@ -108,8 +108,9 @@ key-down and key-up; no audio persisted beyond the temp hand-off.
 **Verify:**
 1. `make test` green — all headless, no network, no TCC.
 2. INTEGRATION (the one real-endpoint step): with settings seeded (D13),
-   extend 1B wiring to call the service and log the transcript — speak a
-   known sentence, confirm correct text in the log.
+   rewire 1B to call the service and log the transcript — the temp-file
+   write is removed, not kept alongside (R10) — speak a known sentence,
+   confirm correct text in the log.
 
 **Invariants:** service never touches TCC-bearing APIs; request construction
 is byte-for-byte unit-tested; 20 s timeout enforced.

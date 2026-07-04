@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItemController: StatusItemController?
     private var hotkeyMonitor: EventTapMonitor?
+    private var dictationController: DictationController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItemController = StatusItemController()
@@ -24,8 +25,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // D15: chord from the `hotkeyChord` defaults key; nil/unparseable → hold-Fn.
         let chord = UserDefaults.standard.string(forKey: "hotkeyChord")
             .flatMap(HotkeyChord.parse) ?? .fnHold
+        let dictation = DictationController()
+        dictationController = dictation
         hotkeyMonitor = EventTapMonitor(chord: chord) { action in
             Self.logger.info("hotkey action: \(String(describing: action), privacy: .public)")
+            // EventTapMonitor delivers on the main thread (see its start()).
+            MainActor.assumeIsolated { dictation.handle(action) }
         }
         hotkeyMonitor?.start()
     }

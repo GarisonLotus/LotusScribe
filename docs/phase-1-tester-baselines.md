@@ -5,15 +5,31 @@
 
 ## Last gate
 
-**Sub-phase:** 1A
+**Sub-phase:** 1B
 **Test command:** `make test`
-**Counts:** 26 tests in 3 suites, 0 failures, 0 build warnings (xcresult
-errorCount 0 / warningCount 0).
+**Counts:** 32 tests in 4 suites, 0 failures, 0 build warnings (xcresult
+errorCount 0 / warningCount 0 / analyzerWarningCount 0).
 - HotkeyStateMachineTests: 14 (13 functions + 1 parameterized ×7 cases) ·
-  KeychainStoreTests: 5 · SettingsStoreTests: 6 · smoke appDelegateInitializes: 1
+  WavEncoderTests: 6 · SettingsStoreTests: 6 · KeychainStoreTests: 5 ·
+  smoke appDelegateInitializes: 1 (freestanding — runner reports 4 suites)
+- Matches reviewer's inline counts (32 in 4 suites, same per-suite split).
 - Note: the R3 "'is' test is always true" warning in SmokeTests.swift did not
   surface this run (incremental build; file unchanged) — still tracked as
   pre-existing.
+
+**WAV format oracle (no-app check):** `afconvert -f WAVE -d LEI16@16000 -c 1`
+output inspected with afinfo + xxd — fmt chunk size 16, format 1 (PCM),
+1 ch, 16000 Hz, byte-rate 32000, block-align 2, 16-bit: exactly the field
+values WavEncoderTests assert. Real audio round-trip remains human verify 2.
+
+**Info.plist (D11):** after `make generate`, generated
+Sources/LotusScribe/Info.plist carries NSMicrophoneUsageDescription
+("LotusScribe records audio while the dictation hotkey is held, …");
+file stays gitignored.
+
+### 1A archive
+**Counts:** 26 tests in 3 suites, 0 failures, 0 build warnings (xcresult
+errorCount 0 / warningCount 0).
 
 **Graceful-degradation evidence (1A invariant):** hosted test run launches the
 app binary unpermissioned; run log shows
@@ -21,6 +37,13 @@ app binary unpermissioned; run log shows
 followed by `[EventTapMonitor] event tap started` — listen-only tap creation
 succeeded without TCC grants (no failure path exercised), host did not crash,
 all 26 tests passed.
+
+## HUMAN-AT-SCREEN remainder for 1B close (user owes before phase close)
+
+- Spec 1B verify step 2: hold Fn, speak ~3 s, release; `afinfo <temp>.wav`
+  reports 16000 Hz, 1 ch, 16-bit LPCM; QuickLook playback intelligible.
+- Spec 1B verify step 3 (TCC record #2): note when the Microphone prompt
+  fires — expect on first `start()`, not at launch → record here.
 
 ## HUMAN-AT-SCREEN remainder for 1A close (user owes before phase close)
 

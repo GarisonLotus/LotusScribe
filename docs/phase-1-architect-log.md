@@ -36,3 +36,5 @@ The spec spreads the empirical record across three checkpoints: 1A (event
 tap), 1B (mic), 1D (final matrix incl. synthetic paste).
 
 2026-07-04: docs/phase-1-spec.md authored (sub-phases 1A–1E, D14–D21).
+2026-07-04: 1B shape approved (post-R8). R9 tail-drop accepted for
+dictation; spec §1C verify-2 amended to make temp-write removal explicit (R10).
