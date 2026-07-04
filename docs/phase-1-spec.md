@@ -39,6 +39,7 @@
   swallowing in Phase 1 (D16).
 - `Permissions.swift` (~30): wraps `CGPreflightListenEventAccess()` /
   `CGRequestListenEventAccess()` / `AXIsProcessTrusted()`; logs at launch.
+  Listen access is requested once at launch, guarded from test hosts (D22).
   No onboarding UI (Phase 7).
 - `AppDelegate.swift` delta (~15): monitor with chord from UserDefaults key
   `hotkeyChord` (nil → `.fnHold`, D15); log start/stop.

@@ -17,6 +17,7 @@
 | D19 | 2026-07-04 | TranscriptionService unit tests via URLProtocol stub, not a localhost listener | In-process, deterministic, no port/network flake | 1C |
 | D20 | 2026-07-04 | Insertion = pasteboard write + synthesized Cmd-V only; no clipboard save/restore (no pasteboard reads anywhere) in Phase 1 | Restore needs a pasteboard read → upcoming privacy alert (RESEARCH §2); restore is Phase 6 | 1D |
 | D21 | 2026-07-04 | Settings pane = SwiftUI Form in NSHostingController-backed window, opened from status-item menu | No storyboard/SwiftUI-App churn; macOS 14 baseline (D5); fewest LoC without deps | 1E |
+| D22 | 2026-07-04 | Keep `CGRequestListenEventAccess()` at launch, guarded from test hosts (rules R5) | Deterministic, user-visible prompt → clean §1A-verify-3 TCC record; dropping it = silent failure until user finds System Settings; Phase 7 owns real onboarding | 1A |
 
 ## Open questions
 
