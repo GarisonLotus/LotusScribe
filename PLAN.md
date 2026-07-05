@@ -51,6 +51,14 @@ Xcode project, `LSUIElement = YES`, NSStatusItem menu bar presence, settings sto
 **Verify:** pill never steals focus (type in target app while it's visible); shows over a fullscreen app; waveform tracks voice.
 
 ## Phase 3 — LLM cleanup
+
+> **3A (user-directed addition, 2026-07-05):** Settings Save =
+> test-then-close — Save probes the drafted STT endpoint (silent-WAV
+> round-trip) before closing; green checkmark + 2 s auto-close on
+> success, Close Anyway / Cancel sheet on failure. Pulled forward from
+> Phase 7.3's connection-test button; spec: docs/phase-3-spec.md §3A
+> (D36–D38). LLM-cleanup items below become 3B+.
+
 1. `CleanupService`: chat completion against configured endpoint. System prompt pattern (per RESEARCH.md §4): fix filler/punctuation/paragraphs, preserve meaning and voice verbatim otherwise, output cleaned text only.
 2. Cleanup levels: Off / Light / Standard (maps to prompt variants); per-utterance raw-transcript fallback kept in history ("undo cleanup" mirror of Wispr).
 3. Warm-up: on launch and endpoint change, fire minimal request with `keep_alive: -1` (Ollama) to defeat the 3–10 s cold start.
