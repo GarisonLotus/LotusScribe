@@ -43,38 +43,30 @@ at 638b11d).
 **3B CLOSED 2026-07-05** at 2083eb0 (human gate: primary path
 user-confirmed; negative paths waived, unit-covered).
 
-**RESUME POINT (3C dispatch, 2026-07-05): engineer dispatch DIED
-MID-RUN (session limit). It staged/wrote NOTHING — working tree clean
-at 52cf28f, `make test` green (106/15). Simply RE-DISPATCH the 3C
-engineer with the same brief:** spec §3C scope — (1) settings cleanup
-level Picker (Off/Light/Standard, D40 key, through the D26 buffered
-draft); (2) D44 per-endpoint Save probe — probe ANY non-empty drafted
-endpoint, STT then LLM (`ConnectionProbe.testLLM`, chat-completion
-round-trip), stop at first failure, failure sheet NAMES the failing
-endpoint; (3) endpoint-change warm-up after successful Save
-(CleanupService.warmUp exists); (4) folds: R36 (save() cancels stale
-flash/auto-close tasks), R37 (extract SettingsForm.swift from the
-214-line SettingsWindowController.swift), R38 (warm-up log cosmetics),
-R39 (D25 empty→nil normalization at read time). Tests per spec §3C
-(dedicated-stub discipline, parallel-suite race); baseline 106/15.
-Then 4-way gate (reviewer → architect+tester parallel is fine) → ONE
-commit → rebuild + relaunch → HUMAN verify (picker, dual-probe sheet
-naming the endpoint, warm-up on endpoint change) → Phase-3 close gate.
+**3C CLOSED (automated gates) 2026-07-05** at 7d5ecf7: level picker,
+D44 dual-endpoint Save probe, endpoint-change warm-up; R36–R39 folded
+and closed.Debt sweep a5960da closed R3/R30/R32/R40.3B verify-2
+CORRECTED to false positive and re-opened (c01f808): no LLM settings
+were ever persisted — cleanup was effective-off during the user's
+test.
 
-**Session context worth carrying:** user's LLM endpoint+model are
-configured in the app and verified working (3B human gate); sheet
-labels are Save Anyway / Try Again; launch recipe in §5; SourceKit
-cross-file "cannot find in scope" diagnostics are stale-index noise —
-trust `make test`.
+**RESUME POINT — AWAITING USER ("I'm back"):**
+1.Settings → enter LLM endpoint URL + model + pick cleanup level →
+   Save (now probes BOTH endpoints; sheet names the failing one).
+2.Re-run 3B verify-2 for real: dictate a filler sentence, confirm
+   cleaned text; check warm-up fires on the endpoint-change Save.
+3.3C human items: picker persists across reopen; bogus-LLM sheet says
+   "Cleanup LLM"; 390 pt window fits; one end-to-end dictation (D38).
+Then Phase-3 close gate needs an architect decision: PLAN.md Phase 3
+items 3B+3C are done except the human confirms above; remaining
+PLAN.md Phase-3 scope (cleanup-level prompt variants exist; history
+deferred by D41) — architect declares Phase 3 complete or names 3D.
 
-(superseded 3B note: implementation per spec §3B (D39–D44
-locked 2026-07-05): CleanupLevel + CleanupService + pipeline hop +
-launch warm-up. Then 3C (settings level picker + per-endpoint Save
-probe, folds R36/R37). User's LLM endpoint URL + model needed at the
-3B/3C human gates (spec hardcodes none; SettingsStore already carries
-the LLM URL/model fields).
+**Session context:** launch recipe §5; sheet labels Save Anyway / Try
+Again; SourceKit cross-file diagnostics are stale-index noise — trust
+`make test`; running app pid/build = debt-sweep a5960da.
 
-**Baseline:** 89 tests / 13 suites green ×2 at 4f21c17.
+**Baseline:** 120 tests / 15 suites green ×2 at a5960da.
 
 **Working tree:** untracked RESEARCH.md, claude.md (user's files).
 
