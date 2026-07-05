@@ -19,7 +19,37 @@ prompt fires at first recording start, not launch.
 
 ## Phase 2 gates
 
-**Last gate: 2B** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
+**Last gate: 2C** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
+base commit 3a8a83e).
+- **Counts:** 74 tests in 12 suites, 0 failures — `make test` run TWICE,
+  both runs identical (74/12 green each, TEST SUCCEEDED). Count UNCHANGED
+  vs 2B baseline (74/12), as expected: spec says no new tests in 2C
+  (thin glue over TCC-bearing recorder; covered by human gate).
+- **Per-suite (run 2):** AudioLevelTests 5, DictationControllerTests 3,
+  HotkeyStateMachineTests 22, KeychainStoreTests 5, MultipartBodyTests 5,
+  PillPanelTests 5, PillViewModelTests 2, SettingsStoreTests 6,
+  SettingsValidationTests 2, SettingsWindowControllerTests 5,
+  TranscriptionServiceTests 6, WavEncoderTests 6 = 72 in suites + 2
+  top-level tests (appDelegateInitializes, mainMenuRoutesPaste) = 74.
+  Identical to the 2B per-suite breakdown.
+- **Cross-check:** matches reviewer's inlined 74/12 green and their
+  "no new tests in the 2C diff" claim. No divergence.
+- **Staged surface:** `git diff --cached --stat` = 2 source
+  (AudioRecorder.swift, DictationController.swift), 2 docs
+  (phase-2-architect-log.md, phase-2-reviewer-observations.md), 0 test
+  files — consistent with "no new tests".
+- **Warnings:** only registry noise observed (destination auto-pick,
+  Accessibility-not-vending, DetachedSignatures, task-name-port). One
+  non-registry line, informational not a warning: app's own
+  `[Permissions] TCC at launch — listenEventAccess: true,
+  accessibilityTrusted: true` log at hosted-app launch.
+- **Flakes:** none — both runs identical, no pass-on-second-run tests.
+- **HUMAN-AT-SCREEN §2C verify 1–6: PENDING (owed at this gate).**
+  Includes verify-4 observed `.warming` duration (closes architect Q6)
+  and the folded-in 2A items: no-9-leak dictation check + Q5 defaultTap
+  "event tap started (mode)" Console record.
+
+**Prior gate: 2B** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
 base commit 51a040d).
 - **Counts:** 74 tests in 12 suites, 0 failures — `make test` run TWICE,
   both runs identical (74/12 green each, TEST SUCCEEDED). Delta vs 2A

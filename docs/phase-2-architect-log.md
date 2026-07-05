@@ -20,8 +20,16 @@
 |----|-------------|----------|--------|------------|
 | Q5 | 2026-07-04 | Does `.defaultTap` session-tap creation succeed under the already-granted Input Monitoring + Accessibility (no new TCC pane/prompt)? Empirical — spec §2A verify 3 | open | 2A human verify |
 | — | carried | R4 (phase 0): close by exercising a Keychain read under the 5RC66Q82V9 identity — precondition satisfied since R27 | open | any authed-endpoint work |
+| Q6 | 2026-07-05 | D29a effectiveness: `prepare()` at init precedes graph configuration (inputNode untouched by design — no HAL/TCC poke), so warm-up may be limited until first start(). Kept as-is; §2C verify 4 records observed warming duration → tester baselines, which closes this either way (D29b pill-truth is the load-bearing fix regardless) | open | 2C human verify 4 |
 
 ## Notes
+
+2026-07-05: 2C SHAPE NON-OBJECTION. Transitions = spec §2C state model; sole-
+ownership invariant holds (DictationController owns state, pill display-only,
+four-method surface per D33). D23 error-path generation guard ruled consistent:
+spec "stale results never touch the pill" always covered error results — an
+error flash is a result. Code-verified guards (DictationController.swift:102
+success, :124 catch). No spec change. D29a effectiveness → Q6 (pending).
 
 2026-07-05: 2B SHAPE NON-OBJECTION. R33 accepted (D33, spec §2B round-tripped).
 Other 4 beyond-spec additions (`isReleasedWhenClosed = false`, setContentSize

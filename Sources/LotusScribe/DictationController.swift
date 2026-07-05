@@ -3,7 +3,8 @@ import os
 
 /// Main-actor owner of the dictation loop (spec §1D wiring): hotkey
 /// start → recorder.start(); stop → TranscriptionService → non-empty
-/// transcript → TextInserter.
+/// transcript → TextInserter. Sole driver of the display-only pill
+/// (spec §2C) — show/update/push/hide only, never reads pill state.
 @MainActor
 final class DictationController {
     private static let logger = Logger(
@@ -12,7 +13,33 @@ final class DictationController {
     private let recorder = AudioRecorder()
     private let transcription = TranscriptionService(settings: SettingsStore())
     private let inserter = TextInserter()
+    private let pill = PillController()
     private var isRecording = false
+
+    /// False until the current capture's first level arrives (D29b —
+    /// warming → recording only when the engine is demonstrably live).
+    private var engineLive = false
+
+    init() {
+        recorder.onLevel = { [weak self] level in
+            // Delivered on the main queue (D32); hop onto the actor the
+            // same way AppDelegate's hotkey callback does.
+            MainActor.assumeIsolated { self?.handleLevel(level) }
+        }
+    }
+
+    /// D29b: the first level of a capture proves the engine is live —
+    /// pill flips warming → recording (waveform = "speak now"); every
+    /// level feeds the waveform bars.
+    private func handleLevel(_ level: Float) {
+        // Late main-queue dispatch can land after stop() — drop it.
+        guard isRecording else { return }
+        if !engineLive {
+            engineLive = true
+            pill.update(.recording)
+        }
+        pill.push(level: level)
+    }
 
     /// D23: overlapping dictation — each start bumps the generation; an
     /// in-flight transcribe Task inserts only if its generation is still
@@ -39,13 +66,16 @@ final class DictationController {
 
     private func startRecording() {
         generation += 1  // D23: invalidates any still-in-flight transcript.
+        engineLive = false
         do {
             try recorder.start()
             isRecording = true
+            pill.show(.warming)
         } catch {
-            // Failure policy (spec §cross-cutting): log, do nothing.
+            // Failure policy (spec §cross-cutting): log + error flash.
             Self.logger.error(
                 "recorder start failed: \(String(describing: error), privacy: .public)")
+            pill.show(.error)
         }
     }
 
@@ -60,8 +90,10 @@ final class DictationController {
             // hallucinates a transcript ("you") that would be pasted.
             Self.logger.info(
                 "capture too short (\(wav.count) bytes) — skipping transcription")
+            pill.hide()  // spec §2C: tap-length press — no error flash
             return
         }
+        pill.update(.processing)
 
         let capturedGeneration = generation
         Task {
@@ -69,7 +101,8 @@ final class DictationController {
                 let text = try await transcription.transcribe(wav: wav)
                 guard capturedGeneration == generation else {
                     // D23: a newer dictation started while this one was
-                    // in flight — drop, never paste stale text.
+                    // in flight — drop, never paste stale text; a stale
+                    // result never touches the pill (spec §2C).
                     Self.logger.info(
                         "stale transcript dropped (generation \(capturedGeneration))")
                     return
@@ -77,14 +110,20 @@ final class DictationController {
                 guard !text.isEmpty else {
                     // Failure policy (spec §cross-cutting): empty → no paste.
                     Self.logger.info("empty transcript — nothing inserted")
+                    pill.hide()
                     return
                 }
                 Self.logger.info("transcript: \(text, privacy: .public)")
                 inserter.insert(text)
+                pill.update(.success)
             } catch {
-                // Failure policy (spec §cross-cutting): log, do nothing.
+                // Failure policy (spec §cross-cutting): log + error flash —
+                // but stale failures never touch the pill (D23/spec §2C).
                 Self.logger.error(
                     "transcription failed: \(String(describing: error), privacy: .public)")
+                if capturedGeneration == generation {
+                    pill.update(.error)
+                }
             }
         }
     }

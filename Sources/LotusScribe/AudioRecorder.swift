@@ -23,6 +23,13 @@ final class AudioRecorder {
         subsystem: "com.garisonlotus.LotusScribe", category: "AudioRecorder")
 
     private let engine = AVAudioEngine()
+
+    init() {
+        // D29a: best-effort HAL warm-up at init — no TCC touch, no mic
+        // indicator; trims the first-dictation cold start.
+        engine.prepare()
+    }
+
     // Tap callbacks arrive on an audio thread while stop() runs on the main
     // thread — every `pcm` access goes through `lock`.
     private let lock = NSLock()

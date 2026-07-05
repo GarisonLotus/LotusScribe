@@ -1,5 +1,17 @@
 # Reviewer observations — LotusScribe (Phase 2)
 
+> 2C gate reviewed 2026-07-05: EXECUTION APPROVED. All spec §2C
+> transitions present and none extra; D23 generation guards verified on
+> both success and error paths (insert-path semantics untouched); the
+> late-level race is closed by set-ordering (isRecording=false before
+> recorder.stop(), all on the serial main queue) — residual
+> straggler-attribution window noted as R34 (not realistic); D33 holds
+> (show/update/push/hide only); D29a prepare() touches no TCC surface;
+> failure policy = log + flash, D24 untouched. Independent `make test`:
+> 74 tests / 12 suites green. R30 picture unchanged in substance —
+> status annotated. Remaining verification is the HUMAN-AT-SCREEN
+> phase gate (spec §2C verify 1–6).
+
 > 2B gate reviewed 2026-07-05: EXECUTION APPROVED (approved-with-notes).
 > R29 fix verified correct (chordKeyDownPassedThrough, pair balance holds
 > across the modifiers-after-key entry order; regression test present).
@@ -30,10 +42,11 @@
 | id | first raised | item | status |
 |----|--------------|------|--------|
 | R29 | 2A | Pair-balance hole, modifiers-after-key order: hold chord key bare (down passes through to the app), then add the chord modifiers while it autorepeats — the repeat down matches `!isCapturing` + superset, starts capture and sets `chordKeyDownSwallowed`, so the eventual keyUp is swallowed. App saw a down, never the up (stuck-repeat risk). Machine can't tell initial vs autorepeat downs (`HotkeyEvent` lacks kCGKeyboardEventAutorepeat). Fix options: track a chord-key-down-passed-through flag via the non-matching keyDown branch and refuse start/swallow until a clean keyUp, or carry the autorepeat field. Unusual entry order, not exercised by 2A human verify; architect mandated the flag fix under the ratified pair-balance invariant | closed 2B (2026-07-05): `chordKeyDownPassedThrough` landed, reviewer-verified with regression test; architect confirmed vs mandate |
-| R30 | 2A | AudioLevel/AudioRecorder nits: (a) rms not clamped — an Int16.min-heavy buffer yields ≈1.00003 > the documented 0…1 (suggest `min(1, …)` or amend doc); (b) `onLevel` doc says "not called after stop()" — a block dispatched just before stop() can still land on main after it returns; wording only. Cosmetic; safe to fold into any 2A follow-up | open (non-blocking) |
+| R30 | 2A | AudioLevel/AudioRecorder nits: (a) rms not clamped — an Int16.min-heavy buffer yields ≈1.00003 > the documented 0…1 (suggest `min(1, …)` or amend doc); (b) `onLevel` doc says "not called after stop()" — a block dispatched just before stop() can still land on main after it returns; wording only. Cosmetic; safe to fold into any 2A follow-up | open (non-blocking) — 2C note (2026-07-05): (a) unclamped rms now feeds the pill, but PillView.barHeight clamps to 0…1 downstream, so no visual defect; (b) the doc line "not called after stop()" is now demonstrably contradicted by DictationController.handleLevel's own guard comment ("Late main-queue dispatch can land after stop()") — consumer defends correctly; doc wording fix still owed |
 | R31 | 2A | Pre-existing (phase 1, unchanged in kind): `handleTapEvent` re-enables on `.tapDisabledByTimeout` but not `.tapDisabledByUserInput`; under `.defaultTap` a dead tap still just means dead hotkey, same failure mode as before. Note only, per surgical-change rule | open (future phase) |
 | R32 | 2B | PillView bar-geometry literals (bar width 3, spacing 3, 4 pt height floor, 24 pt interior inset in `barHeight`) are view-local, single-site each — D31 constants themselves have no second site, so no violation. But the interior-inset `24` numerically coincides with `PillMetrics.bottomMargin`; name it or comment it if it ever wants a second site (R21 trigger) | open (non-blocking) |
 | R33 | 2B | PillController exposes read-only `state` accessor + internal `panel` beyond the spec'd surface (show/update/push/hide) — test observability per R24 precedent, no state ownership change, execution-OK. Shape question for architect: should the 2C-facing API be strictly the four methods, or is read-only observability part of the surface? | closed 2B (2026-07-05): architect ruled D33 — read-only observability ratified as part of the surface; spec §2B round-tripped |
+| R34 | 2C | Straggler-attribution micro-window: a level block dispatched from the audio thread while `recorder.stop()` runs lands on main after `stopRecording()` returns; the practical race (flipping .processing back to .recording) is closed — `isRecording = false` precedes `recorder.stop()` and everything serializes on the main queue, so the straggler hits `guard isRecording` and drops. The only residual path is if a NEW `startCapture` executed before the already-queued straggler drained (stale level would prematurely flip the new capture's .warming → .recording, bending D29 warming-truth by one frame). Requires a human-timescale hotkey event to beat a millisecond-old queued main block — not realistic; cosmetic even if hit. Note only | open (non-blocking) |
 
 ## Convention-violation tracking
 
