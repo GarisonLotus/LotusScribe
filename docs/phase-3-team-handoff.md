@@ -37,10 +37,14 @@ Sheet labels renamed per user directive 2026-07-05: Save Anyway (was
 Close Anyway), Try Again (was Cancel) — behavior unchanged, orchestrator
 trivial-change edit, rides in the label-rename commit after 4f21c17.
 
-**RESUME POINT (next):** HUMAN-AT-SCREEN spec §3A verify 2–5 (success
-flow, failure sheet, mid-test close, D38 dictation regression) — user
-at screen. Then 3A closes; next is 3B (LLM cleanup per PLAN.md §Phase 3
-items 1–4; spec §3B to be authored by architect).
+**3A CLOSED 2026-07-05:** human verify 2–5 all passed (user-confirmed
+at 638b11d).
+
+**RESUME POINT (next):** 3B — LLM cleanup (PLAN.md §Phase 3 items 1–4:
+CleanupService, Off/Light/Standard levels, warm-up, ~4 s timeout →
+raw-transcript fallback). Architect authors spec §3B first; note the
+LLM endpoint is a NEW user setting — user's actual endpoint/model
+needed by the human gate, not by the spec.
 
 **Baseline:** 89 tests / 13 suites green ×2 at 4f21c17.
 
