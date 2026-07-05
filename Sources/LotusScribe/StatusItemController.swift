@@ -1,8 +1,11 @@
 import AppKit
+import os
 
 /// Owns the NSStatusItem: fixed SF Symbol icon and a menu with Settings… and Quit.
 /// NSObject subclass so it can be an NSMenuItem action target.
 final class StatusItemController: NSObject {
+    private static let logger = Logger(
+        subsystem: "com.garisonlotus.LotusScribe", category: "StatusItemController")
     private let statusItem: NSStatusItem
     private var settingsWindowController: SettingsWindowController?
 
@@ -32,6 +35,7 @@ final class StatusItemController: NSObject {
 
     // Lazy: the window is only built on first open; kept so reopening focuses it.
     @objc private func openSettings() {
+        Self.logger.info("openSettings fired")
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController()
         }
