@@ -1,5 +1,10 @@
 # Reviewer observations — LotusScribe (Phase 2)
 
+> 2A gate reviewed 2026-07-04: PASS WITH OBSERVATIONS (R29 routed to
+> architect; R30/R31 non-blocking). Independent `make test`: 66/10 green.
+> LoC overages accepted per R6 precedent — overage is doc comments /
+> why-comments; code-norms budget counts code lines only.
+
 > Forward-looking items for Phase 2. Archives: phase-0 (R1–R4), phase-1
 > (R5–R28). Numbering continues at R29. Only still-open rows carried.
 
@@ -16,7 +21,9 @@
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
-|     |              | (none yet — starts at R29) | |
+| R29 | 2A | Pair-balance hole, modifiers-after-key order: hold chord key bare (down passes through to the app), then add the chord modifiers while it autorepeats — the repeat down matches `!isCapturing` + superset, starts capture and sets `chordKeyDownSwallowed`, so the eventual keyUp is swallowed. App saw a down, never the up (stuck-repeat risk). Machine can't tell initial vs autorepeat downs (`HotkeyEvent` lacks kCGKeyboardEventAutorepeat). Fix options: track a chord-key-down-passed-through flag via the non-matching keyDown branch and refuse start/swallow until a clean keyUp, or carry the autorepeat field. Unusual entry order, not exercised by 2A human verify; needs architect disposition (fix in 2A vs narrow the invariant wording) | open — routed to architect |
+| R30 | 2A | AudioLevel/AudioRecorder nits: (a) rms not clamped — an Int16.min-heavy buffer yields ≈1.00003 > the documented 0…1 (suggest `min(1, …)` or amend doc); (b) `onLevel` doc says "not called after stop()" — a block dispatched just before stop() can still land on main after it returns; wording only. Cosmetic; safe to fold into any 2A follow-up | open (non-blocking) |
+| R31 | 2A | Pre-existing (phase 1, unchanged in kind): `handleTapEvent` re-enables on `.tapDisabledByTimeout` but not `.tapDisabledByUserInput`; under `.defaultTap` a dead tap still just means dead hotkey, same failure mode as before. Note only, per surgical-change rule | open (future phase) |
 
 ## Convention-violation tracking
 

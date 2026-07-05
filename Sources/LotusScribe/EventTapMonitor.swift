@@ -2,14 +2,20 @@ import CoreGraphics
 import Foundation
 import os
 
-/// TCC-bearing adapter around a listen-only session CGEventTap (D16). Maps
-/// keyboard CGEvents to HotkeyEvents, feeds HotkeyStateMachine, and forwards
-/// its non-`.none` actions to `onAction` on the main thread. No decision
-/// logic here (D14) — that lives in HotkeyStateMachine.
+/// TCC-bearing adapter around a session CGEventTap. Maps keyboard CGEvents
+/// to HotkeyEvents, feeds HotkeyStateMachine, and forwards its non-`.none`
+/// actions to `onAction` on the main thread. No decision logic here (D14) —
+/// that lives in HotkeyStateMachine.
 ///
-/// Degrades gracefully: if tap creation fails (listen access not granted —
-/// e.g. the hosted-test app or a headless launch), it logs and the app keeps
-/// running without a hotkey ("functional when permissions denied" invariant).
+/// D30: the tap is `.defaultTap` so the chord keycode's keyDown/keyUp can be
+/// consumed (callback returns nil when the machine says swallow). If
+/// `.defaultTap` creation fails, retries `.listenOnly` — Phase-1 chord
+/// leakage beats a dead hotkey.
+///
+/// Degrades gracefully: if tap creation fails entirely (listen access not
+/// granted — e.g. the hosted-test app or a headless launch), it logs and the
+/// app keeps running without a hotkey ("functional when permissions denied"
+/// invariant).
 final class EventTapMonitor {
     private static let logger = Logger(
         subsystem: "com.garisonlotus.LotusScribe", category: "EventTapMonitor")
@@ -34,14 +40,18 @@ final class EventTapMonitor {
             (1 << CGEventType.flagsChanged.rawValue)
                 | (1 << CGEventType.keyDown.rawValue)
                 | (1 << CGEventType.keyUp.rawValue))
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,  // D16 — never blocks or modifies events
-            eventsOfInterest: mask,
-            callback: EventTapMonitor.tapCallback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
+        // D30: .defaultTap so swallow decisions can consume the chord key.
+        var mode = "defaultTap"
+        var created = createTap(options: .defaultTap, mask: mask)
+        if created == nil {
+            mode = "listenOnly"
+            created = createTap(options: .listenOnly, mask: mask)
+            if created != nil {
+                EventTapMonitor.logger.error(
+                    ".defaultTap creation failed — fell back to .listenOnly (D30); chord key will leak to the focused app")
+            }
+        }
+        guard let tap = created else {
             EventTapMonitor.logger.error(
                 "event tap creation failed — listen access not granted (Input Monitoring or Accessibility in System Settings); hotkey disabled, app otherwise functional")
             return
@@ -53,7 +63,18 @@ final class EventTapMonitor {
         self.runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        EventTapMonitor.logger.info("event tap started")
+        // Mode is part of the Q5 empirical record — keep it in the log line.
+        EventTapMonitor.logger.info("event tap started (\(mode, privacy: .public))")
+    }
+
+    private func createTap(options: CGEventTapOptions, mask: CGEventMask) -> CFMachPort? {
+        CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: options,
+            eventsOfInterest: mask,
+            callback: EventTapMonitor.tapCallback,
+            userInfo: Unmanaged.passUnretained(self).toOpaque())
     }
 
     func stop() {
@@ -65,36 +86,40 @@ final class EventTapMonitor {
         runLoopSource = nil
     }
 
-    /// C-convention trampoline; refcon is the unretained monitor.
+    /// C-convention trampoline; refcon is the unretained monitor. Returning
+    /// nil consumes the event (D30 swallow); anything else passes through
+    /// unmodified. (Under the .listenOnly fallback the return is ignored.)
     private static let tapCallback: CGEventTapCallBack = { _, type, event, refcon in
-        if let refcon {
-            Unmanaged<EventTapMonitor>.fromOpaque(refcon).takeUnretainedValue()
-                .handleTapEvent(type: type, event: event)
-        }
-        // Listen-only tap: return value is ignored, but pass the event
-        // through unmodified anyway (D16).
-        return Unmanaged.passUnretained(event)
+        guard let refcon else { return Unmanaged.passUnretained(event) }
+        let swallow = Unmanaged<EventTapMonitor>.fromOpaque(refcon).takeUnretainedValue()
+            .handleTapEvent(type: type, event: event)
+        return swallow ? nil : Unmanaged.passUnretained(event)
     }
 
-    private func handleTapEvent(type: CGEventType, event: CGEvent) {
+    /// Returns true when the event must be swallowed (chord keyDown/keyUp
+    /// only — the machine never swallows anything else, D30).
+    private func handleTapEvent(type: CGEventType, event: CGEvent) -> Bool {
         switch type {
         case .tapDisabledByTimeout:
             // The system disables slow taps; re-enable so the hotkey survives.
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            return false
         case .flagsChanged:
-            forward(.flagsChanged(event.flags))
+            return forward(.flagsChanged(event.flags))
         case .keyDown:
-            forward(.keyDown(event.getIntegerValueField(.keyboardEventKeycode), event.flags))
+            return forward(.keyDown(event.getIntegerValueField(.keyboardEventKeycode), event.flags))
         case .keyUp:
-            forward(.keyUp(event.getIntegerValueField(.keyboardEventKeycode)))
+            return forward(.keyUp(event.getIntegerValueField(.keyboardEventKeycode)))
         default:
-            break
+            return false
         }
     }
 
-    private func forward(_ event: HotkeyEvent) {
-        let action = machine.handle(event)
-        guard action != HotkeyAction.none else { return }
-        onAction(action)  // already on the main thread — see start()
+    private func forward(_ event: HotkeyEvent) -> Bool {
+        let decision = machine.handle(event)
+        if decision.action != HotkeyAction.none {
+            onAction(decision.action)  // already on the main thread — see start()
+        }
+        return decision.swallow
     }
 }

@@ -28,11 +28,12 @@
   mutating func handle(_ event: HotkeyEvent) -> HotkeyDecision
   ```
   Swallow rules (D30, combo chords only): the matching keyDown that starts
-  capture; chord-keycode autorepeat downs while capturing; the chord-keycode
-  keyUp iff its keyDown was swallowed (pair balance — track a
-  `chordKeyDownSwallowed` flag so the modifier-release stop path still
-  swallows the trailing keyUp). Never `flagsChanged`, never other keycodes,
-  never `.fnHold`.
+  capture; chord-keycode autorepeat downs while `chordKeyDownSwallowed` is
+  set — i.e. while a swallowed press is physically held, a strict superset
+  of "while capturing" so autorepeats after a modifier-release stop stay
+  swallowed; the chord-keycode keyUp iff its keyDown was swallowed (pair
+  balance — same flag, cleared on keyUp). Never `flagsChanged`, never other
+  keycodes, never `.fnHold`.
 - `EventTapMonitor.swift` delta (~20): `tapCreate` with `.defaultTap`; if
   creation fails, retry `.listenOnly` and log the fallback (D30 — Phase-1
   leakage beats a dead hotkey). Callback returns nil when

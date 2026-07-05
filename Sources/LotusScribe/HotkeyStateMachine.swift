@@ -54,21 +54,36 @@ enum HotkeyEvent {
 /// What the machine's owner should do in response to an event.
 enum HotkeyAction { case startCapture, stopCapture, none }
 
+/// Action plus whether the event tap should consume the event (D30).
+/// Swallowing only ever applies to the chord keycode's keyDown/keyUp in
+/// combo mode — never flagsChanged, never other keys, never `.fnHold`.
+struct HotkeyDecision: Equatable {
+    var action: HotkeyAction
+    var swallow: Bool
+}
+
 /// Tracks whether the chord is held. Invariant (spec §1A): never emits
 /// `.stopCapture` without a prior `.startCapture`; duplicate downs and
-/// repeated same-state flags are `.none`.
+/// repeated same-state flags are `.none`. D30 invariant: down/up swallowing
+/// is pair-balanced — a chord keyUp is swallowed iff its keyDown was, so no
+/// app ever sees half of the chord key's down/up pair.
 struct HotkeyStateMachine {
     private let chord: HotkeyChord
     private var isCapturing = false
+    // D30 pair balance: true while a swallowed chord-key press is still
+    // physically held (survives the modifier-release stop path, where
+    // isCapturing goes false before the trailing keyUp arrives).
+    private var chordKeyDownSwallowed = false
 
     init(chord: HotkeyChord) {
         self.chord = chord
     }
 
-    mutating func handle(_ event: HotkeyEvent) -> HotkeyAction {
+    mutating func handle(_ event: HotkeyEvent) -> HotkeyDecision {
         switch chord {
         case .fnHold:
-            return handleFnHold(event)
+            // D30: fnHold is driven by flagsChanged only — never swallow.
+            return HotkeyDecision(action: handleFnHold(event), swallow: false)
         case .combo(let keyCode, let modifiers):
             return handleCombo(event, keyCode: keyCode, modifiers: modifiers)
         }
@@ -90,25 +105,46 @@ struct HotkeyStateMachine {
 
     private mutating func handleCombo(
         _ event: HotkeyEvent, keyCode: Int64, modifiers: CGEventFlags
-    ) -> HotkeyAction {
+    ) -> HotkeyDecision {
         switch event {
         case .keyDown(let code, let flags):
+            guard code == keyCode else {
+                return HotkeyDecision(action: .none, swallow: false)
+            }
+            if chordKeyDownSwallowed {
+                // Autorepeat of a swallowed press — while capturing, or held
+                // past a modifier-release stop. Swallowed either way so the
+                // focused app never sees a down whose up will be swallowed.
+                return HotkeyDecision(action: .none, swallow: true)
+            }
             // isSuperset: real events carry extra flag bits (device-dependent,
             // non-coalesced); only the chord's modifiers must be present.
-            guard !isCapturing, code == keyCode, flags.isSuperset(of: modifiers) else {
-                return .none
+            guard !isCapturing, flags.isSuperset(of: modifiers) else {
+                return HotkeyDecision(action: .none, swallow: false)
             }
             isCapturing = true
-            return .startCapture
+            chordKeyDownSwallowed = true
+            return HotkeyDecision(action: .startCapture, swallow: true)
         case .keyUp(let code):
-            guard isCapturing, code == keyCode else { return .none }
+            guard code == keyCode else {
+                return HotkeyDecision(action: .none, swallow: false)
+            }
+            // Pair balance (D30): swallow iff the matching down was swallowed.
+            let swallow = chordKeyDownSwallowed
+            chordKeyDownSwallowed = false
+            guard isCapturing else {
+                return HotkeyDecision(action: .none, swallow: swallow)
+            }
             isCapturing = false
-            return .stopCapture
+            return HotkeyDecision(action: .stopCapture, swallow: swallow)
         case .flagsChanged(let flags):
             // Releasing any required modifier mid-hold also ends capture.
-            guard isCapturing, !flags.isSuperset(of: modifiers) else { return .none }
+            // Never swallowed — modifiers are shared system state (D30).
+            guard isCapturing, !flags.isSuperset(of: modifiers) else {
+                return HotkeyDecision(action: .none, swallow: false)
+            }
             isCapturing = false
-            return .stopCapture
+            return HotkeyDecision(action: .stopCapture, swallow: false)
         }
     }
 }

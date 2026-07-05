@@ -28,6 +28,11 @@ final class AudioRecorder {
     private let lock = NSLock()
     private var pcm = Data()
 
+    /// Per-chunk normalized RMS (D32), invoked on the main queue. The first
+    /// invocation doubles as the engine-live signal (D29 — waveform means
+    /// "speak now"). Set before start(); not called after stop().
+    var onLevel: ((Float) -> Void)?
+
     /// Installs the input tap and starts the engine. First call in an app's
     /// lifetime triggers the Microphone TCC prompt (tester record #2).
     func start() throws {
@@ -111,5 +116,12 @@ final class AudioRecorder {
         let byteCount = Int(output.frameLength) * MemoryLayout<Int16>.size  // mono, interleaved
         let chunk = Data(bytes: channelData[0], count: byteCount)
         lock.withLock { pcm.append(chunk) }
+
+        // D32: RMS computed here on the audio thread, only the Float crosses
+        // to the main queue.
+        if let onLevel {
+            let level = AudioLevel.rms(pcm16: chunk)
+            DispatchQueue.main.async { onLevel(level) }
+        }
     }
 }
