@@ -39,3 +39,20 @@ controller as a closure so Save-path logic tests headlessly (D14);
 ConnectionProbe itself tested via the established StubURLProtocol pattern
 (serialized suite, global handler — same concurrency surface as
 TranscriptionServiceTests, carried in tester baselines).
+
+2026-07-05: 3A SHAPE NON-OBJECTION. All four engineer proceed-on-lean items
+accepted at shape level — each is the minimal realization of spec'd
+behavior, not new surface: (a) `.onExitCommand` is the only route for the
+spec's own Esc-mid-test requirement once Cancel is disabled; (b) `ProbeState:
+ObservableObject` is forced by NSWindowController being unable to publish;
+(c) `private(set) probeTask` is the D14 headless-test seam; (d) dedicated
+ProbeStubURLProtocol isolates the global-handler stub from parallel suites.
+Recorded as a 5-line execution-notes block in phase-3-spec.md §3A; no D-number
+warranted. ConnectionProbe placement/API confirmed against D36: struct in
+Sources/, reads only its arguments (never SettingsStore), injectable
+URLSession, signature matches the spec deliverable verbatim; the shared
+SettingsValidation gate for the no-network invalid-URL path is the right
+reuse. R37 disposition: ACCEPT split-at-3B — 3B's per-endpoint
+generalization reworks this controller anyway; splitting now churns a
+just-reviewed surface for zero behavior. R36 stale-flash: cosmetic, no
+ruling needed.

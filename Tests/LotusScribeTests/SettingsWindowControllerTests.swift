@@ -36,12 +36,13 @@ final class SettingsWindowControllerTests {
         #expect(controller.window != nil)
     }
 
-    // D26: Save writes all four D9 keys (empty → nil per D25) and closes.
-    // Drives the same method the Save button calls.
-    @Test func savePersistsDraftsAndCloses() throws {
+    // D26/D37: probe success → Save writes all four D9 keys immediately
+    // (empty → nil per D25), phase → success. The 2 s auto-close timer and
+    // checkmark are thin UI, verified HUMAN-AT-SCREEN.
+    @Test func savePersistsDraftsOnProbeSuccess() async throws {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         let store = SettingsStore(defaults: defaults)
-        let controller = SettingsWindowController(store: store)
+        let controller = SettingsWindowController(store: store, probe: { _, _ in .success })
         controller.show()
 
         controller.draft.sttEndpointURL = "https://stt.example.com/v1"
@@ -49,12 +50,55 @@ final class SettingsWindowControllerTests {
         controller.draft.llmEndpointURL = ""
         controller.draft.llmModel = "qwen3"
         controller.save()
+        await controller.probeTask?.value
 
         #expect(store.sttEndpointURL == "https://stt.example.com/v1")
         #expect(store.sttModel == "whisper-large-v3")
         #expect(store.llmEndpointURL == nil)  // empty → nil (D25)
         #expect(store.llmModel == "qwen3")
+        #expect(controller.probeState.phase == .success)
+        controller.window?.close()  // don't sit out the 2 s auto-close
+    }
+
+    // D36: empty drafted STT URL → save+close exactly as before, probe never
+    // invoked (clearing settings must not be blocked by a guaranteed fail).
+    @Test func saveWithEmptySTTURLSkipsProbeAndCloses() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        let controller = SettingsWindowController(store: store, probe: { _, _ in
+            Issue.record("probe must not run for an empty drafted STT URL")
+            return .failure(reason: "unexpected probe")
+        })
+        controller.show()
+
+        controller.draft.sttModel = "whisper-large-v3"
+        controller.save()
+
+        #expect(controller.probeTask == nil)
+        #expect(store.sttModel == "whisper-large-v3")
         #expect(controller.window?.isVisible == false)
+    }
+
+    // D37: probe failure → store untouched, phase carries the reason for
+    // the sheet (the sheet itself is thin UI, verified HUMAN-AT-SCREEN).
+    @Test func probeFailureLeavesStoreUntouched() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.sttModel = "before"
+        let controller = SettingsWindowController(store: store, probe: { _, _ in
+            .failure(reason: "HTTP 503")
+        })
+        controller.show()
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.draft.sttModel = "edited"
+        controller.save()
+        await controller.probeTask?.value
+
+        #expect(store.sttModel == "before")
+        #expect(store.sttEndpointURL == nil)
+        #expect(controller.probeState.phase == .failure("HTTP 503"))
+        controller.window?.close()  // dismisses the failure sheet too
     }
 
     // D26: Cancel closes and writes nothing — the store stays untouched.

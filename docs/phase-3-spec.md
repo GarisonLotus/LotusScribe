@@ -92,6 +92,12 @@ endpoint yet); the surface generalizes per-endpoint in 3B.
   success → store written + phase == success; stub failure → store
   untouched + phase == failure(reason). Timer/sheet not unit-tested.
 
+**Execution notes (architect-accepted lean deltas, 2026-07-05):** Esc-mid-test
+lands via `.onExitCommand` (key equivalents skip the disabled Cancel button);
+probe phase publishes through a tiny `ProbeState: ObservableObject`
+(NSWindowController cannot publish); `probeTask` is `private(set)` so tests
+await Save's async leg; probe tests use a dedicated ProbeStubURLProtocol.
+
 **Verify:**
 1. `make test` green ×2 (delta ≈ +9 tests, +1 suite vs 80/12).
 2. HUMAN-AT-SCREEN (success): real settings (D13 endpoint,

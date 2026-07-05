@@ -4,6 +4,35 @@
 > (R5–R28), phase-2 (R29–R35). Numbering continues at R36. Only still-open
 > rows carried.
 
+> 3A gate reviewed 2026-07-05: EXECUTION APPROVED. D36 verified: probe
+> reads only its arguments (endpoint/model captured from DRAFTS in
+> `save()`; ConnectionProbe has no SettingsStore access); silent WAV is
+> exactly 0.2 s (6400 zero bytes = 3200 Int16 @ 16 kHz mono); success =
+> 200 + decodable `{"text":}`; `timeoutInterval == 10` asserted in the
+> request-shape test; empty drafted URL short-circuits to save+close
+> (probe never invoked, test-guarded); un-parseable URL fails before the
+> session. D37 verified: `draft.save()` precedes autoCloseTask creation
+> (crash mid-flash cannot lose the save); Close Anyway = save-then-close;
+> sheet-Cancel resets phase to idle, drafts intact; mid-test close is
+> race-free — NSWindowController is MainActor, so windowWillClose's
+> cancel and the post-await `Task.isCancelled` guard serialize: a probe
+> completion landing after close always sees the cancel and writes
+> nothing (real probe also cancels cooperatively via URLSession).
+> Retain audit clean: probeTask/autoCloseTask/sheet handler all
+> `[weak self]`, window.delegate weak, autoCloseTask cancelled in
+> windowWillClose if the user closes first. D38: staged diff touches
+> only ConnectionProbe/SettingsWindowController + their tests — zero
+> dictation-path changes; failure sheet is settings-window-only.
+> Request shape matches TranscriptionService (model field + file part,
+> byte-equal multipart assertion). Independent `make test`: 89 tests /
+> 13 suites green (expected 89/13). LoC: ConnectionProbe 45 code lines
+> (under ~55); controller delta +95 vs ~85 and ConnectionProbeTests 112
+> vs ~60 — overage is the dedicated ProbeStubURLProtocol (cross-suite
+> race is load-bearing; R13 precedent: stub infra under-scoped in the
+> estimate) plus spec-listed request-shape/timeout tests, not logic
+> creep — accepted per R6. New rows R36–R37. Remaining verification is
+> HUMAN-AT-SCREEN (spec §3A verify 2–5).
+
 ## Carried items
 
 | id | first raised | item | status |
@@ -21,7 +50,8 @@
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
-|    | (none yet)   |      |        |
+| R36 | 3A | `save()` doesn't cancel a prior probeTask/autoCloseTask: during the 2 s success flash the buttons re-enable (disabled only on `.testing`), so a second Save spawns a fresh probe while the first flash's auto-close still fires at T+2 s — window closes mid-second-probe, probe cancelled, nothing extra written (first save already persisted). Outcome correct by accident; have `save()` cancel stale tasks if this surface is touched in 3B | open (non-blocking) |
+| R37 | 3A | SettingsWindowController.swift is now 214 code lines vs the ~200 target (code-norms): file hosts validation + draft + probe state + controller + form. Natural split point is 3B's per-endpoint probe generalization (e.g. SettingsForm or ProbePhase/ProbeState to their own file) | open (fold into 3B) |
 
 ## Convention-violation tracking
 

@@ -54,24 +54,54 @@ final class SettingsDraft: ObservableObject {
     }
 }
 
+/// Probe lifecycle for the Save flow (D37), published for SettingsForm.
+enum ProbePhase: Equatable {
+    case idle
+    case testing
+    case success
+    case failure(String)
+}
+
+/// Observable wrapper so the hosted form reacts to probe progress.
+@MainActor
+final class ProbeState: ObservableObject {
+    @Published var phase: ProbePhase = .idle
+}
+
 /// Bare settings pane (D21): SwiftUI `Form` hosted in an NSHostingController-backed
 /// window, opened from the status-item menu. Touches only the four D9 keys;
 /// SettingsStore remains the single backing store (spec §1E invariants).
 /// Buffered-edit per D26: Save is the only write path; Cancel and the
 /// titlebar close button write nothing (drafts are local, so titlebar close
 /// is automatically a Cancel — there is no other write path).
-final class SettingsWindowController: NSWindowController {
+/// D37 amends Save only: the write-then-close step is gated on a connection
+/// probe of the drafted STT endpoint (see docs/phase-3-spec.md §3A).
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private static let logger = Logger(
         subsystem: "com.garisonlotus.LotusScribe", category: "SettingsWindowController")
 
     let draft: SettingsDraft
+    let probeState = ProbeState()
 
-    init(store: SettingsStore) {
+    /// Injected probe seam (D14) so Save-path logic tests headlessly.
+    private let runProbe: (String, String) async -> ProbeResult
+    /// Exposed read-only so tests can await Save's async probe leg.
+    private(set) var probeTask: Task<Void, Never>?
+    private var autoCloseTask: Task<Void, Never>?
+
+    init(
+        store: SettingsStore,
+        probe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
+            await ConnectionProbe().testSTT(endpoint: endpoint, model: model)
+        }
+    ) {
         draft = SettingsDraft(store: store)
+        runProbe = probe
         super.init(window: nil)
         let window = NSWindow(contentViewController: NSHostingController(
             rootView: SettingsForm(
                 draft: draft,
+                probeState: probeState,
                 onSave: { [weak self] in self?.save() },
                 onCancel: { [weak self] in self?.cancel() })))
         window.title = "LotusScribe Settings"
@@ -79,6 +109,7 @@ final class SettingsWindowController: NSWindowController {
         // (title-bar-only window), even with an explicit root .frame — size
         // the window directly. Must match SettingsForm's root frame.
         window.setContentSize(NSSize(width: 420, height: 350))
+        window.delegate = self  // windowWillClose cancels in-flight probe work
         self.window = window
     }
 
@@ -103,6 +134,7 @@ final class SettingsWindowController: NSWindowController {
         // rebuilding the contentViewController — @Published refreshes the
         // cached form's fields in place (D26 reopen behavior, minimal path).
         draft.reload()
+        probeState.phase = .idle  // D37: reopen resets probe state
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -110,15 +142,80 @@ final class SettingsWindowController: NSWindowController {
             "post-show: window=\(self.window != nil ? "non-nil" : "nil", privacy: .public) isVisible=\(self.window?.isVisible ?? false, privacy: .public) frame=\(String(describing: self.window?.frame), privacy: .public)")
     }
 
-    /// Save button / Return: persist all four keys, then close (D26).
+    /// Save button / Return (D37): empty drafted STT URL → save+close as
+    /// before (D36: clearing settings is never blocked by a guaranteed-fail
+    /// test); otherwise gate the write-then-close on a connection probe.
     func save() {
-        draft.save()
-        window?.close()
+        let endpoint = draft.sttEndpointURL
+        guard !endpoint.isEmpty else {
+            draft.save()
+            window?.close()
+            return
+        }
+
+        probeState.phase = .testing
+        let model = draft.sttModel
+        probeTask = Task { [weak self] in
+            guard let self else { return }
+            let result = await self.runProbe(endpoint, model)
+            // Mid-test close cancelled us — write nothing (D26/D37).
+            guard !Task.isCancelled else { return }
+            self.handleProbeResult(result)
+        }
     }
 
     /// Cancel button / Esc: close without writing (D26).
     func cancel() {
         window?.close()
+    }
+
+    /// Every close path (Cancel, Esc, titlebar, force-close) lands here:
+    /// cancel in-flight probe work so nothing is written after the window
+    /// is gone (D37 mid-test close semantics).
+    func windowWillClose(_ notification: Notification) {
+        probeTask?.cancel()
+        probeTask = nil
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+    }
+
+    private func handleProbeResult(_ result: ProbeResult) {
+        switch result {
+        case .success:
+            // D37: persist immediately — a force-close during the 2 s
+            // checkmark flash cannot lose the save.
+            draft.save()
+            probeState.phase = .success
+            autoCloseTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                self?.window?.close()
+            }
+        case .failure(let reason):
+            probeState.phase = .failure(reason)
+            presentFailureSheet(reason: reason)
+        }
+    }
+
+    /// D38: this sheet is a direct response to the user's Save click in the
+    /// settings window — outside the dictation loop's no-alert policy.
+    private func presentFailureSheet(reason: String) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "There's a problem with the connection."
+        alert.informativeText = reason
+        alert.addButton(withTitle: "Close Anyway")
+        alert.addButton(withTitle: "Cancel")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            if response == .alertFirstButtonReturn {
+                // D37: "close anyways" honors the Save click — persist.
+                self.draft.save()
+                self.window?.close()
+            } else {
+                self.probeState.phase = .idle  // back to editing, drafts intact
+            }
+        }
     }
 }
 
@@ -127,6 +224,7 @@ final class SettingsWindowController: NSWindowController {
 /// saved anyway — the hint is advisory and runs live on the drafts.
 private struct SettingsForm: View {
     @ObservedObject var draft: SettingsDraft
+    @ObservedObject var probeState: ProbeState
     let onSave: () -> Void
     let onCancel: () -> Void
 
@@ -143,20 +241,48 @@ private struct SettingsForm: View {
                 }
             }
             .formStyle(.grouped)
+            .disabled(probeState.phase == .testing)
             HStack {
+                probeIndicator
                 Spacer()
                 Button("Cancel", action: onCancel)
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: onSave)
                     .keyboardShortcut(.defaultAction)
             }
+            .disabled(probeState.phase == .testing)
             .padding([.horizontal, .bottom])
         }
+        // D37: Esc must still cancel mid-test while the buttons are disabled
+        // — key equivalents skip disabled buttons, so cancelOperation lands
+        // here instead.
+        .onExitCommand(perform: onCancel)
         // Both dimensions fixed: on macOS 26 the NSHostingController fitting
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
         // take either), leaving a title-bar-only window. 350 pt fits the four
         // fields, two section headers, hint rows, and the button row.
         .frame(width: 420, height: 350)
+    }
+
+    /// Spinner while testing, green checkmark on success (D37). Thin UI —
+    /// verified HUMAN-AT-SCREEN, not unit-tested. Failure needs no row
+    /// indicator: the sheet carries the message.
+    @ViewBuilder
+    private var probeIndicator: some View {
+        switch probeState.phase {
+        case .testing:
+            ProgressView()
+                .controlSize(.small)
+            Text("Testing connection…")
+                .font(.caption)
+        case .success:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+            Text("Connected")
+                .font(.caption)
+        case .idle, .failure:
+            EmptyView()
+        }
     }
 
     @ViewBuilder

@@ -23,8 +23,30 @@ model whisper-large-v3, no key (D13).
 
 ## Phase 3 gates
 
-(none yet — first gate will be 3A: expect ≈ +9 tests / +1 suite vs 80/12,
-plus HUMAN-AT-SCREEN spec §3A verify 2–5.)
+| gate | date | staged base | counts | runs | result |
+|------|------|-------------|--------|------|--------|
+| 3A | 2026-07-05 | e79d800 (staged, not committed) | 89 tests / 13 suites | ×2 | green ×2, 0 failures |
+
+**3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
+AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,
+HotkeyStateMachineTests 22, KeychainStoreTests 5, MultipartBodyTests 5,
+PillPanelTests 5, PillViewModelTests 2, SettingsStoreTests 6,
+SettingsValidationTests 2, SettingsWindowControllerTests 7 (+2 net),
+TranscriptionServiceTests 6, WavEncoderTests 6, top-level (no suite) 2
+(appDelegateInitializes, mainMenuRoutesPaste). Delta vs 80/12 baseline:
++7 (new ConnectionProbeTests suite) +2 (SettingsWindowControllerTests) = 89/13,
+matching engineer claim.
+
+**3A concurrency watch:** no cross-suite URLProtocol stub race observed —
+TranscriptionServiceTests and ConnectionProbeTests both clean in both runs
+(ConnectionProbeTests uses its own URLProtocol stub). Remains a watch item,
+not an incident.
+
+**3A warnings:** known-noise only (destination auto-pick, NSCGS/CA during
+PillPanelTests, task-name-port, CursorUI ViewBridge). No new entries.
+
+**HUMAN-AT-SCREEN:** spec §3A verify items 2–5 pending (probe-gated Save
+behavior against live endpoint not machine-verifiable).
 
 ## Flake registry (known-noise, carried from phase 2)
 
