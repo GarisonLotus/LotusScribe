@@ -88,6 +88,12 @@ worked via the live-settings read), HTTP-400 -> retry-sans-keep_alive
 leg observed in hosted tests.Negative paths (dead-host verify 3,
 level-off verify 4) user-waived ("continue") — both unit-covered (D43
 fallback, isEnabled). **3B CLOSED at 2083eb0.**
+**CORRECTION (2026-07-05, orchestrator, post-3C):** verify-2 was a
+FALSE POSITIVE — `defaults read` shows no llmEndpointURL/llmModel were
+ever saved, so cleanup was effective-OFF during the user's test; the
+"cleaned" sentence was Whisper's own filler suppression.3B verify-2
+RE-OPENED: user must save real LLM settings (3C Save now probes them)
+and re-dictate a filler sentence.Code paths remain unit-covered.
 
 **3C per-suite breakdown (120 = 118 in-suite + 2 top-level):**
 AudioLevelTests 10, CleanupLevelTests 6, CleanupServiceTests 11,
