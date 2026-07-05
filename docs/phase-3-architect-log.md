@@ -21,12 +21,13 @@
 | D46 | 2026-07-05 | Two-stage pill state shape (user directive 2026-07-05): PillState gains ONE case `stagedSuccess(cleanup: CleanupStage)` with `CleanupStage = pending/done/missed`; `.success` retained verbatim for the STT-only path (D40 not effective-enabled → today's single check, unchanged). The associated value is a display instruction, not dictation state — pill holds no pipeline knowledge, DictationController stays sole driver (§2C invariant). Flash classification becomes a pure headless property `PillState.flashDuration: TimeInterval?` (nil = sticky, incl. `.stagedSuccess(.pending)`); PillController.update guards on it instead of the hardcoded success/error check. Rejected: three top-level cases (case-count bloat for one visual family), bool-pair payload (unrepresentable states) | One case + payload is the minimal shape that keeps `.success` untouched and makes the flash/sticky decision a pure testable mapping (D14) instead of controller branching | 3D |
 | D47 | 2026-07-05 | Two-stage sequencing, ruled against DictationController's real flow (insertion happens AFTER cleanup — the cleaned text is what inserts, so stage 1 must display pre-insert): transcript accepted (post generation + non-empty guards) → cleanup disabled: insert + `.success` unchanged; enabled: `.stagedSuccess(.pending)` (check 1 green + slot 2 pending) BEFORE the cleanup await → cleanup returns (D43 do/catch, raw fallback) → second generation guard unchanged (stale → drop, no insert, no pill touch; no orphaned `.pending` — the newer generation's `show(.warming)` already repainted) → insert → `.stagedSuccess(.done)` (cleaned) or `.stagedSuccess(.missed)` (raw fallback, amber). `.pending` carries no timer of its own — CleanupService's 8 s timeout (D45) bounds it. D23/D43 intact: `.error` stays transcription-failure-only; a cleanup miss is never `.error` — amber-over-green, the words landed. AMENDS D43's pill face only ("flashes `.success` on miss" → flashes `.stagedSuccess(.missed)`); D43 fallback/logging/no-alert semantics untouched | Stage 1 = STT proof, and the only truthful pre-insert moment for it is transcript-accepted; the visible pending wait is the information during the cleanup hop; keeping both generation guards exactly where they are adds zero new stale surface | 3D |
 | D48 | 2026-07-05 | Two-stage visuals + flash timing: `.stagedSuccess` renders HStack(spacing 16), centered in the existing 260×52 content, both slots `.title2` SF Symbols — slot 1 `checkmark.circle.fill` green (same symbol as `.success`); slot 2 pending = small ProgressView (reuses `.processing` vocabulary), done = `checkmark.circle.fill` green, missed = `exclamationmark.triangle.fill` systemOrange (triangle+amber = warning, distinct from `.error`'s red circle). No text labels. Flash: staged terminals hide after NEW `PillMetrics.stagedFlashDuration = 1.2 s` (two symbols + amber semantics need more read time); D31's 0.8 s stands untouched for `.success`/`.error`; both literals live only in PillMetrics (D31 single-site) | Reuses every existing visual token (green check, small spinner, exclamation) so the two-stage read is instant; 1.2 s is the smallest bump that makes a two-symbol + warning read comfortable without making the pill feel sticky | 3D |
+| D49 | 2026-07-05 | R31 pull-forward APPROVED (amends the phase-1 note-only posture): `handleTapEvent` re-enables the tap on `.tapDisabledByUserInput` exactly as it does on `.tapDisabledByTimeout` — one combined case (`case .tapDisabledByTimeout, .tapDisabledByUserInput:`), plus ONE log line naming which cause fired; `return false` (never swallow), no other change, no new state. Constraints: machine verify = compile + existing suite stays 126/16 (the branch is unreachable without a real CGEventTap — this is the adapter side of the D14 split, `tap` is nil in tests, so NO new test is owed); live dead-tap recovery is HUMAN-AT-SCREEN, queued behind the same blocked-verify wall as 3C/3D/D45 and does NOT gate the code landing | Dead tap = dead hotkey with no recovery path — a real resilience gap, and the fix is a strict mirror of the proven timeout branch (near-zero risk, ~3 lines). The surgical-change deferral was about not touching an unrelated surface mid-phase; a blocked window burning down machine-verifiable backlog is exactly when a mirror-branch fix should land | backlog (blocked window) |
 
 ## Open questions
 
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
-| — | carried | R4 (phase 0): close by exercising a Keychain read under the 5RC66Q82V9 identity. Note: 3A's probe hits the no-key D13 endpoint, so it does not exercise this — still owed at first authed-endpoint work | open | any authed-endpoint work |
+| — | carried | R4 (phase 0): close by exercising a Keychain read under the 5RC66Q82V9 identity. Note: 3A's probe hits the no-key D13 endpoint, so it does not exercise this — still owed at first authed-endpoint work. CLOSED 2026-07-05 as moot-until-API-key-feature (see Notes ruling); reopen trigger = first authed-endpoint work | closed (moot) | — |
 
 ## Notes
 
@@ -156,6 +157,37 @@ ceilings: source ~61 across PillState/PillView/PillController/
 DictationController, tests ~35. Forced-miss verify path: bogus LLM URL via
 Save Anyway (D37). HUMAN GATE: user's LLM endpoint needed for the
 two-stage happy path, as at 3B/3C.
+
+2026-07-05: BLOCKED-WINDOW BACKLOG RULINGS (vLLM host unreachable; all
+HUMAN-AT-SCREEN verifies blocked; orchestrator burning down
+machine-verifiable backlog at 126/16 baseline, 7f7c8a4).
+(1) R4 — CLOSED AS MOOT-UNTIL-API-KEY-FEATURE. The feared failure
+(legacy-keychain ACL on an item written under an old signature becoming
+unreadable after re-signing) requires a pre-existing production item, and
+none has ever been written: the app has NO API-key feature (D13 endpoints
+need no key), KeychainStore has zero production callers, and every gate
+runs KeychainStoreTests writing/reading FRESH items green under the stable
+5RC66Q82V9 identity (R27) — fresh items are created with the current
+identity's ACL, so the legacy-ACL hazard cannot exist for anything the app
+will ever write from here. Carrying the row buys nothing. REOPEN TRIGGER
+(named, binding): the first authed-endpoint work — the sub-phase that adds
+the first production API-key write must include a verify step that stores
+a key, rebuilds+re-signs, relaunches, and reads it back; that step IS the
+R4 close-out and must cite this ruling.
+(2) R31 — PULL-FORWARD APPROVED as D49 (see Locked decisions): mirror the
+`.tapDisabledByTimeout` re-enable for `.tapDisabledByUserInput`, one log
+line naming the cause, nothing else. No new test owed (tap is nil under
+tests — adapter side of D14); suite must stay 126/16; live dead-tap
+recovery joins the blocked HUMAN-AT-SCREEN queue, non-gating.
+(3) Rest of backlog — NOTHING ELSE PULLED FORWARD. R34: unrealistic
+microsecond race, cosmetic even if hit — any "fix" is speculative code for
+a non-event (CLAUDE.md §2), stays note-only. R41: latent test-hygiene seam
+with zero current exposure (every test stubs `warmUp:`); adding a guard now
+is a test-only seam code-norms disfavor — stays backlog per the 3C ruling.
+R42: truthfulness wrinkle is D47's accepted framing (slot 1 = STT proof),
+reachable only by deliberate overlap — a change would reopen a
+just-locked, just-reviewed design for note-grade value; stays note-only.
+R7 (for completeness): hotkey-config UI is Phase 7+ — untouched.
 
 2026-07-05: 3D SHAPE NON-OBJECTION (post-execution, 126/16 ×2). (a) Local
 `var terminal = PillState.success` mutated inside the existing do/catch,

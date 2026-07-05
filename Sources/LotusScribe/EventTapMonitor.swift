@@ -100,8 +100,12 @@ final class EventTapMonitor {
     /// only — the machine never swallows anything else, D30).
     private func handleTapEvent(type: CGEventType, event: CGEvent) -> Bool {
         switch type {
-        case .tapDisabledByTimeout:
-            // The system disables slow taps; re-enable so the hotkey survives.
+        case .tapDisabledByTimeout, .tapDisabledByUserInput:
+            // The system disables slow taps (timeout) or a user/system action
+            // disables it directly; re-enable either way so the hotkey
+            // survives (D49 — a dead tap is a silently dead hotkey).
+            EventTapMonitor.logger.info(
+                "tap disabled (\(type == .tapDisabledByTimeout ? "timeout" : "userInput", privacy: .public)) — re-enabling")
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return false
         case .flagsChanged:
