@@ -19,7 +19,42 @@ prompt fires at first recording start, not launch.
 
 ## Phase 2 gates
 
-**Last gate: 2C-fix (D34)** (2026-07-05, PARALLEL mode — reviewer ran
+**Last gate: 2C-waveform-fix** (2026-07-05, PARALLEL mode — reviewer +
+architect ran concurrently; staged, NOT committed; base 5c7cd80, i.e.
+on top of c83031f/5c7cd80).
+- **Counts:** 80 tests in 12 suites, 0 failures — `make test` run TWICE,
+  both runs identical (80/12 green each, TEST SUCCEEDED). Delta vs
+  2C-fix baseline: +5 tests, suites unchanged — AudioLevelTests 5→10,
+  matching engineer claim exactly (75 + 5).
+- **Per-suite (run 2):** AudioLevelTests 10, DictationControllerTests 4,
+  HotkeyStateMachineTests 22, KeychainStoreTests 5, MultipartBodyTests 5,
+  PillPanelTests 5, PillViewModelTests 2, SettingsStoreTests 6,
+  SettingsValidationTests 2, SettingsWindowControllerTests 5,
+  TranscriptionServiceTests 6, WavEncoderTests 6 = 78 in suites + 2
+  top-level tests (appDelegateInitializes, mainMenuRoutesPaste) = 80.
+  Only AudioLevelTests changed vs the 2C-fix breakdown.
+- **Staged surface:** `git diff --cached --stat` = 3 source
+  (AudioLevel.swift `display(rms:)` dBFS mapping, PillView.swift
+  render-time call, DictationController.swift +1 diagnostic log) + 1
+  test file (AudioLevelTests.swift +5) — matches the claimed fix scope.
+- **Cross-check:** parallel-mode — orchestrator collates. Tester counts
+  match engineer's claimed 80/12 green ×2.
+- **Warnings:** registry noise only (destination auto-pick,
+  DetachedSignatures, task-name-port, NSCGS CA-commit/entangle at
+  PillPanelTests). One new cosmetic line both runs, added to registry:
+  `[CursorUI] ViewBridge to RemoteViewService Terminated ...
+  NSViewBridgeErrorCanceled` (message self-describes as benign).
+- **Flakes:** none — both runs identical, no pass-on-second-run tests.
+- **HUMAN-GATE PROGRESS (orchestrator-supplied):**
+  - **§2C verify 3 (waveform tracks voice): PASS** — user-confirmed
+    2026-07-05 after this fix. Initial report was FAIL (bars frozen);
+    root cause: linear RMS mapping defect, fixed by the dBFS
+    `AudioLevel.display(rms:)` mapping in this diff.
+  - **Still PENDING:** verify 1 (focus-steal), verify 2 (fullscreen),
+    verify 4 (cold-start + observed `.warming` duration), verify 5
+    (state flashes), verify 6 (no-9-leak dictation check).
+
+**Prior gate: 2C-fix (D34)** (2026-07-05, PARALLEL mode — reviewer ran
 concurrently; staged, NOT committed; code base afe0c98, HEAD 32b9d04
 docs-only handoff commit).
 - **Counts:** 75 tests in 12 suites, 0 failures — `make test` run TWICE,
@@ -161,3 +196,4 @@ counts; orchestrator collates post-hoc).
 | 2026-07-04 | (known-noise) | `xcodebuild: WARNING: Using the first of multiple matching destinations` | tool notice, first seen at 2A gate; benign destination auto-pick |
 | 2026-07-04 | (known-noise) | `[Common] Unable to obtain a task name port right for pid NNN: (os/kern) failure (0x5)` at hosted-app launch | cosmetic, intermittent (seen run 1 only at 2A gate) |
 | 2026-07-05 | (known-noise) | `[NSCGS] Warning: Invalid attempt to open a new transaction during CA commit` + `[NSCGS] Ignoring request to entangle context after pre-commit` during PillPanelTests | cosmetic AppKit/CA panel-ordering logs; first recorded at 2C-fix gate on pre-existing 2B surface |
+| 2026-07-05 | (known-noise) | `[CursorUI] ViewBridge to RemoteViewService Terminated: ... NSViewBridgeErrorCanceled` at hosted-app run | cosmetic; message self-describes as benign; first recorded at 2C-waveform-fix gate, both runs |

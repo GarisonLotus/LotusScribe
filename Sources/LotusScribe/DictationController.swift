@@ -36,6 +36,7 @@ final class DictationController {
         guard isRecording else { return }
         if !engineLive {
             engineLive = true
+            Self.logger.info("engine live — first level \(level, privacy: .public)")
             pill.update(.recording)
         }
         pill.push(level: level)

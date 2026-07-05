@@ -57,9 +57,11 @@ struct PillView: View {
     }
 
     /// 4 pt floor (silence stays visible) up to the capsule interior.
+    /// Raw RMS goes through the perceptual dBFS map here, at render
+    /// time — stored levels stay raw per the D32 contract.
     private func barHeight(_ level: Float) -> CGFloat {
         let maxHeight = PillMetrics.contentSize.height - 24
-        let clamped = CGFloat(min(max(level, 0), 1))
-        return 4 + clamped * (maxHeight - 4)
+        let display = CGFloat(AudioLevel.display(rms: level))
+        return 4 + display * (maxHeight - 4)
     }
 }

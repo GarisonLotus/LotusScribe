@@ -87,8 +87,10 @@ Phase-1 behavior exactly; RMS math is pure and headless-tested.
   ObservableObject` — `@Published var state: PillState`, `@Published var
   levels: [Float]`; `push(level:)` appends and trims to `barCount`.
 - `PillView.swift` (~70): SwiftUI capsule (.ultraThinMaterial); per-state
-  content: warming = dimmed static bars, recording = bars scaled by
-  `levels`, processing = spinner/shimmer, success = checkmark, error =
+  content: warming = dimmed static bars, recording = bars scaled
+  perceptually from raw `levels` via `AudioLevel.display(rms:)` at render
+  time (dBFS [-50, 0] → 0…1; D35 — stored levels stay raw per D32),
+  processing = spinner/shimmer, success = checkmark, error =
   exclamation. Root frame from PillMetrics (mirrored why-comment, R21
   pattern). Hosted via NSHostingView with `.ignoresSafeArea()`.
 - `PillController.swift` (~50): owns panel + hosting view + view model;

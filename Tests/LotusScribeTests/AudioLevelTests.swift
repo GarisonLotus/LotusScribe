@@ -34,4 +34,33 @@ struct AudioLevelTests {
         data.append(0x7F)  // half a sample — must not skew or crash
         #expect(AudioLevel.rms(pcm16: data) == 1.0)
     }
+
+    // display(rms:) — perceptual dBFS window [-50, 0] dB → 0…1.
+
+    @Test func displayZeroIsZero() {
+        #expect(AudioLevel.display(rms: 0) == 0)
+    }
+
+    @Test func displayFullScaleIsOne() {
+        #expect(AudioLevel.display(rms: 1.0) == 1.0)
+    }
+
+    @Test func displaySilenceFloorIsNearZero() {
+        // -50 dBFS = 10^(-50/20) ≈ 0.00316 — the window floor.
+        #expect(AudioLevel.display(rms: 0.00316) < 0.01)
+    }
+
+    @Test func displayTypicalSpeechIsMidRange() {
+        // 0.05 RMS ≈ -26 dBFS — must render clearly above the floor.
+        let level = AudioLevel.display(rms: 0.05)
+        #expect(level > 0.3 && level < 0.7)
+    }
+
+    @Test func displayIsStrictlyMonotonicInsideWindow() {
+        let mapped = [0.005, 0.02, 0.05, 0.15, 0.5].map {
+            AudioLevel.display(rms: Float($0))
+        }
+        #expect(mapped == mapped.sorted())
+        #expect(Set(mapped).count == mapped.count)
+    }
 }

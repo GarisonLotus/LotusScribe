@@ -21,4 +21,14 @@ enum AudioLevel {
         }
         return Float((sumOfSquares / Double(sampleCount)).squareRoot() / Double(Int16.max))
     }
+
+    /// Perceptual display level for the waveform bars: raw RMS → dBFS,
+    /// clamped to [-50, 0] dB and mapped linearly onto 0…1. Speech RMS
+    /// (~0.02–0.15 full scale) lands mid-range instead of pinning near
+    /// the bar floor; exact 0 stays 0.
+    static func display(rms: Float) -> Float {
+        guard rms > 0 else { return 0 }
+        let db = 20 * log10(rms)
+        return min(max(1 + db / 50, 0), 1)
+    }
 }
