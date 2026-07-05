@@ -6,6 +6,11 @@ import SwiftUI
 /// controller. Invalid URLs are saved anyway — the hint is advisory and
 /// runs live on the drafts.
 struct SettingsForm: View {
+    /// Single source for the fixed settings window content size (R40):
+    /// the macOS 26 fitting-size collapse forces both this form's root
+    /// frame and the controller's setContentSize to agree.
+    static let contentSize = CGSize(width: 420, height: 390)
+
     @ObservedObject var draft: SettingsDraft
     @ObservedObject var probeState: ProbeState
     let onSave: () -> Void
@@ -51,8 +56,8 @@ struct SettingsForm: View {
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
         // take either), leaving a title-bar-only window. 390 pt fits the four
         // fields, the cleanup picker, two section headers, hint rows, and the
-        // button row. Must match the controller's setContentSize.
-        .frame(width: 420, height: 390)
+        // button row. Shared with the controller's setContentSize (R40).
+        .frame(width: Self.contentSize.width, height: Self.contentSize.height)
     }
 
     /// Spinner while testing, green checkmark on success (D37). Thin UI —

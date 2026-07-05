@@ -4,8 +4,10 @@ import Foundation
 /// (D14). See docs/phase-2-spec.md §"Sub-phase 2A".
 enum AudioLevel {
     /// Normalized root-mean-square of little-endian Int16 PCM samples,
-    /// 0 (silence) … 1 (full scale). Empty or sub-sample input is 0; a
-    /// trailing odd byte is ignored.
+    /// 0 (silence) … ~1 (full scale; may marginally exceed 1 for
+    /// full-scale negative signals since |Int16.min| > Int16.max —
+    /// consumers clamp, see `display(rms:)`). Empty or sub-sample input
+    /// is 0; a trailing odd byte is ignored.
     static func rms(pcm16: Data) -> Float {
         let sampleCount = pcm16.count / MemoryLayout<Int16>.size
         guard sampleCount > 0 else { return 0 }

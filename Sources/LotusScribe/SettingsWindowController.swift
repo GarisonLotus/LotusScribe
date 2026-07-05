@@ -125,8 +125,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.title = "LotusScribe Settings"
         // NSHostingController's fitting size collapses to 0x0 on macOS 26
         // (title-bar-only window), even with an explicit root .frame — size
-        // the window directly. Must match SettingsForm's root frame.
-        window.setContentSize(NSSize(width: 420, height: 390))
+        // the window directly, sharing SettingsForm's root-frame constant (R40).
+        window.setContentSize(SettingsForm.contentSize)
         window.delegate = self  // windowWillClose cancels in-flight probe work
         self.window = window
     }

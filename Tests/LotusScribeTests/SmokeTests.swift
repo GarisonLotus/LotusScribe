@@ -2,9 +2,12 @@ import AppKit
 import Testing
 @testable import LotusScribe
 
-/// Smoke test: the hosted test bundle loads and links against the app target.
-@Test func appDelegateInitializes() {
-    #expect(AppDelegate() is NSApplicationDelegate)
+/// Smoke test (R3): the hosted app has already run
+/// applicationDidFinishLaunching by the time tests execute — assert the
+/// delegate really composed the dictation pipeline, not just that it links.
+@Test @MainActor func appDelegateInitializes() {
+    let delegate = NSApp.delegate as? AppDelegate
+    #expect(delegate?.dictationController != nil)
 }
 
 /// The programmatic Edit menu must route Cmd-V to paste: (LSUIElement fix).

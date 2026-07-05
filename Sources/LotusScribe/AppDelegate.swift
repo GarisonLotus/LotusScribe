@@ -9,7 +9,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItemController: StatusItemController?
     private var hotkeyMonitor: EventTapMonitor?
-    private var dictationController: DictationController?
+    // Internal (not private) so the hosted smoke test can assert real
+    // post-launch composition (R3).
+    private(set) var dictationController: DictationController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainMenu.install()

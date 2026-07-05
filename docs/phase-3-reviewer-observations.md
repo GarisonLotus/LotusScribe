@@ -113,16 +113,33 @@
 > Remaining verification is HUMAN-AT-SCREEN (spec §3C verify 2–5, user
 > supplies LLM endpoint/model).
 
+> Maintenance sweep reviewed 2026-07-05 (post-3C): APPROVED. Four items,
+> staged diff = exactly the 7 expected files, nothing beyond scope. R3:
+> smoke test now asserts `NSApp.delegate as? AppDelegate` composed
+> `dictationController` post-launch (real behavior — fails if the cast or
+> composition fails; the old always-true `is` check is gone);
+> `private(set)` widening is read-only (getter internal, setter private).
+> R30: doc-only — `rms` doc now says "~1, consumers clamp, see
+> display(rms:)" (leg a) and `onLevel` doc drops "not called after
+> stop()" for the late-dispatch/consumers-guard wording (leg b); zero
+> code change in either file. R32: comment-only at the 24 pt inset
+> naming the PillMetrics.bottomMargin coincidence. R40:
+> `SettingsForm.contentSize` (420×390) defined once, consumed at both
+> the root `.frame` and the controller's `setContentSize`; grep confirms
+> no third code literal (remaining 390/420 hits are the constant itself
+> and two comments, incl. the test-threshold comment). Independent
+> `make test`: 120 tests / 15 suites green (expected 120/15).
+
 ## Carried items
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
-| R3 | 0B (carried) | 0A smoke test is still link-smoke (`appDelegateInitializes`, with the pre-existing "'is' test is always true" warning); repoint at real behavior when convenient | open |
+| R3 | 0B (carried) | 0A smoke test is still link-smoke (`appDelegateInitializes`, with the pre-existing "'is' test is always true" warning); repoint at real behavior when convenient. CLOSED in maintenance sweep (post-3C): test asserts the launched delegate's `dictationController != nil` via read-only `private(set)` | closed (sweep) |
 | R4 | 0B (carried) | Legacy-keychain ACLs vs re-signing may break later-phase API-key reads. Precondition resolved (R27: stable team signing); close by exercising a Keychain read under the 5RC66Q82V9 identity. 3A's probe hits the no-key D13 endpoint — does not exercise this | open |
 | R7 | 1A (carried) | Combo keycode map is ANSI-positional (kVK_ANSI_*): "z" means the physical ANSI-Z key, not the layout character (AZERTY/Dvorak diverge). Revisit when hotkey-config UI lands (Phase 7+) | open (future phase) |
-| R30 | 2A (carried) | AudioLevel/AudioRecorder nits: (a) `AudioLevel.rms` unclamped vs its 0…1 doc (Int16.min-heavy buffer ≈ 1.00003); downstream protection lives in `AudioLevel.display(rms:)`'s min/max since the D35 fix; (b) `onLevel` doc line "not called after stop()" contradicted by consumer's own late-dispatch guard — doc wording fix owed. Cosmetic; fold into any AudioLevel follow-up | open (non-blocking) |
+| R30 | 2A (carried) | AudioLevel/AudioRecorder nits: (a) `AudioLevel.rms` unclamped vs its 0…1 doc (Int16.min-heavy buffer ≈ 1.00003); downstream protection lives in `AudioLevel.display(rms:)`'s min/max since the D35 fix; (b) `onLevel` doc line "not called after stop()" contradicted by consumer's own late-dispatch guard — doc wording fix owed. Cosmetic; fold into any AudioLevel follow-up. CLOSED in maintenance sweep (post-3C): doc-only fixes at both legs (rms "~1, consumers clamp"; onLevel late-dispatch wording); phase-2 archive row left as-is | closed (sweep) |
 | R31 | 2A (carried) | Pre-existing (phase 1, unchanged in kind): `handleTapEvent` re-enables on `.tapDisabledByTimeout` but not `.tapDisabledByUserInput`; under `.defaultTap` a dead tap still just means dead hotkey. Note only, per surgical-change rule | open (future phase) |
-| R32 | 2B (carried) | PillView bar-geometry literals (4 pt floor, 24 pt interior inset) view-local, single-site; interior-inset 24 numerically coincides with `PillMetrics.bottomMargin` — name or comment it if it ever wants a second site (R21 trigger). dB window bounds (-50, 20, 50) in AudioLevel.display: same posture, documented in doc comment | open (non-blocking) |
+| R32 | 2B (carried) | PillView bar-geometry literals (4 pt floor, 24 pt interior inset) view-local, single-site; interior-inset 24 numerically coincides with `PillMetrics.bottomMargin` — name or comment it if it ever wants a second site (R21 trigger). dB window bounds (-50, 20, 50) in AudioLevel.display: same posture, documented in doc comment. CLOSED in maintenance sweep (post-3C): comment at the 24 pt inset names the coincidence; comment-only; phase-2 archive row left as-is | closed (sweep) |
 | R34 | 2C (carried) | Straggler-attribution micro-window: a queued level block from a just-stopped capture could flip a NEW capture's `.warming` → `.recording` one frame early iff a human-timescale hotkey press beats a millisecond-old main-queue block — not realistic; cosmetic even if hit. Note only | open (non-blocking) |
 | R35 | 2C (carried) | GATE-TRIP LESSON — construction-smoke coverage for composition roots: any TCC-free composition-root type constructed on the launch path gets a construction test at introduction, not after a regression (D34 launch abort passed a full gate with zero construction coverage; AppKit swallows init-time NSExceptions silently). AppDelegate itself remains link-smoked only (R3) | open (process lesson) |
 
@@ -134,7 +151,7 @@
 | R37 | 3A | SettingsWindowController.swift was 214 code lines vs the ~200 target. FOLDED in 3C: SettingsForm extracted to SettingsForm.swift (mechanical move + picker row); controller now 196 code lines | closed (3C) |
 | R38 | 3B | Warm-up log cosmetics: (a) skip log blamed "not effective-enabled" for an unparseable URL; (b) retry log printed `Optional(200)`. FOLDED in 3C: dedicated unparseable-URL skip log; retry outcome maps nil → "transport failure" | closed (3C) |
 | R39 | 3B | Empty-string keys written via raw `defaults write` (bypassing draft.save's D25 empty→nil) made `isEnabled` true with unusable config. FOLDED in 3C: SettingsStore applies empty→nil at read time across all six string keys; regression test `emptyStringValuesReadAsNil` | closed (3C) |
-| R40 | 3C | Settings window size literals (420×390) now live at two sites in two FILES: `SettingsForm.body`'s `.frame` and the controller's `setContentSize` (macOS 26 fitting-size collapse forces both). Cross-referenced by comments and currently in sync, but the R23/R21 second-site trigger is met — name a shared constant next time either file is touched | open (non-blocking) |
+| R40 | 3C | Settings window size literals (420×390) now live at two sites in two FILES: `SettingsForm.body`'s `.frame` and the controller's `setContentSize` (macOS 26 fitting-size collapse forces both). Cross-referenced by comments and currently in sync, but the R23/R21 second-site trigger is met — name a shared constant next time either file is touched. CLOSED in maintenance sweep (post-3C): `SettingsForm.contentSize` consumed at both sites; no third literal | closed (sweep) |
 | R41 | 3C | Latent test-hygiene hazard: the controller's default warm-up closure runs a REAL `CleanupService.warmUp()` network Task; the XCTestSessionIdentifier guard covers only the AppDelegate launch trigger, not this seam. Every current test either stubs `warmUp:` or never persists a changed LLM config — but a future controller test that saves a changed llmEndpointURL/llmModel without stubbing fires a real request from the test process. Note for tester baselines | open (non-blocking) |
 
 ## Convention-violation tracking

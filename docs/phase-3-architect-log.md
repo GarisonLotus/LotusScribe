@@ -114,3 +114,15 @@ constant on next touch of either file; a doc-mandated now-edit fails
 CLAUDE.md §3. R41 (default warm-up closure = real-network seam): BACKLOG —
 every test injects a stub today; revisit only if a test ever constructs the
 controller without one. No spec divergence found; no round-trip.
+
+2026-07-05: MAINTENANCE SWEEP SHAPE NON-OBJECTION. (a) R3:
+AppDelegate.dictationController `private` → `private(set)` (getter
+internal, @testable-visible) so the hosted smoke test asserts real
+post-launch composition instead of mere linkage — minimal visibility
+relaxation, setter stays private, correct. (b) R40:
+`SettingsForm.contentSize` static on the form itself, referenced by
+SettingsWindowController.setContentSize — this IS the backlogged
+"shared constant on next touch"; the form is the natural owner (the
+size exists because of its root-frame workaround), and a separate
+PillMetrics-style enum would be a speculative third file for one
+CGSize.R40 backlog item closed.

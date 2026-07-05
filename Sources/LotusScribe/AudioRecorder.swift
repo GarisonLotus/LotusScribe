@@ -31,7 +31,8 @@ final class AudioRecorder {
 
     /// Per-chunk normalized RMS (D32), invoked on the main queue. The first
     /// invocation doubles as the engine-live signal (D29 — waveform means
-    /// "speak now"). Set before start(); not called after stop().
+    /// "speak now"). Set before start(). A block dispatched just before
+    /// stop() can still land after it returns — consumers guard (R30).
     var onLevel: ((Float) -> Void)?
 
     /// Installs the input tap and starts the engine. First call in an app's

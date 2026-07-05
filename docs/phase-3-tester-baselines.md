@@ -28,6 +28,7 @@ model whisper-large-v3, no key (D13).
 | 3A | 2026-07-05 | e79d800 (staged, not committed) | 89 tests / 13 suites | ×2 | green ×2, 0 failures |
 | 3B | 2026-07-05 | 4b3aa9d (staged, not committed) | 106 tests / 15 suites | ×2 | green ×2, 0 failures |
 | 3C | 2026-07-05 | 537f174 (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures |
+| debt-sweep | 2026-07-05 | c01f808 (R3/R30/R32/R40 staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures; "'is' test is always true" warning GONE (SmokeTests.swift force-recompiled via touch before run 1; 0 "always true" hits in xcodebuild output) |
 
 **3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
 AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,

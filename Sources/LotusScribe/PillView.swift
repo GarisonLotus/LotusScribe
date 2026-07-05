@@ -60,6 +60,8 @@ struct PillView: View {
     /// Raw RMS goes through the perceptual dBFS map here, at render
     /// time — stored levels stay raw per the D32 contract.
     private func barHeight(_ level: Float) -> CGFloat {
+        // The 24 pt interior inset is view-local; its numeric match with
+        // PillMetrics.bottomMargin is coincidental, not shared (R32).
         let maxHeight = PillMetrics.contentSize.height - 24
         let display = CGFloat(AudioLevel.display(rms: level))
         return 4 + display * (maxHeight - 4)
