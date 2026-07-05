@@ -29,21 +29,22 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** all three sub-phases committed + pushed: 2A 51a040d,
-2B 3a8a83e (D33 locked, R23/R29/R33 closed), 2C afe0c98 (pill wiring +
-prepare(); reviewer approved, architect non-objected — D23 error-path
-guard ruling-consistent, D29a pending Q6; tester green ×2). All
-automated gates clear.
+**Where we are:** 2A 51a040d, 2B 3a8a83e, 2C afe0c98, plus D34 hotfix
+c83031f: 2C's `engine.prepare()`-at-init raised a swallowed NSException
+in applicationDidFinishLaunching — dead hotkey every post-2C launch;
+found by orchestrator lldb at launch verification, D29a rescinded
+(D34), regression test added (R35 rule: construction-smoke for
+composition roots). Q5 closed: `event tap started (defaultTap)` under
+existing grants. Q6 closed by D34. All automated gates clear.
 
 **RESUME POINT (next): HUMAN-AT-SCREEN phase gate** — spec §2C verify
-1–6 (focus-steal, fullscreen, waveform, cold-start warming duration →
-closes Q6, state flashes, swallowing regression) PLUS folded 2A items
-(no-9-leak, Q5 defaultTap Console record). Results → tester baselines
-by orchestrator or a dispatched tester; Q5/Q6 closures → architect log.
-Phase 2 closes only after these pass; then Phase 3 bootstrap (new docs
-set per CLAUDE.md §5).
+1–6 (focus-steal, fullscreen, waveform, cold-start incl. observed
+warming duration → baselines, state flashes, swallowing regression)
+PLUS folded 2A no-9-leak check. Results → tester baselines. Phase 2
+closes after these pass; then Phase 3 bootstrap (new docs set per
+CLAUDE.md §5).
 
-**Baseline:** 74 tests / 12 suites green ×2 at afe0c98 (2C gate).
+**Baseline:** 75 tests / 12 suites green ×2 at c83031f (D34 gate).
 
 **HUMAN-AT-SCREEN owed (2A, folds into 2C phase gate):** no-9-leak
 dictation check; Q5 defaultTap TCC record ("event tap started (mode)"
