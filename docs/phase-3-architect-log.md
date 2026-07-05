@@ -94,3 +94,23 @@ needs it (CLAUDE.md §2). R38 (warm-up log cosmetics) and R39 (raw-defaults
 empty string bypasses D25 empty→nil; degrades safely to a failed cleanup +
 raw insert) are 3C intake — both touch surfaces 3C reworks anyway
 (warm-up hook, settings/draft plumbing).
+
+2026-07-05: 3C SHAPE NON-OBJECTION (post-execution, reviewer 120/15
+approved). (a) ConnectionProbe `send(_:)` extraction: correct second-caller
+factoring — private, transport+status gate only, per-endpoint decoding
+stays in the callers; the hardcoded "Timed out after 10 s" reason is safe
+while both probes share D36/D44's 10 s. (b) Warm-up seam + single-write-path
+confirmed against source: `persist()` is the only `draft.save()` caller
+(probe-success, Save Anyway, both-URLs-empty), and the before/after LLM
+tuple compare + `CleanupService.isEnabled` gate implements D42's
+endpoint-change trigger exactly — clearing the endpoint changes the tuple
+but disables cleanup, so no warm-up fires (correct). The `warmUp ?? { Task
+{ … } }` init-body fallback (default params can't capture `store`) is the
+right minimal seam. (c) SettingsForm.swift split: boundary is exactly
+view-vs-lifecycle — form owns drafts/probeState rendering + Esc route,
+controller owns tasks/sheet/persist; mechanical per R37, picker row is the
+only net-new. R40 (420x390 literal in two files): BACKLOG — name a shared
+constant on next touch of either file; a doc-mandated now-edit fails
+CLAUDE.md §3. R41 (default warm-up closure = real-network seam): BACKLOG —
+every test injects a stub today; revisit only if a test ever constructs the
+controller without one. No spec divergence found; no round-trip.

@@ -24,6 +24,7 @@ final class SettingsDraft: ObservableObject {
     @Published var sttModel = ""
     @Published var llmEndpointURL = ""
     @Published var llmModel = ""
+    @Published var cleanupLevel: CleanupLevel = .standard
 
     private let store: SettingsStore
 
@@ -39,14 +40,17 @@ final class SettingsDraft: ObservableObject {
         sttModel = store.sttModel ?? ""
         llmEndpointURL = store.llmEndpointURL ?? ""
         llmModel = store.llmModel ?? ""
+        cleanupLevel = CleanupLevel.resolve(store.cleanupLevel)  // D40
     }
 
-    /// Write all four D9 keys; empty → nil per D25 (unset keeps its meaning).
+    /// Write the four D9 keys (empty → nil per D25 — unset keeps its
+    /// meaning) plus the D40 cleanup level's raw value.
     func save() {
         store.sttEndpointURL = stored(sttEndpointURL)
         store.sttModel = stored(sttModel)
         store.llmEndpointURL = stored(llmEndpointURL)
         store.llmModel = stored(llmModel)
+        store.cleanupLevel = cleanupLevel.rawValue
     }
 
     private func stored(_ value: String) -> String? {
@@ -68,14 +72,15 @@ final class ProbeState: ObservableObject {
     @Published var phase: ProbePhase = .idle
 }
 
-/// Bare settings pane (D21): SwiftUI `Form` hosted in an NSHostingController-backed
-/// window, opened from the status-item menu. Touches only the four D9 keys;
+/// Bare settings pane (D21): SwiftUI SettingsForm hosted in an
+/// NSHostingController-backed window, opened from the status-item menu.
 /// SettingsStore remains the single backing store (spec §1E invariants).
 /// Buffered-edit per D26: Save is the only write path; Cancel and the
 /// titlebar close button write nothing (drafts are local, so titlebar close
 /// is automatically a Cancel — there is no other write path).
-/// D37 amends Save only: the write-then-close step is gated on a connection
-/// probe of the drafted STT endpoint (see docs/phase-3-spec.md §3A).
+/// D37/D44 amend Save only: the write-then-close step is gated on connection
+/// probes of every drafted non-empty endpoint, STT then LLM
+/// (see docs/phase-3-spec.md §3A/§3C).
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private static let logger = Logger(
         subsystem: "com.garisonlotus.LotusScribe", category: "SettingsWindowController")
@@ -83,20 +88,33 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     let draft: SettingsDraft
     let probeState = ProbeState()
 
-    /// Injected probe seam (D14) so Save-path logic tests headlessly.
-    private let runProbe: (String, String) async -> ProbeResult
-    /// Exposed read-only so tests can await Save's async probe leg.
+    private let store: SettingsStore
+    /// Injected probe seams (D14) so Save-path logic tests headlessly.
+    private let runSTTProbe: (String, String) async -> ProbeResult
+    private let runLLMProbe: (String, String) async -> ProbeResult
+    /// D42 endpoint-change warm-up; injected so tests can count firings.
+    private let fireWarmUp: () -> Void
+    /// Exposed read-only so tests can await Save's async probe leg and
+    /// assert R36 stale-task cancellation.
     private(set) var probeTask: Task<Void, Never>?
-    private var autoCloseTask: Task<Void, Never>?
+    private(set) var autoCloseTask: Task<Void, Never>?
 
     init(
         store: SettingsStore,
-        probe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
+        sttProbe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
             await ConnectionProbe().testSTT(endpoint: endpoint, model: model)
-        }
+        },
+        llmProbe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
+            await ConnectionProbe().testLLM(endpoint: endpoint, model: model)
+        },
+        warmUp: (() -> Void)? = nil
     ) {
+        self.store = store
         draft = SettingsDraft(store: store)
-        runProbe = probe
+        runSTTProbe = sttProbe
+        runLLMProbe = llmProbe
+        // Not a default parameter value — those can't reference `store`.
+        fireWarmUp = warmUp ?? { Task { await CleanupService(settings: store).warmUp() } }
         super.init(window: nil)
         let window = NSWindow(contentViewController: NSHostingController(
             rootView: SettingsForm(
@@ -108,7 +126,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         // NSHostingController's fitting size collapses to 0x0 on macOS 26
         // (title-bar-only window), even with an explicit root .frame — size
         // the window directly. Must match SettingsForm's root frame.
-        window.setContentSize(NSSize(width: 420, height: 350))
+        window.setContentSize(NSSize(width: 420, height: 390))
         window.delegate = self  // windowWillClose cancels in-flight probe work
         self.window = window
     }
@@ -142,26 +160,57 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             "post-show: window=\(self.window != nil ? "non-nil" : "nil", privacy: .public) isVisible=\(self.window?.isVisible ?? false, privacy: .public) frame=\(String(describing: self.window?.frame), privacy: .public)")
     }
 
-    /// Save button / Return (D37): empty drafted STT URL → save+close as
-    /// before (D36: clearing settings is never blocked by a guaranteed-fail
-    /// test); otherwise gate the write-then-close on a connection probe.
+    /// Save button / Return (D37/D44): probe every endpoint whose drafted URL
+    /// is non-empty, STT then LLM; both empty → save+close as before (D36:
+    /// clearing settings is never blocked by a guaranteed-fail test).
     func save() {
-        let endpoint = draft.sttEndpointURL
-        guard !endpoint.isEmpty else {
-            draft.save()
+        // R36: a Save re-entered during the 2 s success flash must not
+        // inherit the stale flash's auto-close (the window would vanish
+        // mid-second-probe) or a stale probe task.
+        probeTask?.cancel()
+        probeTask = nil
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+
+        let sttEndpoint = draft.sttEndpointURL
+        let llmEndpoint = draft.llmEndpointURL
+        guard !sttEndpoint.isEmpty || !llmEndpoint.isEmpty else {
+            persist()
             window?.close()
             return
         }
 
         probeState.phase = .testing
-        let model = draft.sttModel
+        let sttModel = draft.sttModel
+        let llmModel = draft.llmModel
         probeTask = Task { [weak self] in
             guard let self else { return }
-            let result = await self.runProbe(endpoint, model)
-            // Mid-test close cancelled us — write nothing (D26/D37).
+            let result = await self.probeEndpoints(
+                sttEndpoint: sttEndpoint, sttModel: sttModel,
+                llmEndpoint: llmEndpoint, llmModel: llmModel)
+            // Mid-test close or re-entrant Save cancelled us — this leg
+            // owns nothing anymore (D26/D37).
             guard !Task.isCancelled else { return }
             self.handleProbeResult(result)
         }
+    }
+
+    /// D44 sequential probes: skip empty URLs, stop at the first failure,
+    /// prefix the reason with the endpoint's name so the sheet says WHICH
+    /// connection failed.
+    private func probeEndpoints(
+        sttEndpoint: String, sttModel: String,
+        llmEndpoint: String, llmModel: String
+    ) async -> ProbeResult {
+        if !sttEndpoint.isEmpty,
+           case .failure(let reason) = await runSTTProbe(sttEndpoint, sttModel) {
+            return .failure(reason: "Speech to Text: \(reason)")
+        }
+        if !llmEndpoint.isEmpty,
+           case .failure(let reason) = await runLLMProbe(llmEndpoint, llmModel) {
+            return .failure(reason: "Cleanup LLM: \(reason)")
+        }
+        return .success
     }
 
     /// Cancel button / Esc: close without writing (D26).
@@ -184,7 +233,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         case .success:
             // D37: persist immediately — a force-close during the 2 s
             // checkmark flash cannot lose the save.
-            draft.save()
+            persist()
             probeState.phase = .success
             autoCloseTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(2))
@@ -194,6 +243,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         case .failure(let reason):
             probeState.phase = .failure(reason)
             presentFailureSheet(reason: reason)
+        }
+    }
+
+    /// The single store-write path (D37: probe-success and Save Anyway both
+    /// land here). D42 endpoint-change trigger: warm-up fires when the save
+    /// changed llmEndpointURL/llmModel and cleanup is effective-enabled
+    /// after the write; fire-and-forget — never blocks Save or close.
+    private func persist() {
+        let llmBefore = (store.llmEndpointURL, store.llmModel)
+        draft.save()
+        let llmAfter = (store.llmEndpointURL, store.llmModel)
+        if llmAfter != llmBefore, CleanupService(settings: store).isEnabled {
+            fireWarmUp()
         }
     }
 
@@ -210,89 +272,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             guard let self else { return }
             if response == .alertFirstButtonReturn {
                 // D37: "close anyways" honors the Save click — persist.
-                self.draft.save()
+                self.persist()
                 self.window?.close()
             } else {
                 self.probeState.phase = .idle  // back to editing, drafts intact
             }
-        }
-    }
-}
-
-/// Four text fields edit local drafts only (D26) — no store writes while
-/// typing. Save/Cancel actions come from the controller. Invalid URLs are
-/// saved anyway — the hint is advisory and runs live on the drafts.
-private struct SettingsForm: View {
-    @ObservedObject var draft: SettingsDraft
-    @ObservedObject var probeState: ProbeState
-    let onSave: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section("Speech to Text") {
-                    endpointField("Endpoint URL", text: $draft.sttEndpointURL)
-                    TextField("Model", text: $draft.sttModel)
-                }
-                Section("Cleanup LLM") {
-                    endpointField("Endpoint URL", text: $draft.llmEndpointURL)
-                    TextField("Model", text: $draft.llmModel)
-                }
-            }
-            .formStyle(.grouped)
-            .disabled(probeState.phase == .testing)
-            HStack {
-                probeIndicator
-                Spacer()
-                Button("Cancel", action: onCancel)
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: onSave)
-                    .keyboardShortcut(.defaultAction)
-            }
-            .disabled(probeState.phase == .testing)
-            .padding([.horizontal, .bottom])
-        }
-        // D37: Esc must still cancel mid-test while the buttons are disabled
-        // — key equivalents skip disabled buttons, so cancelOperation lands
-        // here instead.
-        .onExitCommand(perform: onCancel)
-        // Both dimensions fixed: on macOS 26 the NSHostingController fitting
-        // size collapses to 0x0 for a grouped Form (width-only .frame didn't
-        // take either), leaving a title-bar-only window. 350 pt fits the four
-        // fields, two section headers, hint rows, and the button row.
-        .frame(width: 420, height: 350)
-    }
-
-    /// Spinner while testing, green checkmark on success (D37). Thin UI —
-    /// verified HUMAN-AT-SCREEN, not unit-tested. Failure needs no row
-    /// indicator: the sheet carries the message.
-    @ViewBuilder
-    private var probeIndicator: some View {
-        switch probeState.phase {
-        case .testing:
-            ProgressView()
-                .controlSize(.small)
-            Text("Testing connection…")
-                .font(.caption)
-        case .success:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-            Text("Connected")
-                .font(.caption)
-        case .idle, .failure:
-            EmptyView()
-        }
-    }
-
-    @ViewBuilder
-    private func endpointField(_ label: String, text: Binding<String>) -> some View {
-        TextField(label, text: text)
-        if !text.wrappedValue.isEmpty,
-           !SettingsValidation.isValidEndpointURL(text.wrappedValue) {
-            Text("Not a valid http(s) URL — saved anyway")
-                .font(.caption)
-                .foregroundStyle(.orange)
         }
     }
 }

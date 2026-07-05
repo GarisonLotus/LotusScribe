@@ -69,6 +69,50 @@
 > verification is HUMAN-AT-SCREEN (spec §3B verify 2–5, user supplies LLM
 > endpoint/model).
 
+> 3C gate reviewed 2026-07-05: EXECUTION APPROVED. D44 verified: `save()`
+> probes each endpoint whose DRAFTED URL is non-empty, sequentially STT
+> then LLM, stopping at the first failure; sheet reason prefixed with the
+> failing endpoint name ("Speech to Text: …" / "Cleanup LLM: …",
+> test-asserted both ways); both-empty → save+close with no probe
+> (Issue.record tripwire on both stubs). `testLLM` body key-set asserted
+> exactly {model, messages, max_tokens} (no keep_alive), user("ping"),
+> max_tokens 1, `timeoutInterval == 10`; success = 200 + decodable
+> `choices[0].message`; invalid URL fails without touching the session
+> (tripwire-stubbed). `send(_:)` extraction (second caller — R21-correct
+> timing) is behavior-neutral for testSTT: identical timeout/transport/
+> non-HTTP/non-200 mapping, decode stays endpoint-specific; all 3A probe
+> tests unchanged and green. D26/D40: picker binds through the draft;
+> level written ONLY in `draft.save()`; `reload()` reseeds via
+> `CleanupLevel.resolve` (round-trip test). R36 FOLDED: `save()` entry
+> cancels stale probeTask AND autoCloseTask; regression test holds the
+> stale task handle and asserts `.isCancelled` + window survival;
+> MainActor serialization keeps either interleaving safe (3A analysis
+> holds). R37 FOLDED: SettingsForm.swift extraction is mechanical (diff =
+> move + spec'd picker row + height comment; `.onExitCommand` Esc path
+> preserved); controller now 196 code lines (< ~200). R38 FOLDED: skip
+> log distinguishes unparseable URL from not-enabled; retry log maps nil
+> → "transport failure", no `Optional()`. R39 FOLDED: empty→nil applied
+> at read time uniformly across ALL SIX string keys (four D9 +
+> sttLanguage + cleanupLevel — engineer flag said five, undercount only),
+> regression test writes raw "" and reads nil. D42 warm-up: `persist()`
+> verified as the SOLE store-write path (probe-success, Save Anyway, and
+> the both-empty shortcut all route through it; `draft.save()` has no
+> other production caller); warm-up fires iff (llmEndpointURL, llmModel)
+> store-read tuple changed across the save AND effective-enabled after
+> the write — injected-counter tests assert fired-once on change and
+> zero on no-change; both-empty path can never fire it (nil URL →
+> isEnabled false). Engineer flags all verified: probeFailure test
+> expectation change is D44-prefix-only (no other drift); window height
+> 350→390 in sync at both sites (now cross-file — R40); `autoCloseTask`
+> `private(set)` widening matches the probeTask precedent, read-only.
+> Cancellation preserved: windowWillClose cancels both tasks; the probe
+> leg's post-await `Task.isCancelled` guard means a late completion
+> writes nothing. Pre-existing behavior change is exactly the D44 prefix
+> — intentional-only confirmed. Independent `make test`: 120 tests / 15
+> suites green (expected 120/15). New rows R40–R41 (both non-blocking).
+> Remaining verification is HUMAN-AT-SCREEN (spec §3C verify 2–5, user
+> supplies LLM endpoint/model).
+
 ## Carried items
 
 | id | first raised | item | status |
@@ -86,10 +130,12 @@
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
-| R36 | 3A | `save()` doesn't cancel a prior probeTask/autoCloseTask: during the 2 s success flash the buttons re-enable (disabled only on `.testing`), so a second Save spawns a fresh probe while the first flash's auto-close still fires at T+2 s — window closes mid-second-probe, probe cancelled, nothing extra written (first save already persisted). Outcome correct by accident; have `save()` cancel stale tasks if this surface is touched in 3B | open (non-blocking) |
-| R37 | 3A | SettingsWindowController.swift is now 214 code lines vs the ~200 target (code-norms): file hosts validation + draft + probe state + controller + form. Natural split point is 3B's per-endpoint probe generalization (e.g. SettingsForm or ProbePhase/ProbeState to their own file) | open (fold into 3B) |
-| R38 | 3B | Warm-up log cosmetics: (a) the skip log says "not effective-enabled" even when the actual cause is an unparseable `llmEndpointURL` (isEnabled true, `URL(string:)` nil — same guard); (b) retry-outcome log prints `Optional(200)` via `String(describing:)`. Log-only path, behavior correct; fold into 3C when the endpoint-change warm-up trigger touches this surface | open (non-blocking) |
-| R39 | 3B | Empty-string LLM keys written via raw `defaults write` (bypassing draft.save's D25 empty→nil) make `isEnabled` true with unusable config; every downstream path degrades safely (cleanup → `.notConfigured` → D43 raw fallback; warmUp → URL-parse guard → skip log). Note only — 3C's picker/save path is the sole intended writer | open (non-blocking) |
+| R36 | 3A | `save()` doesn't cancel a prior probeTask/autoCloseTask: during the 2 s success flash the buttons re-enable (disabled only on `.testing`), so a second Save spawns a fresh probe while the first flash's auto-close still fires at T+2 s — window closes mid-second-probe. FOLDED in 3C: `save()` entry cancels both stale tasks; regression test `reentrantSaveCancelsStaleAutoClose` asserts cancellation + window survival | closed (3C) |
+| R37 | 3A | SettingsWindowController.swift was 214 code lines vs the ~200 target. FOLDED in 3C: SettingsForm extracted to SettingsForm.swift (mechanical move + picker row); controller now 196 code lines | closed (3C) |
+| R38 | 3B | Warm-up log cosmetics: (a) skip log blamed "not effective-enabled" for an unparseable URL; (b) retry log printed `Optional(200)`. FOLDED in 3C: dedicated unparseable-URL skip log; retry outcome maps nil → "transport failure" | closed (3C) |
+| R39 | 3B | Empty-string keys written via raw `defaults write` (bypassing draft.save's D25 empty→nil) made `isEnabled` true with unusable config. FOLDED in 3C: SettingsStore applies empty→nil at read time across all six string keys; regression test `emptyStringValuesReadAsNil` | closed (3C) |
+| R40 | 3C | Settings window size literals (420×390) now live at two sites in two FILES: `SettingsForm.body`'s `.frame` and the controller's `setContentSize` (macOS 26 fitting-size collapse forces both). Cross-referenced by comments and currently in sync, but the R23/R21 second-site trigger is met — name a shared constant next time either file is touched | open (non-blocking) |
+| R41 | 3C | Latent test-hygiene hazard: the controller's default warm-up closure runs a REAL `CleanupService.warmUp()` network Task; the XCTestSessionIdentifier guard covers only the AppDelegate launch trigger, not this seam. Every current test either stubs `warmUp:` or never persists a changed LLM config — but a future controller test that saves a changed llmEndpointURL/llmModel without stubbing fires a real request from the test process. Note for tester baselines | open (non-blocking) |
 
 ## Convention-violation tracking
 

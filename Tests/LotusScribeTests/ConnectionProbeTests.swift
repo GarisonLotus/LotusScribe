@@ -31,11 +31,12 @@ final class ProbeStubURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-/// ConnectionProbe tests (spec §3A, D36): stubbed URLSession, never the real
-/// network. Global handler → `.serialized`.
+/// ConnectionProbe tests (spec §3A/§3C, D36/D44): stubbed URLSession, never
+/// the real network. Global handler → `.serialized`.
 @Suite(.serialized)
 final class ConnectionProbeTests {
     private let endpoint = "https://stt.test/v1/audio/transcriptions"
+    private let llmEndpoint = "https://llm.test/v1/chat/completions"
     private let session: URLSession
 
     init() {
@@ -139,6 +140,72 @@ final class ConnectionProbeTests {
             return .failure(URLError(.badURL))
         }
         let result = await probe().testSTT(endpoint: "not-a-url", model: "m")
+        #expect(failureReason(of: result)?.contains("Invalid endpoint URL") == true)
+    }
+
+    // MARK: testLLM (spec §3C, D44)
+
+    @Test func llmSucceedsOn200WithChatCompletionJSON() async {
+        ProbeStubURLProtocol.handler = { request in
+            .success((
+                Self.response(for: request),
+                Data(#"{"choices":[{"message":{"content":"pong"}}]}"#.utf8)))
+        }
+        let result = await probe().testLLM(endpoint: llmEndpoint, model: "qwen3-8b")
+        #expect(result == .success)
+    }
+
+    /// D44: minimal, strictly standard chat completion — body key-set exactly
+    /// {model, messages, max_tokens} (no keep_alive), user("ping"),
+    /// max_tokens 1, 10 s timeout.
+    @Test func llmRequestMatchesSpec() async throws {
+        nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
+        ProbeStubURLProtocol.handler = { request in
+            captured = (request, StubURLProtocol.bodyData(of: request))
+            return .success(
+                (Self.response(for: request), Data(#"{"choices":[{"message":{}}]}"#.utf8)))
+        }
+
+        _ = await probe().testLLM(endpoint: llmEndpoint, model: "qwen3-8b")
+
+        let (request, body) = try #require(captured)
+        #expect(request.url?.absoluteString == llmEndpoint)
+        #expect(request.httpMethod == "POST")
+        #expect(request.timeoutInterval == 10)  // D44
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(Set(json.keys) == ["model", "messages", "max_tokens"])  // D44: no keep_alive
+        #expect(json["model"] as? String == "qwen3-8b")
+        #expect(json["max_tokens"] as? Int == 1)
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(messages == [["role": "user", "content": "ping"]])
+    }
+
+    @Test func llmNon200FailsWithStatusInReason() async {
+        ProbeStubURLProtocol.handler = { request in
+            .success((Self.response(for: request, status: 404), Data("nope".utf8)))
+        }
+        let result = await probe().testLLM(endpoint: llmEndpoint, model: "m")
+        #expect(failureReason(of: result)?.contains("404") == true)
+    }
+
+    /// D44: 200 without a decodable `choices[0].message` is a failure.
+    @Test func llmMissingChoicesFails() async {
+        ProbeStubURLProtocol.handler = { request in
+            .success((Self.response(for: request), Data(#"{"choices":[]}"#.utf8)))
+        }
+        let result = await probe().testLLM(endpoint: llmEndpoint, model: "m")
+        #expect(failureReason(of: result)?.isEmpty == false)
+    }
+
+    /// D44: same invalid-URL mapping as testSTT — no network touched.
+    @Test func llmInvalidURLFailsWithoutNetwork() async {
+        ProbeStubURLProtocol.handler = { _ in
+            Issue.record("no request may be sent for an un-parseable URL")
+            return .failure(URLError(.badURL))
+        }
+        let result = await probe().testLLM(endpoint: "not-a-url", model: "m")
         #expect(failureReason(of: result)?.contains("Invalid endpoint URL") == true)
     }
 }

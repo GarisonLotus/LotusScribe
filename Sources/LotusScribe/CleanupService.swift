@@ -117,10 +117,14 @@ struct CleanupService {
         guard
             isEnabled,
             let endpoint = settings.llmEndpointURL,
-            let url = URL(string: endpoint),
             let model = settings.llmModel
         else {
             Self.logger.info("warm-up skipped — cleanup not effective-enabled")
+            return
+        }
+        // R38: an unparseable URL is its own skip reason, not "not enabled".
+        guard let url = URL(string: endpoint) else {
+            Self.logger.info("warm-up skipped — llmEndpointURL is not a parseable URL")
             return
         }
 
@@ -135,8 +139,9 @@ struct CleanupService {
             Self.logger.info("warm-up HTTP \(status) — retrying once without keep_alive")
             body.keepAlive = nil
             let retryStatus = await sendWarmUp(url: url, body: body)
-            Self.logger.info(
-                "warm-up retry outcome: \(String(describing: retryStatus), privacy: .public)")
+            // R38: no Optional() wrapper — nil status means transport failure.
+            let outcome = retryStatus.map { "HTTP \($0)" } ?? "transport failure"
+            Self.logger.info("warm-up retry outcome: \(outcome, privacy: .public)")
         } else if let status {
             Self.logger.info("warm-up done (HTTP \(status))")
         }

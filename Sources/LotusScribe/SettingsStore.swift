@@ -2,7 +2,8 @@ import Foundation
 
 /// UserDefaults-backed settings storage. See docs/phase-0-spec.md §Sub-phase 0B.
 ///
-/// Keys are the four D9 keys plus `sttLanguage` (D18); all default nil.
+/// Keys are the four D9 keys plus `sttLanguage` (D18) and `cleanupLevel`
+/// (D40); all default nil. Empty strings read as nil (D25 at read time, R39).
 /// Secrets never live here — API keys go through KeychainStore.
 final class SettingsStore {
     private let defaults: UserDefaults
@@ -12,37 +13,45 @@ final class SettingsStore {
     }
 
     var sttEndpointURL: String? {
-        get { defaults.string(forKey: "sttEndpointURL") }
+        get { normalizedString(forKey: "sttEndpointURL") }
         set { defaults.set(newValue, forKey: "sttEndpointURL") }
     }
 
     var sttModel: String? {
-        get { defaults.string(forKey: "sttModel") }
+        get { normalizedString(forKey: "sttModel") }
         set { defaults.set(newValue, forKey: "sttModel") }
     }
 
     var llmEndpointURL: String? {
-        get { defaults.string(forKey: "llmEndpointURL") }
+        get { normalizedString(forKey: "llmEndpointURL") }
         set { defaults.set(newValue, forKey: "llmEndpointURL") }
     }
 
     var llmModel: String? {
-        get { defaults.string(forKey: "llmModel") }
+        get { normalizedString(forKey: "llmModel") }
         set { defaults.set(newValue, forKey: "llmModel") }
     }
 
     /// D40: cleanup level raw value ("off"/"light"/"standard"); nil or
     /// unrecognized resolves to `.standard` via `CleanupLevel.resolve`.
-    /// Settings-pane picker arrives in 3C — until then `defaults write` only.
+    /// Written by the settings-pane picker (3C).
     var cleanupLevel: String? {
-        get { defaults.string(forKey: "cleanupLevel") }
+        get { normalizedString(forKey: "cleanupLevel") }
         set { defaults.set(newValue, forKey: "cleanupLevel") }
     }
 
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {
-        get { defaults.string(forKey: "sttLanguage") }
+        get { normalizedString(forKey: "sttLanguage") }
         set { defaults.set(newValue, forKey: "sttLanguage") }
+    }
+
+    /// D25 empty→nil applied at read time (R39): a raw `defaults write` of ""
+    /// bypasses draft.save's normalization, and an empty string must never
+    /// count as "set" for effective-enabled checks (D40).
+    private func normalizedString(forKey key: String) -> String? {
+        guard let value = defaults.string(forKey: key), !value.isEmpty else { return nil }
+        return value
     }
 }

@@ -56,6 +56,18 @@ final class SettingsStoreTests {
         #expect(store.llmModel == nil)
     }
 
+    // R39 regression: a raw `defaults write` of "" bypasses draft.save's
+    // D25 empty→nil normalization — the store must apply it at read time so
+    // empty strings can never flip effective-enabled checks (D40).
+    @Test func emptyStringValuesReadAsNil() {
+        defaults.set("", forKey: "llmEndpointURL")
+        defaults.set("", forKey: "llmModel")
+
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.llmEndpointURL == nil)
+        #expect(store.llmModel == nil)
+    }
+
     @Test func valuesPersistAcrossStoreInstances() {
         let writer = SettingsStore(defaults: defaults)
         writer.sttModel = "whisper-1"

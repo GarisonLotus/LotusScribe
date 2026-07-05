@@ -27,6 +27,7 @@ model whisper-large-v3, no key (D13).
 |------|------|-------------|--------|------|--------|
 | 3A | 2026-07-05 | e79d800 (staged, not committed) | 89 tests / 13 suites | ×2 | green ×2, 0 failures |
 | 3B | 2026-07-05 | 4b3aa9d (staged, not committed) | 106 tests / 15 suites | ×2 | green ×2, 0 failures |
+| 3C | 2026-07-05 | 537f174 (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures |
 
 **3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
 AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,
@@ -87,6 +88,51 @@ worked via the live-settings read), HTTP-400 -> retry-sans-keep_alive
 leg observed in hosted tests.Negative paths (dead-host verify 3,
 level-off verify 4) user-waived ("continue") — both unit-covered (D43
 fallback, isEnabled). **3B CLOSED at 2083eb0.**
+
+**3C per-suite breakdown (120 = 118 in-suite + 2 top-level):**
+AudioLevelTests 10, CleanupLevelTests 6, CleanupServiceTests 11,
+ConnectionProbeTests 12 (+5: llmSucceedsOn200WithChatCompletionJSON,
+llmRequestMatchesSpec, llmNon200FailsWithStatusInReason,
+llmMissingChoicesFails, llmInvalidURLFailsWithoutNetwork),
+DictationControllerTests 4, HotkeyStateMachineTests 22, KeychainStoreTests 5,
+MultipartBodyTests 5, PillPanelTests 5, PillViewModelTests 2,
+SettingsStoreTests 7 (+1: llmModelRoundTrips), SettingsValidationTests 2,
+SettingsWindowControllerTests 15 (+8: cleanupLevelRoundTripsThroughDraft,
+emptyLLMURLSkipsLLMProbe, sttFailureStopsChainBeforeLLMProbe,
+llmFailureNamesEndpointAndWritesNothing, bothProbesGreenPersistsAndSucceeds,
+llmChangeSaveFiresWarmUpOnce, noChangeSaveFiresNoWarmUp,
+reentrantSaveCancelsStaleAutoClose), TranscriptionServiceTests 6,
+WavEncoderTests 6, top-level (no suite) 2 (appDelegateInitializes,
+mainMenuRoutesPaste). Delta vs 106/15 baseline: +5 ConnectionProbeTests
++1 SettingsStoreTests +8 SettingsWindowControllerTests = 120/15, matching
+engineer claim (106 + 14).
+
+**3C R41 watch — CLEAN:** the default warm-up closure (real network) is not
+exercised by any test. All four `[CleanupService] warm-up` log lines in the
+full run-2 log occur strictly inside CleanupServiceTests' own stub-driven
+tests (warmUpRequestMatchesSpec, warmUpRetriesOnceWithoutKeepAliveOnNon2xx,
+warmUpSkippedWhenNotEnabled). The SettingsWindowControllerTests warm-up
+tests (llmChangeSaveFiresWarmUpOnce, noChangeSaveFiresNoWarmUp) emitted zero
+CleanupService lines — injected counter path only. No outbound-host strings
+(vllm/garison) and no connection-failure noise anywhere in the log. Run 1
+tail consistent (no CleanupService lines in the settings-tests region).
+
+**3C cross-suite stub isolation:** clean — TranscriptionServiceTests,
+ConnectionProbeTests, CleanupServiceTests all green both runs, no
+URLProtocol handler bleed observed.
+
+**3C warnings:** known-noise only (destination auto-pick, NSCGS/CA during
+PillPanelTests, task-name-port, CursorUI ViewBridge, SettingsWindowController
+show() debug logs). No new entries.
+
+**3C CROSS-CHECK:** parallel-mode — orchestrator collates; reviewer 120/15
+inlined: MATCHED (tester independent ×2: 120 tests / 15 suites, green both).
+
+**HUMAN-AT-SCREEN (3C): PENDING** — spec §3C verify items 2–5: (2) level
+Picker selection persists across settings reopen, (3) dual-probe failure
+sheet names the failing endpoint (STT vs LLM), (4) warm-up-on-endpoint-change
+log line observed on real Save with changed LLM endpoint, (5) D38 dictation
+regression clean + 390 pt window fit (no clipping/scroll).
 
 ## Flake registry (known-noise, carried from phase 2)
 
