@@ -19,7 +19,50 @@ prompt fires at first recording start, not launch.
 
 ## Phase 2 gates
 
-**Last gate: 2C** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
+**Last gate: 2C-fix (D34)** (2026-07-05, PARALLEL mode — reviewer ran
+concurrently; staged, NOT committed; code base afe0c98, HEAD 32b9d04
+docs-only handoff commit).
+- **Counts:** 75 tests in 12 suites, 0 failures — `make test` run TWICE,
+  both runs identical (75/12 green each, TEST SUCCEEDED). Delta vs 2C
+  baseline: +1 test, suites unchanged — DictationControllerTests 3→4
+  (new D34 regression test `constructionDoesNotRaise`), matching
+  engineer claim exactly.
+- **Per-suite (run 2):** AudioLevelTests 5, DictationControllerTests 4,
+  HotkeyStateMachineTests 22, KeychainStoreTests 5, MultipartBodyTests 5,
+  PillPanelTests 5, PillViewModelTests 2, SettingsStoreTests 6,
+  SettingsValidationTests 2, SettingsWindowControllerTests 5,
+  TranscriptionServiceTests 6, WavEncoderTests 6 = 73 in suites + 2
+  top-level tests (appDelegateInitializes, mainMenuRoutesPaste) = 75.
+  Only DictationControllerTests changed vs the 2C breakdown.
+- **Staged surface:** AudioRecorder.swift (D34: AudioRecorder-init
+  `engine.prepare()` deleted — launch-blocking NSException),
+  DictationControllerTests.swift (+1 regression test), 2 docs
+  (phase-2-architect-log.md, phase-2-spec.md) — matches D34 scope.
+- **Cross-check:** parallel-mode — orchestrator collates. Tester counts
+  match engineer's claimed 75/12 green ×2.
+- **Warnings:** registry noise as usual (destination auto-pick,
+  DetachedSignatures, task-name-port, Accessibility-not-vending). One
+  non-registry family observed during PillPanelTests: `[NSCGS] Warning:
+  Invalid attempt to open a new transaction during CA commit` (×2) plus
+  `[NSCGS] Ignoring request to entangle context after pre-commit` (×8)
+  — cosmetic AppKit/CA logs at panel ordering; PillPanelTests surface
+  is pre-existing 2B code untouched by the D34 diff; added to registry.
+- **Flakes:** none — both runs identical, no pass-on-second-run tests.
+- **Gate facts recorded (orchestrator-supplied):**
+  - **Q5 CLOSED — empirical record:** tap mode is `defaultTap` at launch
+    under existing Input Monitoring + Accessibility grants. Console line
+    `event tap started (defaultTap)` observed 2026-07-05, verified by
+    orchestrator + engineer.
+  - **Q6 CLOSED — D29a rescinded as D34:** `engine.prepare()` at
+    AudioRecorder init is fatal on an empty graph (NSException at
+    launch), not merely ineffective. Discovered at the human gate by
+    orchestrator lldb; the 2C prepare-at-init call is deleted, with
+    `constructionDoesNotRaise` as the regression guard.
+- **HUMAN-AT-SCREEN §2C verify 1–6: still PENDING**, minus the Q5
+  Console item, which is now recorded above (folded-in 2A no-9-leak
+  dictation check still owed; verify-4 `.warming` duration still owed).
+
+**Prior gate: 2C** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
 base commit 3a8a83e).
 - **Counts:** 74 tests in 12 suites, 0 failures — `make test` run TWICE,
   both runs identical (74/12 green each, TEST SUCCEEDED). Count UNCHANGED
@@ -117,3 +160,4 @@ counts; orchestrator collates post-hoc).
 | 2026-07-04 | (known-noise) | `appintentsmetadataprocessor … Metadata extraction skipped. No AppIntents.framework dependency found.` (×2) on builds that relink | link-time tool noise; xcresult warnings block stays empty |
 | 2026-07-04 | (known-noise) | `xcodebuild: WARNING: Using the first of multiple matching destinations` | tool notice, first seen at 2A gate; benign destination auto-pick |
 | 2026-07-04 | (known-noise) | `[Common] Unable to obtain a task name port right for pid NNN: (os/kern) failure (0x5)` at hosted-app launch | cosmetic, intermittent (seen run 1 only at 2A gate) |
+| 2026-07-05 | (known-noise) | `[NSCGS] Warning: Invalid attempt to open a new transaction during CA commit` + `[NSCGS] Ignoring request to entangle context after pre-commit` during PillPanelTests | cosmetic AppKit/CA panel-ordering logs; first recorded at 2C-fix gate on pre-existing 2B surface |

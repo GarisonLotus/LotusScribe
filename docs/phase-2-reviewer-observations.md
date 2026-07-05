@@ -1,5 +1,18 @@
 # Reviewer observations — LotusScribe (Phase 2)
 
+> D34 fix reviewed 2026-07-05: EXECUTION APPROVED. Staged diff is exactly
+> the D34 shape: AudioRecorder init + D29a comment deleted (no relocation
+> into start(); zero `prepare` references remain anywhere in Sources),
+> nothing else touched in the file; construction verified TCC-free
+> (AVAudioEngine alloc only — inputNode/HAL first touched in start(),
+> D14 holds; SettingsStore init is UserDefaults-only). Regression test
+> `constructionDoesNotRaise` constructs DictationController on MainActor
+> in the existing hosted suite; the crash-on-NSException is the real
+> guard (acceptable per D34 design) and would genuinely re-expose the
+> launch abort. Doc amendments (D29 rescission note, D34 row, Q6 closed,
+> spec §2C deliverables) match the ruling with no drift. Independent
+> `make test`: 75 tests / 12 suites green. New lesson row R35.
+
 > 2C gate reviewed 2026-07-05: EXECUTION APPROVED. All spec §2C
 > transitions present and none extra; D23 generation guards verified on
 > both success and error paths (insert-path semantics untouched); the
@@ -47,6 +60,7 @@
 | R32 | 2B | PillView bar-geometry literals (bar width 3, spacing 3, 4 pt height floor, 24 pt interior inset in `barHeight`) are view-local, single-site each — D31 constants themselves have no second site, so no violation. But the interior-inset `24` numerically coincides with `PillMetrics.bottomMargin`; name it or comment it if it ever wants a second site (R21 trigger) | open (non-blocking) |
 | R33 | 2B | PillController exposes read-only `state` accessor + internal `panel` beyond the spec'd surface (show/update/push/hide) — test observability per R24 precedent, no state ownership change, execution-OK. Shape question for architect: should the 2C-facing API be strictly the four methods, or is read-only observability part of the surface? | closed 2B (2026-07-05): architect ruled D33 — read-only observability ratified as part of the surface; spec §2B round-tripped |
 | R34 | 2C | Straggler-attribution micro-window: a level block dispatched from the audio thread while `recorder.stop()` runs lands on main after `stopRecording()` returns; the practical race (flipping .processing back to .recording) is closed — `isRecording = false` precedes `recorder.stop()` and everything serializes on the main queue, so the straggler hits `guard isRecording` and drops. The only residual path is if a NEW `startCapture` executed before the already-queued straggler drained (stale level would prematurely flip the new capture's .warming → .recording, bending D29 warming-truth by one frame). Requires a human-timescale hotkey event to beat a millisecond-old queued main block — not realistic; cosmetic even if hit. Note only | open (non-blocking) |
+| R35 | 2C (D34 fix) | GATE-TRIP LESSON — construction-smoke coverage for composition roots: the D29a launch abort passed a full 4-way gate because no test ever constructed DictationController (same class as R3's link-smoke gap). AppKit swallows init-time NSExceptions inside applicationDidFinishLaunching silently, so a hosted construction-smoke test is the only automated tripwire for this failure mode. Going forward: any TCC-free composition-root type constructed on the launch path gets a construction test at introduction, not after a regression. AppDelegate itself remains link-smoked only (R3 still open) | open (process lesson) |
 
 ## Convention-violation tracking
 

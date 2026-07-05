@@ -16,4 +16,13 @@ struct DictationControllerTests {
         #expect(DictationController.hasUsableAudio(wavByteCount: 44 + 3200))
         #expect(DictationController.hasUsableAudio(wavByteCount: 100_000))
     }
+
+    /// Launch-blocking regression (D34): AudioRecorder once called
+    /// engine.prepare() in init on an empty graph, raising an NSException
+    /// inside DictationController() that AppKit swallowed at launch. This
+    /// test crashes the suite if construction ever raises again.
+    @Test @MainActor func constructionDoesNotRaise() {
+        let controller: DictationController? = DictationController()
+        #expect(controller != nil)
+    }
 }

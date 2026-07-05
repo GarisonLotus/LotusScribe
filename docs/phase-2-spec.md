@@ -116,8 +116,10 @@ no second definition site (R21 lesson).
 ## Sub-phase 2C — State wiring + cold-start mitigation (phase gate)
 
 **Deliverables:**
-- `AudioRecorder.swift` delta (~5): `engine.prepare()` at init (D29a —
-  no TCC touch, no mic indicator; best-effort HAL warm-up).
+- `AudioRecorder.swift` delta (~2): remove the init-time `engine.prepare()`
+  (D34 — NSException on the empty graph aborts launch; no relocation into
+  start(), which prepares implicitly). D29b pill truth is the sole
+  cold-start mitigation.
 - `DictationController.swift` delta (~45): owns a PillController.
   startCapture → `recorder.start()` ok → pill `.warming`; first `onLevel`
   callback → `.recording` (then `push(level:)` per callback); start failure
@@ -126,8 +128,10 @@ no second definition site (R21 lesson).
   `.success` flash; empty transcript → hide; transcription error → `.error`
   flash. Stale (D23 generation) results never touch the pill — a newer
   dictation owns it.
-- No new unit tests: the transition wiring is thin glue over the
-  TCC-bearing recorder (D14) — covered by the human gate below.
+- One new unit test (D34 regression): hosted test constructs
+  `DictationController` — guards the launch path; legal because
+  construction is TCC-free (D14). Transition wiring itself stays
+  covered by the human gate below.
 
 **Verify (all HUMAN-AT-SCREEN — this is the PLAN.md phase gate):**
 1. Focus-steal: while the pill is visible mid-dictation, keep typing in
