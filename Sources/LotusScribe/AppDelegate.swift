@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dictationController: DictationController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        MainMenu.install()
         statusItemController = StatusItemController()
         Permissions.logStatusAtLaunch()
 
