@@ -164,7 +164,8 @@ verbatim, they are test fixtures):
   and pause words (um, uh, you know, like) and fix punctuation and
   capitalization only. Change nothing else."
 
-**Service (D39):** `CleanupService.swift` (~90), mirrors
+**Service (D39):** `CleanupService.swift` (~120; raised from ~90 at 3B
+close per R6/R13 precedent), mirrors
 TranscriptionService: `init(settings: SettingsStore, session: URLSession =
 .shared)`; `var isEnabled: Bool` (D40 rule); `func cleanup(transcript:
 String) async throws -> String`; `func warmUp() async`. Cleanup request:
@@ -177,9 +178,10 @@ emptiness for spoken words). Errors mirror TranscriptionError.
 
 **Warm-up (D42):** `warmUp()` fire-and-forget, log-only, never touches the
 pill: body `{"model", "messages": [user("ok")], "max_tokens": 1,
-"keep_alive": -1}`, `timeoutInterval` 30 (cold start 3–10 s); non-2xx →
+"keep_alive": -1}`, `timeoutInterval` 30 (cold start 3–10 s); HTTP non-2xx →
 retry ONCE without `keep_alive` (strict OpenAI-compat validators may 400 on
-unknown fields — vLLM must still warm). Skipped when not effective-enabled.
+unknown fields — vLLM must still warm); transport failures log and stop, no
+retry (D42 as amended). Skipped when not effective-enabled.
 Launch trigger: AppDelegate, inside the existing `XCTestSessionIdentifier`
 guard (tests never fire network warm-ups); endpoint-change trigger is 3C.
 
@@ -190,7 +192,8 @@ generation` after the await; insert, `.success`. SettingsStore delta (~8):
 `cleanupLevel: String?` following the existing key pattern.
 
 **Tests (D14 headless):** `CleanupLevelTests` (~35): resolve mapping (nil,
-garbage, each raw); prompt fixtures. `CleanupServiceTests` (~120, dedicated
+garbage, each raw); prompt fixtures. `CleanupServiceTests` (~195, raised from ~120 at 3B close per
+R6/R13 precedent — stub infra; dedicated
 stub URLProtocol per 3A precedent, serialized): request shape (URL, model,
 level→system prompt, temperature 0, NO keep_alive, timeout 4); 200+content
 → trimmed text; 200 empty-content / non-200 / transport / non-JSON → throw;

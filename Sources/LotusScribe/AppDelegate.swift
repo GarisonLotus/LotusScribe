@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (Marker verified empirically: xcodebuild test sets XCTestSessionIdentifier.)
         if ProcessInfo.processInfo.environment["XCTestSessionIdentifier"] == nil {
             _ = Permissions.requestListenEventAccess()
+
+            // D42: launch warm-up — fire-and-forget, log-only; skipped
+            // internally when cleanup is not effective-enabled.
+            Task { await CleanupService(settings: SettingsStore()).warmUp() }
         }
 
         // D15: chord from the `hotkeyChord` defaults key; nil/unparseable → hold-Fn.

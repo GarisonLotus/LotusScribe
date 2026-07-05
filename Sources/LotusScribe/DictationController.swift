@@ -12,6 +12,7 @@ final class DictationController {
 
     private let recorder = AudioRecorder()
     private let transcription = TranscriptionService(settings: SettingsStore())
+    private let cleanup = CleanupService(settings: SettingsStore())
     private let inserter = TextInserter()
     private let pill = PillController()
     private var isRecording = false
@@ -99,7 +100,7 @@ final class DictationController {
         let capturedGeneration = generation
         Task {
             do {
-                let text = try await transcription.transcribe(wav: wav)
+                var text = try await transcription.transcribe(wav: wav)
                 guard capturedGeneration == generation else {
                     // D23: a newer dictation started while this one was
                     // in flight — drop, never paste stale text; a stale
@@ -115,6 +116,24 @@ final class DictationController {
                     return
                 }
                 Self.logger.info("transcript: \(text, privacy: .public)")
+                if cleanup.isEnabled {
+                    do {
+                        text = try await cleanup.cleanup(transcript: text)
+                    } catch {
+                        // D43: never eat the user's words — any cleanup
+                        // failure falls back to the raw transcript; no new
+                        // pill state, no alert.
+                        Self.logger.error(
+                            "cleanup failed — inserting raw transcript: \(String(describing: error), privacy: .public)")
+                    }
+                    guard capturedGeneration == generation else {
+                        // D43: the cleanup await widens the stale window —
+                        // re-check; stale never inserts or touches the pill.
+                        Self.logger.info(
+                            "stale transcript dropped after cleanup (generation \(capturedGeneration))")
+                        return
+                    }
+                }
                 inserter.insert(text)
                 pill.update(.success)
             } catch {

@@ -1,0 +1,266 @@
+import Foundation
+import Testing
+@testable import LotusScribe
+
+/// URLProtocol stub dedicated to CleanupServiceTests. A separate class per
+/// the 3A precedent: `.serialized` only orders tests within one suite, so
+/// sharing another suite's global handler would race when suites run in
+/// parallel. Result-based so transport failures can be simulated.
+final class CleanupStubURLProtocol: URLProtocol {
+    nonisolated(unsafe) static var handler:
+        ((URLRequest) -> Result<(HTTPURLResponse, Data), Error>)?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        switch Self.handler?(request) {
+        case .success((let response, let data)):
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        case .failure(let error):
+            client?.urlProtocol(self, didFailWithError: error)
+        case nil:
+            client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
+        }
+    }
+
+    override func stopLoading() {}
+}
+
+/// CleanupService tests (spec §3B, D39/D40/D42): isolated UserDefaults
+/// suite, stubbed URLSession — never `.standard` defaults, never the real
+/// network. Timing and the live dictation loop are HUMAN-AT-SCREEN.
+@Suite(.serialized)
+final class CleanupServiceTests {
+    private let suiteName = "com.garisonlotus.LotusScribe.tests.\(UUID().uuidString)"
+    private let defaults: UserDefaults
+    private let settings: SettingsStore
+    private let session: URLSession
+
+    private let endpoint = "https://llm.test/v1/chat/completions"
+
+    init() throws {
+        defaults = try #require(UserDefaults(suiteName: suiteName))
+        settings = SettingsStore(defaults: defaults)
+        settings.llmEndpointURL = endpoint
+        settings.llmModel = "qwen3-8b"
+
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [CleanupStubURLProtocol.self]
+        session = URLSession(configuration: config)
+    }
+
+    deinit {
+        CleanupStubURLProtocol.handler = nil
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    private func service() -> CleanupService {
+        CleanupService(settings: settings, session: session)
+    }
+
+    private static func response(for request: URLRequest, status: Int = 200) -> HTTPURLResponse {
+        HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+    }
+
+    /// Minimal chat-completion reply: {"choices":[{"message":{"content": …}}]}.
+    private static func contentJSON(_ content: String) -> Data {
+        try! JSONSerialization.data(
+            withJSONObject: ["choices": [["message": ["content": content]]]])
+    }
+
+    /// Decodes a captured request body as a JSON object.
+    private static func json(_ body: Data) throws -> [String: Any] {
+        try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    }
+
+    // MARK: cleanup(transcript:)
+
+    /// D39/D42: hot-path body is strictly OpenAI-standard — model,
+    /// system+user messages, temperature 0, and NOTHING else (no keep_alive,
+    /// no max_tokens); 4 s timeout.
+    @Test func cleanupRequestMatchesSpec() async throws {
+        nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
+        CleanupStubURLProtocol.handler = { request in
+            captured = (request, StubURLProtocol.bodyData(of: request))
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await service().cleanup(transcript: "um hello")
+
+        let (request, body) = try #require(captured)
+        #expect(request.url?.absoluteString == endpoint)
+        #expect(request.httpMethod == "POST")
+        #expect(request.timeoutInterval == 4)  // D39: 4 s
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+
+        let json = try Self.json(body)
+        #expect(Set(json.keys) == ["model", "messages", "temperature"])  // D42: no keep_alive
+        #expect(json["model"] as? String == "qwen3-8b")
+        #expect(json["temperature"] as? Double == 0)
+
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(messages.count == 2)
+        #expect(messages[0]["role"] == "system")
+        // cleanupLevel unset → resolves to .standard (D40).
+        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt)
+        #expect(messages[1] == ["role": "user", "content": "um hello"])
+    }
+
+    @Test func lightLevelSendsLightSystemPrompt() async throws {
+        settings.cleanupLevel = "light"
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await service().cleanup(transcript: "hi")
+
+        let json = try Self.json(try #require(captured))
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(messages[0]["content"] == CleanupLevel.light.systemPrompt)
+    }
+
+    @Test func successReturnsTrimmedContent() async throws {
+        CleanupStubURLProtocol.handler = { request in
+            .success((Self.response(for: request), Self.contentJSON("\n  Hello world.  \n")))
+        }
+        let text = try await service().cleanup(transcript: "hello world")
+        #expect(text == "Hello world.")
+    }
+
+    /// D39: trimmed-empty output throws — never insert emptiness for
+    /// spoken words (the caller falls back to the raw transcript).
+    @Test func whitespaceOnlyContentThrowsEmptyOutput() async {
+        CleanupStubURLProtocol.handler = { request in
+            .success((Self.response(for: request), Self.contentJSON("  \n ")))
+        }
+        do {
+            _ = try await service().cleanup(transcript: "hello")
+            Issue.record("expected CleanupError.emptyOutput")
+        } catch CleanupError.emptyOutput {
+            // expected
+        } catch {
+            Issue.record("expected .emptyOutput, got \(error)")
+        }
+    }
+
+    @Test func non200ThrowsHTTPError() async {
+        CleanupStubURLProtocol.handler = { request in
+            .success((Self.response(for: request, status: 503), Data("busy".utf8)))
+        }
+        do {
+            _ = try await service().cleanup(transcript: "hello")
+            Issue.record("expected CleanupError.http")
+        } catch CleanupError.http(let status) {
+            #expect(status == 503)
+        } catch {
+            Issue.record("expected .http, got \(error)")
+        }
+    }
+
+    /// URLError(.timedOut) is the runtime face of the 4 s ceiling — it must
+    /// map to .transport so the pipeline's raw fallback catches it (D43).
+    @Test func timedOutMapsToTransport() async {
+        CleanupStubURLProtocol.handler = { _ in .failure(URLError(.timedOut)) }
+        do {
+            _ = try await service().cleanup(transcript: "hello")
+            Issue.record("expected CleanupError.transport")
+        } catch CleanupError.transport {
+            // expected
+        } catch {
+            Issue.record("expected .transport, got \(error)")
+        }
+    }
+
+    @Test func malformedJSONThrowsBadResponse() async {
+        CleanupStubURLProtocol.handler = { request in
+            .success((Self.response(for: request), Data("not json".utf8)))
+        }
+        do {
+            _ = try await service().cleanup(transcript: "hello")
+            Issue.record("expected CleanupError.badResponse")
+        } catch CleanupError.badResponse {
+            // expected
+        } catch {
+            Issue.record("expected .badResponse, got \(error)")
+        }
+    }
+
+    // MARK: isEnabled (D40 matrix)
+
+    @Test func isEnabledRequiresURLModelAndNonOffLevel() {
+        #expect(service().isEnabled)  // URL + model set, level unset → standard
+
+        settings.cleanupLevel = "off"
+        #expect(!service().isEnabled)
+
+        settings.cleanupLevel = "light"
+        #expect(service().isEnabled)
+
+        settings.llmModel = nil
+        #expect(!service().isEnabled)
+
+        settings.llmModel = "qwen3-8b"
+        settings.llmEndpointURL = nil
+        #expect(!service().isEnabled)
+    }
+
+    // MARK: warmUp() (D42)
+
+    /// D42: warm-up pins the model — user("ok"), max_tokens 1,
+    /// keep_alive -1, 30 s timeout; the ONLY request allowed keep_alive.
+    @Test func warmUpRequestMatchesSpec() async throws {
+        nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
+        CleanupStubURLProtocol.handler = { request in
+            captured = (request, StubURLProtocol.bodyData(of: request))
+            return .success((Self.response(for: request), Self.contentJSON("ok")))
+        }
+
+        await service().warmUp()
+
+        let (request, body) = try #require(captured)
+        #expect(request.url?.absoluteString == endpoint)
+        #expect(request.timeoutInterval == 30)  // D42: cold start 3–10 s
+
+        let json = try Self.json(body)
+        #expect(Set(json.keys) == ["model", "messages", "max_tokens", "keep_alive"])
+        #expect(json["model"] as? String == "qwen3-8b")
+        #expect(json["max_tokens"] as? Int == 1)
+        #expect(json["keep_alive"] as? Int == -1)
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(messages == [["role": "user", "content": "ok"]])
+    }
+
+    /// D42: non-2xx → exactly one retry, WITHOUT keep_alive (strict
+    /// OpenAI-compat validators may 400 on unknown fields).
+    @Test func warmUpRetriesOnceWithoutKeepAliveOnNon2xx() async throws {
+        nonisolated(unsafe) var bodies: [Data] = []
+        CleanupStubURLProtocol.handler = { request in
+            bodies.append(StubURLProtocol.bodyData(of: request))
+            let status = bodies.count == 1 ? 400 : 200
+            return .success((Self.response(for: request, status: status), Self.contentJSON("ok")))
+        }
+
+        await service().warmUp()
+
+        #expect(bodies.count == 2)
+        let retry = try Self.json(try #require(bodies.last))
+        #expect(Set(retry.keys) == ["model", "messages", "max_tokens"])  // keep_alive dropped
+    }
+
+    /// D40/D42: warm-up is skipped entirely when cleanup is not
+    /// effective-enabled — no request may be sent.
+    @Test func warmUpSkippedWhenNotEnabled() async {
+        settings.cleanupLevel = "off"
+        CleanupStubURLProtocol.handler = { _ in
+            Issue.record("no warm-up request may be sent when cleanup is off")
+            return .failure(URLError(.badURL))
+        }
+        await service().warmUp()
+    }
+}

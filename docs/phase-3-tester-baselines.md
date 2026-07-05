@@ -26,6 +26,7 @@ model whisper-large-v3, no key (D13).
 | gate | date | staged base | counts | runs | result |
 |------|------|-------------|--------|------|--------|
 | 3A | 2026-07-05 | e79d800 (staged, not committed) | 89 tests / 13 suites | ×2 | green ×2, 0 failures |
+| 3B | 2026-07-05 | 4b3aa9d (staged, not committed) | 106 tests / 15 suites | ×2 | green ×2, 0 failures |
 
 **3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
 AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,
@@ -51,6 +52,35 @@ labels renamed Save Anyway / Try Again before the verify): success flow
 (spinner → checkmark → ~2 s auto-close → persisted), failure sheet both
 buttons per D37, mid-test close writes nothing, D38 dictation
 regression clean. **3A CLOSED at 638b11d; code baseline 89/13.**
+
+**3B per-suite breakdown (106 = 104 in-suite + 2 top-level):**
+AudioLevelTests 10, CleanupLevelTests 6 (new), CleanupServiceTests 11 (new),
+ConnectionProbeTests 7, DictationControllerTests 4, HotkeyStateMachineTests 22,
+KeychainStoreTests 5, MultipartBodyTests 5, PillPanelTests 5,
+PillViewModelTests 2, SettingsStoreTests 6, SettingsValidationTests 2,
+SettingsWindowControllerTests 7, TranscriptionServiceTests 6, WavEncoderTests 6,
+top-level (no suite) 2 (appDelegateInitializes, mainMenuRoutesPaste). Delta vs
+89/13 baseline: +6 (new CleanupLevelTests) +11 (new CleanupServiceTests) =
+106/15, matching engineer claim.
+
+**3B watch items — both clean:** (1) UserDefaults bleed: CleanupServiceTests
+uses a UUID-suffixed suite; SettingsStoreTests 6/6 green in both runs, no
+intermittents. (2) Launch warm-up guard: the four `[CleanupService] warm-up`
+log lines in the run output all occur strictly inside CleanupServiceTests'
+own stub-driven tests (warmUpRequestMatchesSpec,
+warmUpRetriesOnceWithoutKeepAliveOnNon2xx, warmUpSkippedWhenNotEnabled); no
+CleanupService lines at hosted-app launch or anywhere outside the suite —
+XCTestSessionIdentifier guard held, no real network fired during tests.
+
+**3B warnings:** known-noise only (destination auto-pick, NSCGS/CA during
+PillPanelTests, task-name-port, CursorUI ViewBridge, SettingsWindowController
+show() debug logs). No new entries.
+
+**3B CROSS-CHECK:** parallel-mode — orchestrator collates; reviewer 106/15
+inlined: MATCHED (tester independent ×2: 106 tests / 15 suites, green both).
+
+**HUMAN-AT-SCREEN (3B):** spec §3B verify items 2–5 **PENDING** — needs
+user's LLM endpoint/model configured at-screen.
 
 ## Flake registry (known-noise, carried from phase 2)
 

@@ -33,6 +33,42 @@
 > creep — accepted per R6. New rows R36–R37. Remaining verification is
 > HUMAN-AT-SCREEN (spec §3A verify 2–5).
 
+> 3B gate reviewed 2026-07-05: EXECUTION APPROVED. D43 verified: cleanup
+> call sits in an inner do/catch whose catch only logs — control falls
+> through to the raw insert; the outer catch (only reachable from
+> `transcription.transcribe`) is the sole `.error` route, so `.error` is
+> structurally unreachable from the cleanup leg; no path discards the
+> transcript (failure → raw, empty output → throws → raw). D23 across the
+> hop: pre-cleanup generation guard unchanged; second guard sits after the
+> cleanup await (and after the catch, so it runs on failure too) — stale →
+> return before insert/pill. D39: temperature 0 + 4 s timeoutInterval
+> asserted; trimmed-empty throws `.emptyOutput`; hot-path body key-set
+> asserted exactly {model, messages, temperature}. D40: `isEnabled` is a
+> computed var over SettingsStore (live defaults reads at call time — no
+> snapshot staleness); nil/garbage level → .standard, fixture-tested; both
+> prompts byte-equal to spec. D42: warm-up 30 s timeout, keep_alive -1,
+> max_tokens 1 asserted as exact key-set; non-2xx → exactly one retry with
+> keep_alive dropped (retry key-set asserted); transport failure (nil
+> status) → no retry — UPHELD as the spec's plain reading ("non-2xx →
+> retry ONCE"; the rationale, unknown-field 400s, only exists on HTTP
+> responses); log-only throughout; launch site inside the
+> XCTestSessionIdentifier guard. Key-set tripwires cover both leak
+> directions (an always-retry regression would also trip the warm-up
+> key-set, since the retry body lacks keep_alive). Stub isolation:
+> dedicated CleanupStubURLProtocol, `.serialized`, UUID-suffixed
+> UserDefaults suite removed in deinit — no bleed. TranscriptionService,
+> pill states, alert policy untouched (staged diff = exactly the 7 listed
+> files). Independent `make test`: 106 tests / 15 suites green (expected
+> 106/15). LoC: CleanupService 120 vs ~90 and CleanupServiceTests 194 vs
+> ~120 — overage is the error enum + Codable scaffolding + retry leg and
+> the dedicated stub + exact-body assertions, not logic creep; accepted
+> per R6/3A precedent (R13: stub infra chronically under-scoped). No-DI
+> seam in DictationController accepted: matches the existing
+> transcription wiring and the D14 split (live loop HUMAN-AT-SCREEN);
+> code-norms disfavor test-only seams. New rows R38–R39. Remaining
+> verification is HUMAN-AT-SCREEN (spec §3B verify 2–5, user supplies LLM
+> endpoint/model).
+
 ## Carried items
 
 | id | first raised | item | status |
@@ -52,6 +88,8 @@
 |----|--------------|------|--------|
 | R36 | 3A | `save()` doesn't cancel a prior probeTask/autoCloseTask: during the 2 s success flash the buttons re-enable (disabled only on `.testing`), so a second Save spawns a fresh probe while the first flash's auto-close still fires at T+2 s — window closes mid-second-probe, probe cancelled, nothing extra written (first save already persisted). Outcome correct by accident; have `save()` cancel stale tasks if this surface is touched in 3B | open (non-blocking) |
 | R37 | 3A | SettingsWindowController.swift is now 214 code lines vs the ~200 target (code-norms): file hosts validation + draft + probe state + controller + form. Natural split point is 3B's per-endpoint probe generalization (e.g. SettingsForm or ProbePhase/ProbeState to their own file) | open (fold into 3B) |
+| R38 | 3B | Warm-up log cosmetics: (a) the skip log says "not effective-enabled" even when the actual cause is an unparseable `llmEndpointURL` (isEnabled true, `URL(string:)` nil — same guard); (b) retry-outcome log prints `Optional(200)` via `String(describing:)`. Log-only path, behavior correct; fold into 3C when the endpoint-change warm-up trigger touches this surface | open (non-blocking) |
+| R39 | 3B | Empty-string LLM keys written via raw `defaults write` (bypassing draft.save's D25 empty→nil) make `isEnabled` true with unusable config; every downstream path degrades safely (cleanup → `.notConfigured` → D43 raw fallback; warmUp → URL-parse guard → skip log). Note only — 3C's picker/save path is the sole intended writer | open (non-blocking) |
 
 ## Convention-violation tracking
 

@@ -31,6 +31,14 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: "llmModel") }
     }
 
+    /// D40: cleanup level raw value ("off"/"light"/"standard"); nil or
+    /// unrecognized resolves to `.standard` via `CleanupLevel.resolve`.
+    /// Settings-pane picker arrives in 3C — until then `defaults write` only.
+    var cleanupLevel: String? {
+        get { defaults.string(forKey: "cleanupLevel") }
+        set { defaults.set(newValue, forKey: "cleanupLevel") }
+    }
+
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {
