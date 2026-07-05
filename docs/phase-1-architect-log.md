@@ -22,14 +22,17 @@
 | D24 | 2026-07-04 | D23 refinement: generation bump precedes `recorder.start()` — a failed start also invalidates any in-flight transcript | User's latest intent wins even when the new capture fails; strictly-stronger reading of "bump on each start", locked so a future refactor can't reorder it | 1D |
 | D25 | 2026-07-04 | Settings pane: emptying a field writes nil to SettingsStore, never "" — unset keeps its phase-0 meaning (nil → code-path defaults, D15/D18 pattern) | "" would silently defeat every nil-fallback; locked so a future form rewrite can't regress it | 1E |
 | D26 | 2026-07-04 | Settings pane is buffered-edit: fields edit local drafts, Save (default button, Return) writes all four D9 keys (empty → nil per D25) and closes; Cancel (Esc) and titlebar close write nothing; reopening re-seeds drafts from the store; URL hint runs live on drafts | User rejected write-through-per-keystroke in Phase-1 verification; supersedes the write-through aspect of the 1E shape note below | 1E |
+| D27 | 2026-07-04 | Combo chord is the default hotkey from Phase 1 on: macOS 26 delivers NO Fn events (no flagsChanged, no keyDown-63) to session CGEventTaps even with Input Monitoring + Accessibility granted and AppleFnUsageType=0 — lldb-verified at the callback. D15's nil→hold-Fn fallback stays in code for older macOS only; no new config surface | PLAN's hold-Fn default is unimplementable on macOS 26; phase gate ran end-to-end on ctrl+alt+cmd+9 | close |
+| D28 | 2026-07-04 | Event swallowing (deferred by D16) moves up to Phase 2: hotkey tap becomes `.defaultTap` and swallows the chord's events during dictation | Live-tested leakage did real damage (ctrl+alt+z suspended user's terminal apps); with chord as default (D27) leakage hits every dictation — can't wait for Phase 6 | close |
 
 ## Open questions
 
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
-| Q1 | 2026-07-04 | Wire DEVELOPMENT_TEAM — which team ID? | open | user adding Apple ID in Xcode |
-| Q2 | 2026-07-04 | Ad-hoc re-signing (D6) may reset TCC grants each build, making the Phase-1 empirical TCC record noisy — record prompts per fresh build; re-baseline once Q1 closes | open | Q1 |
-| Q3 | 2026-07-04 | Does synthesized Cmd-V land in Terminal / secure-input contexts? 1D verify observes and records; handling (if needed) is Phase 6 scope | open | 1D verify |
+| Q1 | 2026-07-04 | Wire DEVELOPMENT_TEAM — which team ID? | closed 2026-07-04: user logged into Xcode (ads@garison.com); DEVELOPMENT_TEAM wiring in progress this session | — |
+| Q2 | 2026-07-04 | Ad-hoc re-signing (D6) may reset TCC grants each build, making the Phase-1 empirical TCC record noisy — record prompts per fresh build; re-baseline once Q1 closes | closed 2026-07-04: confirmed live — grants died on every rebuild, stale-signature entries ignored; resolution = stable personal-team signing per Q1/D12 | — |
+| Q3 | 2026-07-04 | Does synthesized Cmd-V land in Terminal / secure-input contexts? 1D verify observes and records; handling (if needed) is Phase 6 scope | closed 2026-07-04: observed FAIL in Terminal (paste did not land); secure-input diagnostics skipped by user — not diagnosed; handling is Phase 6 | — |
+| Q4 | 2026-07-04 | Cold-start: first-ever recording took 2.5 s to start, user's words missed — prewarm the audio engine vs rely on Phase-2 pill recording-state feedback? | open — Phase-2 spec input | Phase 2 spec |
 
 ## Notes
 
@@ -60,3 +63,8 @@ keyEquivalent "," on Settings… (standard macOS, cosmetic in a status menu).
 2026-07-04: Phase-1 human verification: user rejected write-through-per-
 keystroke settings → D26 buffered-edit (Save/Cancel); spec §1E amended
 (deliverable ~120 LoC, verify-2, invariants). D25 unchanged, applies at Save.
+2026-07-04 phase close: gate passed live on macOS 26 (chord ctrl+alt+cmd+9)
+→ D27/D28; Q1–Q3 closed, Q4 opened. Defect queued for next code batch:
+0-byte capture still POSTs → Whisper hallucinates ("you") → would paste;
+fix = skip transcription below a minimum PCM byte threshold. D26 buffered
+Save verified live (empty LLM fields → keys absent from defaults).

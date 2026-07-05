@@ -19,9 +19,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.garisonlotus.LotusScribe
-        # Ad-hoc signing (D6) — no signing identities on this machine.
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_STYLE: Manual
+        # D12/Q1: real Apple Development signing so TCC grants persist.
+        DEVELOPMENT_TEAM: 5RC66Q82V9
+        CODE_SIGN_STYLE: Automatic
 
   LotusScribeTests:
     type: bundle.unit-test

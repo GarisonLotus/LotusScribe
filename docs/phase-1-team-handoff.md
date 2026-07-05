@@ -5,7 +5,7 @@
 > git state. All docs/ files carry the phase number (CLAUDE.md §5);
 > phase-0 files are the archive of that phase.
 
-**Last updated:** 2026-07-04, 1E closed — Phase 1 code complete.
+**Last updated:** 2026-07-04, Phase 1 code + verify complete — close-out.
 
 ## §1. How to use this doc
 
@@ -45,13 +45,14 @@ Settings… menu item + SettingsValidation tests. Baselines: 45 tests /
   Xcode (0 identities). DEVELOPMENT_TEAM wired once user completes
   Xcode → Settings → Accounts.
 
-**Active sub-phase:** none — Phase 1 close BLOCKED on user's
-HUMAN-AT-SCREEN checklist (full list in tester log): 1D phase-gate
-dictation matrix (TextEdit/Slack/browser/Terminal vs D13 endpoint), TCC
-records #1–#3 incl. whether Input Monitoring ever fires, password-field
-negative + R16 clipboard-residue note, 1B afinfo/playback check, 1E
-settings persistence across relaunch. After user record lands in tester
-baselines → phase-close review, then Phase 2 (pill overlay) spec.
+**Active sub-phase:** none — Phase 1 verify PASSED live 2026-07-04 on
+macOS 26 (chord ctrl+alt+cmd+9 vs D13 endpoint). Key findings, all logged
+in the architect log: Fn invisible to session CGEventTaps on macOS 26 →
+combo chord is the default (D27); chord leakage → event swallowing pulled
+up to Phase 2 (D28); Q1–Q3 closed (Q3: Cmd-V failed in Terminal, Phase 6);
+Q4 opened (2.5 s cold start — Phase-2 spec input). Queued for next code
+batch: skip transcription below a minimum PCM threshold (0-byte capture
+currently POSTs → hallucinated transcript). Next: Phase 2 (pill) spec.
 
 **Working tree:** untracked PLAN.md, RESEARCH.md, claude.md (user's files).
 
@@ -84,8 +85,10 @@ decisions go in docs/phase-1-architect-log.md (starts at D12).
 
 ## §7. Open decisions / questions
 
-- Q1 (carried): personal-team signing chosen; BLOCKED on user adding Apple
-  ID in Xcode. Gates TCC grant stability + reliable Keychain reads (R4).
+- Q1 CLOSED 2026-07-04: user logged into Xcode (ads@garison.com);
+  DEVELOPMENT_TEAM wiring in progress. Q2 confirmed + closed (TCC churn
+  was ad-hoc signing, exactly as predicted). Q4 open: cold-start
+  mitigation (prewarm vs Phase-2 pill feedback) — Phase-2 spec input.
 
 ## §8. Non-blocking items
 

@@ -5,6 +5,16 @@
 
 ## Last gate
 
+**Sub-phase:** Phase-1 close (HEAD cf5471c)
+**Test command:** `make test` — run TWICE.
+**Counts (both runs):** 51 tests in 8 suites, 0 failures, both runs
+`** TEST SUCCEEDED **`, zero `warning:` lines in run-2 log grep.
+- Matches the last reviewer run exactly (51/8 expected); no count drift.
+  Delta vs the 1E tester baseline below (45/7) is the post-1E growth already
+  accounted for by the reviewer's run at cf5471c.
+
+### 1E archive
+
 **Sub-phase:** 1E
 **Test command:** `make test` — run TWICE (carried concurrency surface:
 serialized TranscriptionServiceTests + URLProtocol global handler); both runs
@@ -128,55 +138,49 @@ followed by `[EventTapMonitor] event tap started` — listen-only tap creation
 succeeded without TCC grants (no failure path exercised), host did not crash,
 all 26 tests passed.
 
-## HUMAN-AT-SCREEN remainder at 1E close (user owes before phase close)
+## Phase 1 empirical record (2026-07-04, macOS 26 Tahoe, MacBook Pro 14/16 notch)
 
-1. **Settings window focus:** open Settings from the menu bar item → the
-   Settings window comes frontmost and is key/focused.
-2. **Settings persistence + effect:** edit sttModel in the Settings pane →
-   quit → relaunch → value persists (verify:
-   `defaults read com.garisonlotus.LotusScribe sttModel`) and the next
-   dictation uses the edited model.
+Final human-at-screen results, orchestrator-verified. Replaces the owed-items
+lists previously carried at 1A/1B/1D/1E close.
 
-## HUMAN-AT-SCREEN remainder at 1D close (user owes before phase close)
+**TCC matrix (records #1–#3):**
+- BOTH Input Monitoring AND Accessibility toggles are required for tap
+  delivery. No automatic prompt ever fired for either, despite
+  `CGRequestListenEventAccess()` at launch (silently ignored) — the user had
+  to enable both manually in System Settings.
+- Ad-hoc re-signing invalidated the TCC grants on every rebuild (Q2
+  confirmed); fixed by remove/re-add of the current binary in the TCC panes.
+- Microphone prompt fired at FIRST recording start (not launch) — as
+  predicted at 1B.
 
-1D verify is the PLAN.md phase gate — the whole end-to-end loop, user at
-screen:
+**Fn key:** NEVER delivered to the session event tap on macOS 26 — no
+flagsChanged, no keyDown-63; lldb-verified at the tap callback. Shift
+flagsChanged delivered fine, and `AppleFnUsageType=0` was set, so the tap
+itself works — the OS withholds Fn specifically. Hold-Fn is unusable; the
+chord fallback is in use.
 
-1. **Dictation matrix** against the live D13 endpoint
-   (https://vllm.garison.com/v1/audio/transcriptions): hold hotkey, speak,
-   release, transcript lands in the focused app — record pass/fail per
-   target: TextEdit, Slack, browser textarea, Terminal.
-2. **TCC record #3 — final prompt matrix:** on a fresh build, record every
-   prompt/toggle needed for the full loop (Microphone, Accessibility for the
-   Cmd-V synthetic keystroke), and explicitly note whether Input Monitoring
-   ever fires → this file.
-3. **Password-field negative observation:** focus a secure text field
-   (e.g. Safari password box), dictate — record what happens (expected: no
-   insertion or OS-blocked paste; note actual behavior).
-4. **R16 (reviewer) — clipboard residue on paste failure:** if Cmd-V paste
-   fails in any matrix cell but the pasteboard was already written, note the
-   transcript-left-on-clipboard behavior in that matrix row (transcript
-   remains user-visible on the clipboard).
+**Dictation matrix** (chord ctrl+alt+cmd+9 — the original ctrl+alt+z
+conflicted, suspending terminal apps via chord leakage), live endpoint
+https://vllm.garison.com/v1/audio/transcriptions:
 
-Carried from 1C: spec 1C verify 2 (speak a known sentence, confirm
-transcript in log) folds into matrix item 1 above. 1A/1B records below
-remain owed.
+| target | result |
+|--------|--------|
+| TextEdit | PASS |
+| Slack | PASS |
+| browser textarea | PASS |
+| Terminal | FAIL — transcript produced, synthetic Cmd-V not landed; secure-input diagnostics skipped by user; deferred to Phase 6 |
+| password field | SKIPPED by user |
 
-## HUMAN-AT-SCREEN remainder for 1B close (user owes before phase close)
+**Pipeline timing (live logs):** STT round-trip 0.92 s for a 1.2 s utterance;
+1.7 s for a 10.5 s utterance. First-ever recording hit a 2.5 s engine cold
+start → 0 PCM bytes captured → Whisper hallucinated " you" from empty audio
+(defect queued).
 
-- Spec 1B verify step 2: hold Fn, speak ~3 s, release; `afinfo <temp>.wav`
-  reports 16000 Hz, 1 ch, 16-bit LPCM; QuickLook playback intelligible.
-- Spec 1B verify step 3 (TCC record #2): note when the Microphone prompt
-  fires — expect on first `start()`, not at launch → record here.
+**Settings:** Save/Cancel verified live; `defaults read` confirmed persisted
+keys; empty LLM fields correctly absent (nil semantics).
 
-## HUMAN-AT-SCREEN remainder for 1A close (user owes before phase close)
-
-- Spec 1A verify step 2: set "Press fn key to: Do Nothing"; launch app;
-  hold/release Fn → Console start/stop logs; repeat with
-  `defaults write … hotkeyChord ctrl+alt+z`.
-- Spec 1A verify step 3 (TCC record #1): on a fresh build, record which
-  prompts/toggles (Accessibility vs Input Monitoring) were needed for the tap
-  to deliver events → this file.
+**1B afinfo/QuickLook check:** superseded by end-to-end pipeline success —
+the 16 kHz WAV is accepted by the real endpoint with correct transcripts.
 
 ## Flake registry (known-noise, carried from phase 0)
 

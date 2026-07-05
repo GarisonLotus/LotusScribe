@@ -19,6 +19,13 @@ final class DictationController {
     /// current, else logs + drops. No cancel/serialize plumbing.
     private var generation = 0
 
+    /// True when the WAV holds at least ~0.1 s of audio:
+    /// payload = wavByteCount − 44 (WAV header); threshold =
+    /// 16000 Hz × 2 bytes/sample × 0.1 s = 3200 bytes.
+    nonisolated static func hasUsableAudio(wavByteCount: Int) -> Bool {
+        wavByteCount - 44 >= 3200
+    }
+
     func handle(_ action: HotkeyAction) {
         switch action {
         case .startCapture:
@@ -47,6 +54,14 @@ final class DictationController {
         guard isRecording else { return }
         isRecording = false
         let wav = recorder.stop()
+
+        guard Self.hasUsableAudio(wavByteCount: wav.count) else {
+            // Defect from live testing: near-empty capture POSTed to Whisper
+            // hallucinates a transcript ("you") that would be pasted.
+            Self.logger.info(
+                "capture too short (\(wav.count) bytes) — skipping transcription")
+            return
+        }
 
         let capturedGeneration = generation
         Task {
