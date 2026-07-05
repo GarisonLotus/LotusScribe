@@ -116,13 +116,20 @@ final class DictationController {
                     return
                 }
                 Self.logger.info("transcript: \(text, privacy: .public)")
+                var terminal = PillState.success
                 if cleanup.isEnabled {
+                    // D47: transcript accepted — check 1 green + slot 2
+                    // pending BEFORE the cleanup await; the visible wait is
+                    // the information (bounded by CleanupService's timeout).
+                    pill.update(.stagedSuccess(cleanup: .pending))
                     do {
                         text = try await cleanup.cleanup(transcript: text)
+                        terminal = .stagedSuccess(cleanup: .done)
                     } catch {
                         // D43: never eat the user's words — any cleanup
-                        // failure falls back to the raw transcript; no new
-                        // pill state, no alert.
+                        // failure falls back to the raw transcript; no alert.
+                        // D47 amends the pill face only: miss → amber slot 2.
+                        terminal = .stagedSuccess(cleanup: .missed)
                         Self.logger.error(
                             "cleanup failed — inserting raw transcript: \(String(describing: error), privacy: .public)")
                     }
@@ -135,7 +142,7 @@ final class DictationController {
                     }
                 }
                 inserter.insert(text)
-                pill.update(.success)
+                pill.update(terminal)
             } catch {
                 // Failure policy (spec §cross-cutting): log + error flash —
                 // but stale failures never touch the pill (D23/spec §2C).

@@ -27,6 +27,15 @@ struct PillView: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.title2)
                     .foregroundStyle(.red)
+            case .stagedSuccess(let stage):
+                // D48: slot 1 = STT proof (same check as .success),
+                // slot 2 = cleanup stage.
+                HStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                    cleanupSlot(stage)
+                }
             }
         }
         // Root frame from PillMetrics only (D31/R21). Both dimensions fixed:
@@ -36,6 +45,26 @@ struct PillView: View {
             width: PillMetrics.contentSize.width,
             height: PillMetrics.contentSize.height)
         .background(.ultraThinMaterial, in: Capsule())
+    }
+
+    /// Second slot of the staged display (D48): pending reuses the
+    /// `.processing` spinner vocabulary; missed is amber-triangle warning,
+    /// distinct from `.error`'s red circle.
+    @ViewBuilder
+    private func cleanupSlot(_ stage: CleanupStage) -> some View {
+        switch stage {
+        case .pending:
+            ProgressView()
+                .controlSize(.small)
+        case .done:
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.green)
+        case .missed:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title2)
+                .foregroundStyle(.orange)
+        }
     }
 
     /// Levels left-padded with silence so the waveform fills in from the

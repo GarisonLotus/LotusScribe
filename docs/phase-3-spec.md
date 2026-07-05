@@ -1,4 +1,4 @@
-# Phase 3 Spec — 3A: Settings Save connection test; 3B/3C: LLM cleanup
+# Phase 3 Spec — 3A: Settings Save connection test; 3B/3C: LLM cleanup; 3D: two-stage pill
 
 > Authored by architect, 2026-07-05 (incrementally: §3A now; §3B+ appended
 > when PLAN.md §Phase 3 LLM-cleanup work starts). Placement ruling: this is
@@ -269,3 +269,147 @@ no-change save → not fired; R36: second save() cancels the first task pair.
 **Invariants:** probes read drafts only; store writes only via
 `draft.save()` at probe-success or Save Anyway (D25/D37); warm-up never
 blocks Save or close; SettingsForm extraction is behavior-neutral.
+
+---
+
+# §3D — Two-stage pill success (STT + cleanup indicators)
+
+> Authored 2026-07-05 after 3C close + maintenance sweep. Rulings D46–D48
+> in docs/phase-3-architect-log.md. Single sub-phase — the surface is one
+> enum case, one view branch, one pipeline touch; slicing gates nothing.
+
+## User requirement (authoritative, 2026-07-05)
+
+Pill success display depends on configuration:
+- STT only configured → current single green checkmark (unchanged).
+- STT + cleanup LLM effective-enabled (D40) → TWO indicators: one for
+  STT, one for cleanup, each going green as its stage succeeds.
+- Cleanup fails/times out and raw text is inserted → second slot shows
+  an AMBER/WARNING mark (first stays green). User-chosen failure UX;
+  amends D43's "pill flashes plain `.success` on a cleanup miss".
+
+## State model (D46)
+
+`PillState.swift` grows one case with a display-instruction payload:
+
+```swift
+enum CleanupStage: Equatable { case pending, done, missed }
+enum PillState: Equatable {
+    case hidden, warming, recording, processing, success, error
+    case stagedSuccess(cleanup: CleanupStage)
+}
+```
+
+`.success` is retained verbatim for the STT-only path — zero change to
+today's single-check rendering or timing. The associated value is a
+display instruction, not dictation state: the pill still holds no
+knowledge of the pipeline (D14/§2C invariant), and DictationController
+remains the sole driver. Rejected: separate top-level cases
+(`.cleanupPending`/`.cleanupDone`/`.cleanupMissed`) — triples the case
+count for one visual family; and a bool pair — unrepresentable states.
+
+Flash classification moves into the state (pure, headless):
+
+```swift
+extension PillState {
+    /// nil = sticky state; non-nil = auto-hide after this interval.
+    var flashDuration: TimeInterval? { ... }
+}
+```
+
+`.success`/`.error` → `PillMetrics.flashDuration` (0.8 s, D31 numeric
+untouched); `.stagedSuccess(.done)`/`.stagedSuccess(.missed)` →
+`PillMetrics.stagedFlashDuration` (1.2 s, D48); everything else —
+including `.stagedSuccess(.pending)` — nil. PillController.update's
+success/error guard becomes `guard let duration = state.flashDuration`;
+no other controller change.
+
+## Sequencing (D47) — ruled against DictationController's actual flow
+
+Stage 1 (STT) must display BEFORE insertion, because the inserted text is
+the cleanup output. Precise sequence inside the stopRecording Task:
+
+1. `transcribe` returns → generation guard → non-empty guard (all as
+   today). This point = **transcript accepted**.
+2. `cleanup.isEnabled == false` → insert → `.success`. Unchanged path.
+3. `cleanup.isEnabled == true` → `pill.update(.stagedSuccess(cleanup:
+   .pending))` — check 1 green + slot 2 pending — THEN `await cleanup`.
+4. Cleanup returns (do/catch per D43, raw fallback on any miss) → second
+   generation guard (D43, unchanged: stale → drop, no insert, NO pill
+   touch — the newer generation's `.warming` has already repainted; a
+   sticky `.pending` orphan is impossible because start always calls
+   `show`) → `inserter.insert(text)` → terminal state:
+   - cleaned text inserted → `.stagedSuccess(cleanup: .done)` — both
+     green, flash-hide after 1.2 s.
+   - raw fallback inserted → `.stagedSuccess(cleanup: .missed)` — amber
+     slot 2, flash-hide after 1.2 s. Insert-then-update order matches
+     today's insert-then-`.success`.
+
+`.pending` has no timer of its own — CleanupService's 8 s timeout (D45)
+bounds it; the visible wait IS the information. D23/D43 stand whole:
+stale never touches the pill on any path; transcription failure →
+`.error` exactly as today (`.error` stays transcription-only — a cleanup
+miss is never `.error`, it is amber-over-green: the words landed).
+
+## Visual (D48)
+
+Inside the existing 260×52 content (no new metrics site, D31; the only
+PillMetrics delta is `static let stagedFlashDuration: TimeInterval =
+1.2`). `.stagedSuccess` renders an `HStack(spacing: 16)`, centered, both
+slots `.font(.title2)`:
+- Slot 1 (STT): `checkmark.circle.fill`, `.green` — identical symbol to
+  today's `.success`.
+- Slot 2 pending: `ProgressView().controlSize(.small)` — reuses the
+  `.processing` visual vocabulary ("still working").
+- Slot 2 done: `checkmark.circle.fill`, `.green`.
+- Slot 2 missed: `exclamationmark.triangle.fill`, `.orange`
+  (systemOrange) — triangle + amber reads "warning", visually distinct
+  from `.error`'s red `exclamationmark.circle.fill`.
+No text labels — two symbols in a 52 pt pill need no captions.
+
+## Deliverables + LoC ceilings
+
+- `PillState.swift` delta (~20): `CleanupStage`, new case,
+  `flashDuration`, `stagedFlashDuration` metric.
+- `PillView.swift` delta (~25): `.stagedSuccess` branch + slot builder.
+- `PillController.swift` delta (~6): flash guard reads
+  `state.flashDuration` (deletes the hardcoded success/error check).
+- `DictationController.swift` delta (~10): step 3/4 wiring — set
+  `.pending` before the cleanup await, track miss via the existing catch,
+  terminal `.stagedSuccess` after insert.
+- `Tests/PillStateTests.swift` (~35, new, headless): `flashDuration`
+  matrix over every case incl. all three stages (pending nil, done/missed
+  1.2, success/error 0.8, rest nil); staged Equatable identity.
+
+## Testability split (D14)
+
+Headless: the full `flashDuration` mapping (the flash/sticky decision is
+now a pure PillState property — that is the extracted logic worth
+testing). DictationController's staged transitions ride the accepted
+no-DI-seam ruling (3B note): live-loop behavior is human-verified; no
+controller seam gets built for this (CLAUDE.md §2). Visuals (layout,
+colors, spinner, flash feel) human-verified.
+
+## Verify (3D)
+
+1. `make test` green ×2 (delta ≈ +6 tests, +1 suite vs the post-sweep
+   baseline; tester records exact counts).
+2. HUMAN-AT-SCREEN (LLM unset): clear the LLM endpoint (or level Off) →
+   dictate → single green checkmark, identical to pre-3D, ~0.8 s flash.
+3. HUMAN-AT-SCREEN (two-stage): user's LLM endpoint/model saved →
+   dictate → processing spinner → check 1 + small spinner → both checks
+   green → cleaned text inserted → pill hides after ~1.2 s.
+4. HUMAN-AT-SCREEN (forced miss): bogus LLM URL saved via Save Anyway →
+   dictate → check 1 green + spinner for ~8 s → slot 2 amber triangle,
+   RAW transcript inserted, hides after ~1.2 s. Words never lost.
+5. HUMAN-AT-SCREEN (stale regression): start a second dictation while
+   the first shows check 1 + spinner → first result dropped, pill follows
+   the new dictation only, no orphaned pending state.
+
+## Invariants
+
+Pill stays display-only — no dictation state, no timers beyond
+flash-hide; DictationController sole driver; `.error` transcription-only
+(D43); stale never touches the pill (D23/D43); cleanup miss still inserts
+raw text (D43 — this section changes only its pill face); all size/timing
+literals live in PillMetrics (D31); no alerts (D38).

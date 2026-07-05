@@ -31,17 +31,18 @@ final class PillController {
         panel.orderFrontRegardless()
     }
 
-    /// Switch state in place. `.success`/`.error` auto-hide after
-    /// `flashDuration` (D31); any newer update cancels a pending flash.
+    /// Switch state in place. Flash states auto-hide after their
+    /// `flashDuration` (D31/D48 via D46's pure mapping); any newer update
+    /// cancels a pending flash.
     func update(_ state: PillState) {
         flashWork?.cancel()
         flashWork = nil
         model.state = state
-        guard state == .success || state == .error else { return }
+        guard let duration = state.flashDuration else { return }
         let work = DispatchWorkItem { [weak self] in self?.hide() }
         flashWork = work
         DispatchQueue.main.asyncAfter(
-            deadline: .now() + PillMetrics.flashDuration, execute: work)
+            deadline: .now() + duration, execute: work)
     }
 
     /// Feed one waveform level (AudioRecorder.onLevel → here in 2C).

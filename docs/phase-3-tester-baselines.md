@@ -30,6 +30,7 @@ model whisper-large-v3, no key (D13).
 | 3C | 2026-07-05 | 537f174 (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures |
 | debt-sweep | 2026-07-05 | c01f808 (R3/R30/R32/R40 staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures; "'is' test is always true" warning GONE (SmokeTests.swift force-recompiled via touch before run 1; 0 "always true" hits in xcodebuild output) |
 | D45-fix | 2026-07-05 | dc34bfa (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures; counts unchanged as expected (cleanup-prompt /no_think prefix + 8 s timeout + fixture updates). **HUMAN re-verify PENDING:** real dictation must now come back cleaned — pre-fix behavior was 100% cleanup timeout at 4 s. |
+| 3D | 2026-07-05 | 81e6dbe (staged, not committed) | 126 tests / 16 suites | ×2 | green ×2, 0 failures |
 
 **3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
 AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,
@@ -135,6 +136,27 @@ show() debug logs). No new entries.
 
 **3C CROSS-CHECK:** parallel-mode — orchestrator collates; reviewer 120/15
 inlined: MATCHED (tester independent ×2: 120 tests / 15 suites, green both).
+
+**3D delta vs 120/15 baseline:** +6 PillStateTests (new suite:
+successFlashesAtLegacyFlashDuration, errorFlashesAtLegacyFlashDuration,
+stagedDoneFlashesAtStagedFlashDuration, stagedMissedFlashesAtStagedFlashDuration,
+pendingAndNonTerminalStatesAreSticky, stagedEqualityFollowsCleanupStage) =
+126 tests / 16 suites, matching engineer claim (120/15 + 6 tests + 1 suite).
+All prior suites unchanged.
+
+**3D warnings:** known-noise only (destination auto-pick, NSCGS/CA during
+PillPanelTests, task-name-port, CursorUI ViewBridge). No new entries.
+
+**3D CROSS-CHECK:** parallel-mode — orchestrator collates; reviewer expects
+126/16 (tester independent ×2: 126 tests / 16 suites, green both).
+
+**HUMAN-AT-SCREEN (3D): PENDING** — spec §3D verify items 2–5: (2) STT-only
+single-check regression (cleanup off → legacy single checkmark flash, no
+staging), (3) two-stage happy path (pending → stagedSuccess/done flash on
+real cleaned dictation), (4) forced amber miss via Save Anyway with bogus
+LLM URL (staged missed/amber flash, raw text still pasted), (5)
+stale/orphaned-pending check + 1.2 s flash feel (flashDuration timing reads
+right at-screen, no pill stuck in pending).
 
 **HUMAN-AT-SCREEN (3C): PENDING** — spec §3C verify items 2–5: (2) level
 Picker selection persists across settings reopen, (3) dual-probe failure

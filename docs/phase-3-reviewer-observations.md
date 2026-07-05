@@ -144,6 +144,41 @@
 > `timedOutMapsToTransport`) updated consistently. Independent
 > `make test`: 120 tests / 15 suites green (expected 120/15).
 
+> 3D reviewed 2026-07-05: APPROVED. Staged diff = exactly the 5 expected
+> code files (PillState, PillView, PillController, DictationController,
+> PillStateTests new) + spec/log; nothing beyond scope. D47 sequencing:
+> `.stagedSuccess(.pending)` set only inside `if cleanup.isEnabled`,
+> after BOTH acceptance guards (generation + non-empty) with no await
+> between guard and paint, and before the cleanup await; `.done`/
+> `.missed` painted only after `inserter.insert` (cleaned vs raw
+> fallback), matching today's insert-then-`.success` order; STT-only
+> path is byte-identical (`terminal` stays `.success`, same insert/
+> update tail). D23: both generation guards unchanged in position and
+> behavior; traced all 9 pill calls in DictationController — every
+> stale path returns before any pill touch; orphaned `.pending` is
+> impossible outside D47's accepted newer-dictation-repaints case
+> (startRecording always calls `show`, including its failure leg).
+> D46: `flashDuration` is a pure exhaustive-switch property (no
+> default — future cases force a decision): success/error → 0.8 s
+> metric, staged done/missed → 1.2 s metric, pending + all non-terminal
+> nil; PillController.update's auto-hide now guards solely on it and
+> still cancels any prior flashWork first (newer-update-cancels-flash
+> semantics preserved; hide() also cancels). D48: slot symbols/colors
+> match spec exactly (slot 1 green `checkmark.circle.fill`; pending
+> small ProgressView; done green check; missed orange
+> `exclamationmark.triangle.fill`; HStack spacing 16, `.title2`, no
+> labels); grep confirms 0.8/1.2 literals exist only in PillMetrics and
+> `stagedFlashDuration` is the sole metrics delta. `.error` remains
+> transcription-only: cleanup throws are caught inner (incl. empty LLM
+> output — CleanupService throws `emptyOutput`, so a blank cleanup
+> can never insert; it falls back raw + `.missed`); outer catch reaches
+> only transcribe failures, still generation-guarded. Pill stays
+> display-only (controller writes show/update/push/hide, never reads
+> state). PillStateTests: 38 code lines vs ~35 ceiling — within "~"
+> tolerance. Independent `make test`: 126 tests / 16 suites green
+> (expected 126/16). New row R42 (non-blocking). Remaining verification
+> is HUMAN-AT-SCREEN (spec §3D verify 2–4).
+
 ## Carried items
 
 | id | first raised | item | status |
@@ -167,6 +202,7 @@
 | R39 | 3B | Empty-string keys written via raw `defaults write` (bypassing draft.save's D25 empty→nil) made `isEnabled` true with unusable config. FOLDED in 3C: SettingsStore applies empty→nil at read time across all six string keys; regression test `emptyStringValuesReadAsNil` | closed (3C) |
 | R40 | 3C | Settings window size literals (420×390) now live at two sites in two FILES: `SettingsForm.body`'s `.frame` and the controller's `setContentSize` (macOS 26 fitting-size collapse forces both). Cross-referenced by comments and currently in sync, but the R23/R21 second-site trigger is met — name a shared constant next time either file is touched. CLOSED in maintenance sweep (post-3C): `SettingsForm.contentSize` consumed at both sites; no third literal | closed (sweep) |
 | R41 | 3C | Latent test-hygiene hazard: the controller's default warm-up closure runs a REAL `CleanupService.warmUp()` network Task; the XCTestSessionIdentifier guard covers only the AppDelegate launch trigger, not this seam. Every current test either stubs `warmUp:` or never persists a changed LLM config — but a future controller test that saves a changed llmEndpointURL/llmModel without stubbing fires a real request from the test process. Note for tester baselines | open (non-blocking) |
+| R42 | 3D | Slot-1 truthfulness wrinkle on the stale-drop path (new in kind with 3D, D23 policy unchanged): slot 1's green check now displays at transcript-accept, PRE-insert; if a newer dictation starts during the cleanup await, gen N is dropped at the second guard — correctly, but the user was shown "STT succeeded" for words that then never insert. Pre-3D the pill never claimed success before insert. Consistent with D47's framing (slot 1 = STT proof, not insert proof) and only reachable by deliberate overlap; note only | open (non-blocking) |
 
 ## Convention-violation tracking
 

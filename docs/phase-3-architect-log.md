@@ -18,6 +18,9 @@
 | D43 | 2026-07-05 | Pipeline semantics (extends D23/D38 across the cleanup hop): any cleanup failure (4 s timeout, HTTP/transport, undecodable/empty output) → insert RAW transcript, log, pill flashes `.success` — the words landed, that is the success; `.error` stays transcription-failure-only; no new pill state (cleanup runs under `.processing`, D31 untouched); generation re-checked after the cleanup await — stale → drop, no insert, no pill touch; no alert ever (D38) | "Never eat the user's words" is the contract; a cleanup miss with a successful raw insert is not an error from the user's seat; the second generation check closes the widened stale window the extra hop creates | 3B |
 | D45 | 2026-07-05 | Reasoning-model compatibility (amends D39 timeout + D40 prompt fixtures; empirical — orchestrator probes 2026-07-05 vs user's vLLM, Qwen/Qwen3.6-35B-A3B-FP8): (1) cleanup `timeoutInterval` 4 → 8 s; (2) both cleanup system prompts (light + standard) gain the literal prefix `/no_think ` — Qwen3-family soft switch that suppresses the hidden reasoning block; inert prompt text on any other OpenAI-compatible backend. Hot-path body stays strictly OpenAI-standard per D39 — the vLLM-only `chat_template_kwargs: {enable_thinking: false}` body field REJECTED. Scope: cleanup requests only; warm-up ("ok") and probe ("ping") bodies unchanged — both are max_tokens 1, content-indifferent | In-app, every real dictation's cleanup timed out at 4 s (reasoning chat latency 4.7–11.8 s; Whisper answers 0.5 s on the same box — not model swapping), so the D43 raw fallback fired 100% and the user never got cleanup. With `/no_think`: 3.4 s consistently, correct output. 8 s = 3.4 s typical + headroom; the 11.8 s outlier still falls back to raw; user accepts a longer processing wait over missing cleanup. Prompt prefix over body field keeps one request shape working everywhere (D39's rationale) | 3B |
 | D44 | 2026-07-05 | Settings/probe generalization (per R37 plan): `ConnectionProbe.testLLM(endpoint:model:)` = minimal chat completion ({model, messages:[user("ping")], max_tokens: 1}, no keep_alive, 10 s, success = 200 + decodable choices[0].message); Save probes each endpoint whose DRAFTED URL is non-empty — level-independent, one rule, mirrors D36's empty-skip — sequentially STT then LLM, stop at first failure; sheet reason prefixed "Speech to Text: …" / "Cleanup LLM: …". Folds R36 (save() cancels stale probeTask/autoCloseTask) and R37 (SettingsForm extracted to SettingsForm.swift + level Picker) | Probing any URL the user typed validates it before it can break a dictation, even while level is Off (the URL outlives the level); sequential-stop keeps one sheet, one reason; R36/R37 land here because 3B/3C is the surface's planned rework moment | 3C |
+| D46 | 2026-07-05 | Two-stage pill state shape (user directive 2026-07-05): PillState gains ONE case `stagedSuccess(cleanup: CleanupStage)` with `CleanupStage = pending/done/missed`; `.success` retained verbatim for the STT-only path (D40 not effective-enabled → today's single check, unchanged). The associated value is a display instruction, not dictation state — pill holds no pipeline knowledge, DictationController stays sole driver (§2C invariant). Flash classification becomes a pure headless property `PillState.flashDuration: TimeInterval?` (nil = sticky, incl. `.stagedSuccess(.pending)`); PillController.update guards on it instead of the hardcoded success/error check. Rejected: three top-level cases (case-count bloat for one visual family), bool-pair payload (unrepresentable states) | One case + payload is the minimal shape that keeps `.success` untouched and makes the flash/sticky decision a pure testable mapping (D14) instead of controller branching | 3D |
+| D47 | 2026-07-05 | Two-stage sequencing, ruled against DictationController's real flow (insertion happens AFTER cleanup — the cleaned text is what inserts, so stage 1 must display pre-insert): transcript accepted (post generation + non-empty guards) → cleanup disabled: insert + `.success` unchanged; enabled: `.stagedSuccess(.pending)` (check 1 green + slot 2 pending) BEFORE the cleanup await → cleanup returns (D43 do/catch, raw fallback) → second generation guard unchanged (stale → drop, no insert, no pill touch; no orphaned `.pending` — the newer generation's `show(.warming)` already repainted) → insert → `.stagedSuccess(.done)` (cleaned) or `.stagedSuccess(.missed)` (raw fallback, amber). `.pending` carries no timer of its own — CleanupService's 8 s timeout (D45) bounds it. D23/D43 intact: `.error` stays transcription-failure-only; a cleanup miss is never `.error` — amber-over-green, the words landed. AMENDS D43's pill face only ("flashes `.success` on miss" → flashes `.stagedSuccess(.missed)`); D43 fallback/logging/no-alert semantics untouched | Stage 1 = STT proof, and the only truthful pre-insert moment for it is transcript-accepted; the visible pending wait is the information during the cleanup hop; keeping both generation guards exactly where they are adds zero new stale surface | 3D |
+| D48 | 2026-07-05 | Two-stage visuals + flash timing: `.stagedSuccess` renders HStack(spacing 16), centered in the existing 260×52 content, both slots `.title2` SF Symbols — slot 1 `checkmark.circle.fill` green (same symbol as `.success`); slot 2 pending = small ProgressView (reuses `.processing` vocabulary), done = `checkmark.circle.fill` green, missed = `exclamationmark.triangle.fill` systemOrange (triangle+amber = warning, distinct from `.error`'s red circle). No text labels. Flash: staged terminals hide after NEW `PillMetrics.stagedFlashDuration = 1.2 s` (two symbols + amber semantics need more read time); D31's 0.8 s stands untouched for `.success`/`.error`; both literals live only in PillMetrics (D31 single-site) | Reuses every existing visual token (green check, small spinner, exclamation) so the two-stage read is instant; 1.2 s is the smallest bump that makes a two-symbol + warning read comfortable without making the pill feel sticky | 3D |
 
 ## Open questions
 
@@ -137,3 +140,31 @@ CleanupServiceTests fixtures change; nothing else. Verify: re-run spec §3B
 verify steps 2–3 against the user's vLLM — step 2 must now produce CLEANED
 text (was the failing observation), step 3's raw fallback now lands after
 ~8 s.
+
+2026-07-05: phase-3-spec.md §3D authored (D46–D48) — user-directed
+two-stage pill success. ONE sub-phase: one enum case, one view branch, one
+pipeline touch; slicing gates nothing. Code-verified against
+DictationController.stopRecording: insertion happens after the cleanup
+await (cleaned text is what inserts), so stage 1 (STT) must display at the
+transcript-accepted point, pre-insert — D47 rules the exact sequence and
+amends only D43's pill face (`.success` on miss → `.stagedSuccess(.missed)`
+amber); fallback/stale/no-alert semantics untouched. D14 split: the
+flash/sticky decision extracted to pure `PillState.flashDuration`
+(headless PillStateTests); DictationController staged transitions ride the
+3B no-DI-seam ruling, human-verified live; visuals human-verified. LoC
+ceilings: source ~61 across PillState/PillView/PillController/
+DictationController, tests ~35. Forced-miss verify path: bogus LLM URL via
+Save Anyway (D37). HUMAN GATE: user's LLM endpoint needed for the
+two-stage happy path, as at 3B/3C.
+
+2026-07-05: 3D SHAPE NON-OBJECTION (post-execution, 126/16 ×2). (a) Local
+`var terminal = PillState.success` mutated inside the existing do/catch,
+keeping one `inserter.insert` site: correct minimal realization of D47 —
+sequence points (pending pre-await, second generation guard, insert, then
+terminal update) unchanged; fewer branches than the spec's prose, same
+semantics. (b) `HStack(spacing: 16)` inline in PillView: D31 governs pill
+SIZE/POSITION literals (panel geometry, one definition site); interior
+layout spacing is view-local, same class as PillView's existing 24 pt
+interior inset (R32 precedent — "numeric match coincidental, not
+shared"). D48's "only PillMetrics delta is stagedFlashDuration" stands as
+written. No D-number warranted for either.
