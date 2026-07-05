@@ -20,6 +20,7 @@
 | D22 | 2026-07-04 | Keep `CGRequestListenEventAccess()` at launch, guarded from test hosts (rules R5) | Deterministic, user-visible prompt → clean §1A-verify-3 TCC record; dropping it = silent failure until user finds System Settings; Phase 7 owns real onboarding | 1A |
 | D23 | 2026-07-04 | Overlapping dictation (R11): generation counter — only the latest dictation's transcript inserts; stale results logged + dropped. No cancel/serialize plumbing | Simplest guaranteed fix for stale insertion (CLAUDE.md); cancel adds Task bookkeeping + CancellationError noise, serialize locks the user out for up to 20 s | 1D |
 | D24 | 2026-07-04 | D23 refinement: generation bump precedes `recorder.start()` — a failed start also invalidates any in-flight transcript | User's latest intent wins even when the new capture fails; strictly-stronger reading of "bump on each start", locked so a future refactor can't reorder it | 1D |
+| D25 | 2026-07-04 | Settings pane: emptying a field writes nil to SettingsStore, never "" — unset keeps its phase-0 meaning (nil → code-path defaults, D15/D18 pattern) | "" would silently defeat every nil-fallback; locked so a future form rewrite can't regress it | 1E |
 
 ## Open questions
 
@@ -47,3 +48,11 @@ amended). Check ordering, @MainActor inserter, strong-self capture (R15):
 implementation-level, no spec text. R16 (CGEvent failure leaves transcript
 on clipboard, no paste) is covered by the §1D clobber-accepted invariant —
 add to the HUMAN-AT-SCREEN failure matrix, no spec change.
+2026-07-04: 1E shape non-object. Empty-field→nil locked as D25 (spec §1E
+amended). Implementation-level, no spec text: SettingsValidation colocated
+in SettingsWindowController.swift (spec listed it under that deliverable);
+local @State + per-change write-through (no ObservableObject retrofit —
+SettingsStore stays the single backing store); StatusItemController as
+NSObject subclass (NSMenuItem target needs ObjC dispatch); activate +
+makeKeyAndOrderFront + lazy retained controller for LSUIElement focus;
+keyEquivalent "," on Settings… (standard macOS, cosmetic in a status menu).

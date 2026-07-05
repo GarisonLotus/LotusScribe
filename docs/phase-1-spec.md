@@ -151,7 +151,8 @@ anywhere in the app; clipboard clobbering is accepted Phase-1 behavior.
   `NSHostingController`-backed window (D21) — four text fields bound to
   SettingsStore (the four D9 keys, no new ones); URL-field hint via pure
   `SettingsValidation.isValidEndpointURL` (http/https scheme + host).
-  Invalid values still saved (hint only). App stays LSUIElement.
+  Invalid values still saved (hint only). Emptying a field stores nil —
+  never "" — so unset keeps its phase-0 meaning (D25). App stays LSUIElement.
 - `StatusItemController.swift` delta (~10): "Settings…" menu item above Quit.
 - `Tests/SettingsValidationTests.swift` (~30): valid/invalid URL cases.
 

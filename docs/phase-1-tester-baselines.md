@@ -5,7 +5,42 @@
 
 ## Last gate
 
-**Sub-phase:** 1D
+**Sub-phase:** 1E
+**Test command:** `make test` — run TWICE (carried concurrency surface:
+serialized TranscriptionServiceTests + URLProtocol global handler); both runs
+identical (test/suite event sequence diff-identical after timing strip).
+**Counts (both runs):** 45 tests in 7 suites, 0 failures, 0 build warnings.
+Run 1 was incremental/no-compile (no warning evidence), so tester touched the
+3 delta files (mtime only) before run 2; run 2 compiled exactly
+SettingsWindowController.swift, StatusItemController.swift,
+SettingsValidationTests.swift and its xcresult build summary is clean —
+0 errors / 0 warnings / 0 analyzer warnings; xcresult test summary
+45 total / 45 passed / 0 failed / 0 skipped.
+- HotkeyStateMachineTests: 14 · WavEncoderTests: 6 · SettingsStoreTests: 6 ·
+  KeychainStoreTests: 5 · MultipartBodyTests: 5 · TranscriptionServiceTests: 6
+  · SettingsValidationTests: 2 (new — acceptsHTTPAndHTTPSURLsWithHost,
+  rejectsNonHTTPSchemesAndHostlessStrings) · smoke appDelegateInitializes: 1
+  (freestanding — runner reports 7 suites)
+- Matches engineer's claim (45/7 ×2, new suite SettingsValidationTests with
+  2 tests, baseline was 43/6). Reviewer ran in parallel this gate —
+  cross-check is orchestrator-collated post-hoc, not inline here.
+- Warning triage: run 2 log carried 2 `warning:` lines, both
+  `appintentsmetadataprocessor … Metadata extraction skipped. No
+  AppIntents.framework dependency found.` — Xcode link-time tool noise, not a
+  compiler diagnostic (xcresult warnings block empty); surfaces only on
+  relink, which prior incremental warning-evidence runs never triggered.
+  Added to flake registry. All other run-2 noise already registered
+  (logging-persist/DetachedSignatures, XPC 4097, "Not vending elements");
+  WarnOnce did not appear this time (registered as intermittent). The R3
+  "'is' test is always true" warning in SmokeTests.swift again did not
+  surface (file unchanged; incremental for that file) — still pre-existing.
+
+**Git hygiene at gate:** staged code surface = exactly 3 files
+(SettingsWindowController.swift new, SettingsValidationTests.swift new,
+StatusItemController.swift delta), matching the announced 1E delta.
+
+### 1D archive
+
 **Test command:** `make test` — run TWICE (carried concurrency surface:
 serialized TranscriptionServiceTests + URLProtocol global handler); both runs
 identical.
@@ -93,6 +128,15 @@ followed by `[EventTapMonitor] event tap started` — listen-only tap creation
 succeeded without TCC grants (no failure path exercised), host did not crash,
 all 26 tests passed.
 
+## HUMAN-AT-SCREEN remainder at 1E close (user owes before phase close)
+
+1. **Settings window focus:** open Settings from the menu bar item → the
+   Settings window comes frontmost and is key/focused.
+2. **Settings persistence + effect:** edit sttModel in the Settings pane →
+   quit → relaunch → value persists (verify:
+   `defaults read com.garisonlotus.LotusScribe sttModel`) and the next
+   dictation uses the edited model.
+
 ## HUMAN-AT-SCREEN remainder at 1D close (user owes before phase close)
 
 1D verify is the PLAN.md phase gate — the whole end-to-end loop, user at
@@ -142,3 +186,4 @@ remain owed.
 | 2026-07-04 | (known-noise) | `[WarnOnce] layoutSubtreeIfNeeded` log at hosted-app launch | cosmetic, intermittent |
 | 2026-07-04 | (known-noise) | `[logging-persist] .../DetachedSignatures - No such file or directory` during Keychain tests | Security framework noise |
 | 2026-07-04 | (known-noise) | `Accessibility: Not vending elements` at hosted-app launch | cosmetic |
+| 2026-07-04 | (known-noise) | `appintentsmetadataprocessor … warning: Metadata extraction skipped. No AppIntents.framework dependency found.` (×2) on builds that relink | link-time tool noise, not a compiler diagnostic; xcresult warnings block stays empty (added at 1E) |
