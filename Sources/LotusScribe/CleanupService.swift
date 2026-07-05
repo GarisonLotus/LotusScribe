@@ -70,7 +70,7 @@ struct CleanupService {
 
     /// Cleans `transcript` per the resolved level. Success = HTTP 200 +
     /// non-empty trimmed `choices[0].message.content`; trimmed-empty throws
-    /// (D39: never insert emptiness for spoken words). 4 s timeout.
+    /// (D39: never insert emptiness for spoken words). 8 s timeout (D45).
     func cleanup(transcript: String) async throws -> String {
         guard
             let endpoint = settings.llmEndpointURL,
@@ -86,7 +86,7 @@ struct CleanupService {
                 Message(role: "user", content: transcript),
             ],
             temperature: 0)
-        let request = makeRequest(url: url, body: body, timeout: 4)  // D39: 4 s
+        let request = makeRequest(url: url, body: body, timeout: 8)  // D45: 8 s
 
         let data: Data
         let response: URLResponse

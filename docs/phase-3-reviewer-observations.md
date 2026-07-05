@@ -130,6 +130,20 @@
 > and two comments, incl. the test-threshold comment). Independent
 > `make test`: 120 tests / 15 suites green (expected 120/15).
 
+> D45 fix reviewed 2026-07-05 (post-sweep): APPROVED. Staged Sources/Tests
+> diff = exactly 4 files (CleanupLevel, CleanupService, CleanupLevelTests,
+> CleanupServiceTests), nothing beyond scope. Both cleanup prompts now
+> begin with the literal `/no_think ` prefix (token + exactly one trailing
+> space, verified in "/no_think You…"), byte-for-byte against the spec §3B
+> fixtures; the test fixtures guard both prompts including the prefix.
+> Timeout change is hot-path only: `cleanup()` makeRequest 4→8 s (comment
+> updated D39→D45); grep confirms warm-up 30 s, probe 10 s (D36/D44), and
+> STT 20 s all untouched. No `chat_template_kwargs` or other body drift —
+> request stays strictly OpenAI-standard per D42/D45. Doc comments on the
+> two timeout-referencing tests (`cleanupRequestMatchesSpec`,
+> `timedOutMapsToTransport`) updated consistently. Independent
+> `make test`: 120 tests / 15 suites green (expected 120/15).
+
 ## Carried items
 
 | id | first raised | item | status |

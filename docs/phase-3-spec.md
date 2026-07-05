@@ -141,7 +141,7 @@ levels, warm-up, PLAN.md Phase 4+ items.
   `llmModel` are both set (D25: empty saved as nil) AND resolved level ≠
   `.off`. Otherwise the transcript inserts untouched — no request, no error.
 - **Failure policy (D43, extends D23/D38):** any cleanup failure (timeout
-  ~4 s, HTTP/transport, undecodable or empty output) → insert the RAW
+  ~8 s per D45, HTTP/transport, undecodable or empty output) → insert the RAW
   transcript, log, pill flashes `.success` (the words landed — that is the
   success). No new pill state (cleanup runs under `.processing`); `.error`
   stays transcription-failure-only; no alert ever. Generation re-checked
@@ -153,14 +153,17 @@ levels, warm-up, PLAN.md Phase 4+ items.
 CaseIterable { case off, light, standard }`; `static func resolve(_ raw:
 String?) -> CleanupLevel` (nil / unrecognized → `.standard`);
 `var systemPrompt: String?` (`.off` → nil). Prompts (RESEARCH.md §4 —
-verbatim, they are test fixtures):
-- `.standard`: "You clean up dictated speech-to-text transcripts. Remove
+verbatim, they are test fixtures). D45: both prompts begin with the literal
+prefix `/no_think ` (token + one space) — the Qwen3-family soft switch that
+suppresses the hidden reasoning block; inert prompt text on any other
+OpenAI-compatible backend:
+- `.standard`: "/no_think You clean up dictated speech-to-text transcripts. Remove
   filler and pause words (um, uh, you know, like), fix punctuation and
   capitalization, and add paragraph breaks where natural. Preserve the
   speaker's meaning, wording, and voice — never rephrase, summarize,
   shorten, or add content. Output only the cleaned text, with no
   commentary."
-- `.light`: same first + last sentences, middle replaced by: "Remove filler
+- `.light`: same prefix + first + last sentences, middle replaced by: "Remove filler
   and pause words (um, uh, you know, like) and fix punctuation and
   capitalization only. Change nothing else."
 
@@ -171,8 +174,12 @@ TranscriptionService: `init(settings: SettingsStore, session: URLSession =
 String) async throws -> String`; `func warmUp() async`. Cleanup request:
 JSON POST to `llmEndpointURL` (full URL, as with STT), body exactly
 `{"model", "messages": [system, user(transcript)], "temperature": 0}` —
-strictly OpenAI-standard, no `keep_alive` on the hot path (D42);
-`timeoutInterval` 4 (PLAN item 4). Success = 200 + decodable
+strictly OpenAI-standard, no `keep_alive` on the hot path (D42) and no
+vLLM-only `chat_template_kwargs` (D45 — reasoning suppression rides in the
+prompt prefix instead); `timeoutInterval` 8 (PLAN item 4 said 4; raised by
+D45 — empirically, reasoning-mode chat latency blew the 4 s cap on every
+real dictation, and with `/no_think` typical latency is 3.4 s). Success =
+200 + decodable
 `choices[0].message.content`, trimmed; trimmed-empty → throw (never insert
 emptiness for spoken words). Errors mirror TranscriptionError.
 
@@ -195,7 +202,8 @@ generation` after the await; insert, `.success`. SettingsStore delta (~8):
 garbage, each raw); prompt fixtures. `CleanupServiceTests` (~195, raised from ~120 at 3B close per
 R6/R13 precedent — stub infra; dedicated
 stub URLProtocol per 3A precedent, serialized): request shape (URL, model,
-level→system prompt, temperature 0, NO keep_alive, timeout 4); 200+content
+level→system prompt incl. `/no_think ` prefix, temperature 0, NO
+keep_alive, timeout 8 per D45); 200+content
 → trimmed text; 200 empty-content / non-200 / transport / non-JSON → throw;
 `isEnabled` matrix; warm-up shape (`max_tokens` 1, `keep_alive` -1) +
 4xx-then-retry-without-keep_alive. Timing + live loop human-verified.
@@ -206,7 +214,7 @@ level→system prompt, temperature 0, NO keep_alive, timeout 4); 200+content
    at the gate — spec hardcodes none), dictate "um so basically I think we
    should uh ship it tomorrow" → cleaned text (fillers gone) lands.
 3. HUMAN-AT-SCREEN (PLAN verify): point `llmEndpointURL` at a dead host →
-   dictate → RAW transcript inserted after ~4 s, pill success, failure
+   dictate → RAW transcript inserted after ~8 s (D45), pill success, failure
    logged. Never eat the user's words.
 4. HUMAN-AT-SCREEN: `defaults write … cleanupLevel off` (picker is 3C) →
    dictate → raw path, log shows no cleanup request.

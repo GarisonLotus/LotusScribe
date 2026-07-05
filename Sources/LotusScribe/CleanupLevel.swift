@@ -22,12 +22,12 @@ enum CleanupLevel: String, CaseIterable {
         case .off:
             return nil
         case .light:
-            return "You clean up dictated speech-to-text transcripts. "
+            return "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like) and fix "
                 + "punctuation and capitalization only. Change nothing else. "
                 + "Output only the cleaned text, with no commentary."
         case .standard:
-            return "You clean up dictated speech-to-text transcripts. "
+            return "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like), fix "
                 + "punctuation and capitalization, and add paragraph breaks where "
                 + "natural. Preserve the speaker's meaning, wording, and voice — "

@@ -29,6 +29,7 @@ model whisper-large-v3, no key (D13).
 | 3B | 2026-07-05 | 4b3aa9d (staged, not committed) | 106 tests / 15 suites | ×2 | green ×2, 0 failures |
 | 3C | 2026-07-05 | 537f174 (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures |
 | debt-sweep | 2026-07-05 | c01f808 (R3/R30/R32/R40 staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures; "'is' test is always true" warning GONE (SmokeTests.swift force-recompiled via touch before run 1; 0 "always true" hits in xcodebuild output) |
+| D45-fix | 2026-07-05 | dc34bfa (staged, not committed) | 120 tests / 15 suites | ×2 | green ×2, 0 failures; counts unchanged as expected (cleanup-prompt /no_think prefix + 8 s timeout + fixture updates). **HUMAN re-verify PENDING:** real dictation must now come back cleaned — pre-fix behavior was 100% cleanup timeout at 4 s. |
 
 **3A per-suite breakdown (89 = 87 in-suite + 2 top-level):**
 AudioLevelTests 10, ConnectionProbeTests 7 (new), DictationControllerTests 4,

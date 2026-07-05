@@ -81,7 +81,7 @@ final class CleanupServiceTests {
 
     /// D39/D42: hot-path body is strictly OpenAI-standard — model,
     /// system+user messages, temperature 0, and NOTHING else (no keep_alive,
-    /// no max_tokens); 4 s timeout.
+    /// no max_tokens); 8 s timeout (D45).
     @Test func cleanupRequestMatchesSpec() async throws {
         nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
         CleanupStubURLProtocol.handler = { request in
@@ -94,7 +94,7 @@ final class CleanupServiceTests {
         let (request, body) = try #require(captured)
         #expect(request.url?.absoluteString == endpoint)
         #expect(request.httpMethod == "POST")
-        #expect(request.timeoutInterval == 4)  // D39: 4 s
+        #expect(request.timeoutInterval == 8)  // D45: 8 s
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
 
         let json = try Self.json(body)
@@ -163,7 +163,7 @@ final class CleanupServiceTests {
         }
     }
 
-    /// URLError(.timedOut) is the runtime face of the 4 s ceiling — it must
+    /// URLError(.timedOut) is the runtime face of the 8 s ceiling — it must
     /// map to .transport so the pipeline's raw fallback catches it (D43).
     @Test func timedOutMapsToTransport() async {
         CleanupStubURLProtocol.handler = { _ in .failure(URLError(.timedOut)) }
