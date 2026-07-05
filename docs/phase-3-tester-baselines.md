@@ -79,8 +79,14 @@ show() debug logs). No new entries.
 **3B CROSS-CHECK:** parallel-mode — orchestrator collates; reviewer 106/15
 inlined: MATCHED (tester independent ×2: 106 tests / 15 suites, green both).
 
-**HUMAN-AT-SCREEN (3B):** spec §3B verify items 2–5 **PENDING** — needs
-user's LLM endpoint/model configured at-screen.
+**HUMAN-AT-SCREEN (3B): PASSED-PRIMARY** (2026-07-05,
+orchestrator-recorded). Verify 2 (real endpoint, filler sentence
+cleaned) user-confirmed at 2083eb0.Warm-up legs verified from logs:
+launch skip-guard fired live (settings empty at launch; cleanup still
+worked via the live-settings read), HTTP-400 -> retry-sans-keep_alive
+leg observed in hosted tests.Negative paths (dead-host verify 3,
+level-off verify 4) user-waived ("continue") — both unit-covered (D43
+fallback, isEnabled). **3B CLOSED at 2083eb0.**
 
 ## Flake registry (known-noise, carried from phase 2)
 

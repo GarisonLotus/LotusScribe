@@ -40,7 +40,14 @@ trivial-change edit, rides in the label-rename commit after 4f21c17.
 **3A CLOSED 2026-07-05:** human verify 2–5 all passed (user-confirmed
 at 638b11d).
 
-**RESUME POINT (next):** 3B implementation per spec §3B (D39–D44
+**3B CLOSED 2026-07-05** at 2083eb0 (human gate: primary path
+user-confirmed; negative paths waived, unit-covered).
+
+**RESUME POINT (next):** 3C per spec §3C — settings level Picker +
+ConnectionProbe.testLLM per-endpoint Save probe (D44) + endpoint-change
+warm-up; folds R36/R37 + R38/R39 intake.Then the Phase-3 close gate.
+
+(superseded 3B note: implementation per spec §3B (D39–D44
 locked 2026-07-05): CleanupLevel + CleanupService + pipeline hop +
 launch warm-up. Then 3C (settings level picker + per-endpoint Save
 probe, folds R36/R37). User's LLM endpoint URL + model needed at the
