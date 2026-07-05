@@ -43,30 +43,36 @@ at 638b11d).
 **3B CLOSED 2026-07-05** at 2083eb0 (human gate: primary path
 user-confirmed; negative paths waived, unit-covered).
 
-**3C CLOSED (automated gates) 2026-07-05** at 7d5ecf7: level picker,
-D44 dual-endpoint Save probe, endpoint-change warm-up; R36–R39 folded
-and closed.Debt sweep a5960da closed R3/R30/R32/R40.3B verify-2
-CORRECTED to false positive and re-opened (c01f808): no LLM settings
-were ever persisted — cleanup was effective-off during the user's
-test.
+**Where we are (2026-07-05, evening):** all automated work done and
+pushed.3C 7d5ecf7 + D45 81e6dbe (cleanup /no_think + 8 s) + 3D
+7f7c8a4 (two-stage pill: STT check, cleanup check, amber miss —
+D46–D48) + debt sweeps a5960da (R3/R30/R32/R40) and 75822bc (D49
+closes R31; R4 closed moot-until-API-key). Backlog now note-only:
+R34/R41/R42, R7 (Phase 7+), R35 rule.
 
-**RESUME POINT — AWAITING USER ("I'm back"):**
-1.Settings → enter LLM endpoint URL + model + pick cleanup level →
-   Save (now probes BOTH endpoints; sheet names the failing one).
-2.Re-run 3B verify-2 for real: dictate a filler sentence, confirm
-   cleaned text; check warm-up fires on the endpoint-change Save.
-3.3C human items: picker persists across reopen; bogus-LLM sheet says
-   "Cleanup LLM"; 390 pt window fits; one end-to-end dictation (D38).
-Then Phase-3 close gate needs an architect decision: PLAN.md Phase 3
-items 3B+3C are done except the human confirms above; remaining
-PLAN.md Phase-3 scope (cleanup-level prompt variants exist; history
-deferred by D41) — architect declares Phase 3 complete or names 3D.
+**BLOCKED — user lost access to the vLLM host.** Every HUMAN-AT-SCREEN
+item needs live STT, so all are queued until vLLM (or another Whisper
+endpoint) is back:
+1.3B/D45 re-verify: filler dictation returns CLEANED text (was 100%
+   timeout pre-D45; never yet verified live).
+2.3D verify 2–4: two-stage pill (check → spinner → check), amber on
+   forced miss (Save Anyway a bogus LLM URL), STT-only single-check
+   regression.
+3.3C verify: picker persists; failure sheet names the endpoint;
+   390 pt window fit; D38 dictation regression.
+4.D49: dead-tap recovery (non-gating).
+Then the Phase-3 close gate (architect declares complete or names 3E).
 
-**Session context:** launch recipe §5; sheet labels Save Anyway / Try
-Again; SourceKit cross-file diagnostics are stale-index noise — trust
-`make test`; running app pid/build = debt-sweep a5960da.
+**Cleanup endpoint context:** user plans local Ollama for cleanup.
+Local `qwen3.6:35b-mlx` is UNUSABLE for the 8 s budget (11–14 s; its
+Ollama template ignores /no_think — 935 think tokens measured).
+Recommended: `ollama pull llama3.2:3b` (user must pull), then LLM URL
+http://localhost:11434/v1/chat/completions, model llama3.2:3b.
+Verified-working alternative when vLLM returns:
+https://vllm.garison.com/v1/chat/completions + Qwen/Qwen3.6-35B-A3B-FP8
+(~3.4 s with /no_think).
 
-**Baseline:** 120 tests / 15 suites green ×2 at a5960da.
+**Baseline:** 126 tests / 16 suites green ×2 at 75822bc.
 
 **Working tree:** untracked RESEARCH.md, claude.md (user's files).
 
