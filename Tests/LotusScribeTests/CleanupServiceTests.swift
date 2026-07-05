@@ -77,11 +77,12 @@ final class CleanupServiceTests {
         try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
     }
 
-    // MARK: cleanup(transcript:)
+    // MARK: cleanup(transcript:frontmostBundleID:)
 
     /// D39/D42: hot-path body is strictly OpenAI-standard — model,
     /// system+user messages, temperature 0, and NOTHING else (no keep_alive,
-    /// no max_tokens); 8 s timeout (D45).
+    /// no max_tokens); 8 s timeout (D45). Nil bundle ID → `.other` → the
+    /// D45 prompt unchanged (D51 neutrality invariant at request level).
     @Test func cleanupRequestMatchesSpec() async throws {
         nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
         CleanupStubURLProtocol.handler = { request in
@@ -89,7 +90,7 @@ final class CleanupServiceTests {
             return .success((Self.response(for: request), Self.contentJSON("cleaned")))
         }
 
-        _ = try await service().cleanup(transcript: "um hello")
+        _ = try await service().cleanup(transcript: "um hello", frontmostBundleID: nil)
 
         let (request, body) = try #require(captured)
         #expect(request.url?.absoluteString == endpoint)
@@ -105,8 +106,9 @@ final class CleanupServiceTests {
         let messages = try #require(json["messages"] as? [[String: String]])
         #expect(messages.count == 2)
         #expect(messages[0]["role"] == "system")
-        // cleanupLevel unset → resolves to .standard (D40).
-        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt)
+        // cleanupLevel unset → resolves to .standard (D40); nil bundle ID
+        // → .other (D50) → byte-identical Phase-3 prompt (D51).
+        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt(for: .other))
         #expect(messages[1] == ["role": "user", "content": "um hello"])
     }
 
@@ -118,18 +120,58 @@ final class CleanupServiceTests {
             return .success((Self.response(for: request), Self.contentJSON("cleaned")))
         }
 
-        _ = try await service().cleanup(transcript: "hi")
+        _ = try await service().cleanup(transcript: "hi", frontmostBundleID: nil)
 
         let json = try Self.json(try #require(captured))
         let messages = try #require(json["messages"] as? [[String: String]])
-        #expect(messages[0]["content"] == CleanupLevel.light.systemPrompt)
+        #expect(messages[0]["content"] == CleanupLevel.light.systemPrompt(for: .other))
+    }
+
+    /// D52: a mapped bundle ID resolves inside the service — the request
+    /// body carries the category-composed system prompt (D51).
+    @Test func mappedBundleIDSendsCategoryComposedPrompt() async throws {
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await service().cleanup(
+            transcript: "hi", frontmostBundleID: "com.apple.mail")
+
+        let json = try Self.json(try #require(captured))
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt(for: .email))
+    }
+
+    /// D52/D53: overrides are read from the service's own store at request
+    /// time (live-read posture, like isEnabled/D40) — an override written
+    /// after the service exists still redirects the category.
+    @Test func overridesAreReadFromStoreAtRequestTime() async throws {
+        let cleanupService = service()
+        settings.appCategoryOverrides = ["com.apple.mail": "personalMessaging"]
+
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await cleanupService.cleanup(
+            transcript: "hi", frontmostBundleID: "com.apple.mail")
+
+        let json = try Self.json(try #require(captured))
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.standard.systemPrompt(for: .personalMessaging))
     }
 
     @Test func successReturnsTrimmedContent() async throws {
         CleanupStubURLProtocol.handler = { request in
             .success((Self.response(for: request), Self.contentJSON("\n  Hello world.  \n")))
         }
-        let text = try await service().cleanup(transcript: "hello world")
+        let text = try await service().cleanup(transcript: "hello world", frontmostBundleID: nil)
         #expect(text == "Hello world.")
     }
 
@@ -140,7 +182,7 @@ final class CleanupServiceTests {
             .success((Self.response(for: request), Self.contentJSON("  \n ")))
         }
         do {
-            _ = try await service().cleanup(transcript: "hello")
+            _ = try await service().cleanup(transcript: "hello", frontmostBundleID: nil)
             Issue.record("expected CleanupError.emptyOutput")
         } catch CleanupError.emptyOutput {
             // expected
@@ -154,7 +196,7 @@ final class CleanupServiceTests {
             .success((Self.response(for: request, status: 503), Data("busy".utf8)))
         }
         do {
-            _ = try await service().cleanup(transcript: "hello")
+            _ = try await service().cleanup(transcript: "hello", frontmostBundleID: nil)
             Issue.record("expected CleanupError.http")
         } catch CleanupError.http(let status) {
             #expect(status == 503)
@@ -168,7 +210,7 @@ final class CleanupServiceTests {
     @Test func timedOutMapsToTransport() async {
         CleanupStubURLProtocol.handler = { _ in .failure(URLError(.timedOut)) }
         do {
-            _ = try await service().cleanup(transcript: "hello")
+            _ = try await service().cleanup(transcript: "hello", frontmostBundleID: nil)
             Issue.record("expected CleanupError.transport")
         } catch CleanupError.transport {
             // expected
@@ -182,7 +224,7 @@ final class CleanupServiceTests {
             .success((Self.response(for: request), Data("not json".utf8)))
         }
         do {
-            _ = try await service().cleanup(transcript: "hello")
+            _ = try await service().cleanup(transcript: "hello", frontmostBundleID: nil)
             Issue.record("expected CleanupError.badResponse")
         } catch CleanupError.badResponse {
             // expected

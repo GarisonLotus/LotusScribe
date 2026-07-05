@@ -58,3 +58,15 @@ the composed prompt under D51's rule for every category — the Qwen3 soft
 switch survives tone weaving. Warm-up ("ok") and probe ("ping") bodies
 untouched (content-indifferent, max_tokens 1) — category never touches
 them.
+
+2026-07-05: 4A NON-OBJECTION (architect gate). Read the staged
+AppCategory.swift public surface and CleanupLevel.systemPrompt(for:)
+against D50–D53: taxonomy/cases, exact-bundle-ID builtInMap,
+overrides-as-argument with valid-rawValue-beats-builtin and
+garbage-fall-through, nil→.other (D50/D53); replace-not-overload
+systemPrompt(for:), .off→nil for all categories, composition rule with
+closer final and /no_think at position 0, levelBody = verbatim D45
+fixture segments so .other is byte-identical by construction (D51/D45);
+no NSWorkspace in the pure layer (D52 split intact). Reviewer PASS
+(145/17, D50–D53 verified, R43 note-only) accepted.No objection — 4A
+clear to commit.

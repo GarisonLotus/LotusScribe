@@ -14,25 +14,36 @@ enum CleanupLevel: String, CaseIterable {
         raw.flatMap(CleanupLevel.init(rawValue:)) ?? .standard
     }
 
-    /// System prompt for the cleanup chat completion; `.off` → nil.
-    /// Verbatim spec fixtures (docs/phase-3-spec.md §3B, per RESEARCH.md §4)
-    /// — guarded byte-for-byte by CleanupLevelTests.
-    var systemPrompt: String? {
+    /// System prompt for the cleanup chat completion; `.off` → nil for
+    /// every category. D51 composition:
+    /// `"/no_think " + levelBody + " " + (toneClause + " ")? + closer`,
+    /// tone term omitted entirely when nil, closer kept FINAL (strongest
+    /// position). D51 NEUTRALITY INVARIANT — `.other` composes
+    /// byte-identical to the D45 Phase-3 fixtures; guarded byte-for-byte
+    /// by CleanupLevelTests.
+    func systemPrompt(for category: AppCategory) -> String? {
+        guard let body = levelBody else { return nil }
+        let toneTerm = category.toneClause.map { $0 + " " } ?? ""
+        return "/no_think " + body + " " + toneTerm
+            + "Output only the cleaned text, with no commentary."
+    }
+
+    /// Level body segment (verbatim D45 fixture content, docs/phase-3-spec.md
+    /// §3B per RESEARCH.md §4); `.off` → nil.
+    private var levelBody: String? {
         switch self {
         case .off:
             return nil
         case .light:
-            return "/no_think You clean up dictated speech-to-text transcripts. "
+            return "You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like) and fix "
-                + "punctuation and capitalization only. Change nothing else. "
-                + "Output only the cleaned text, with no commentary."
+                + "punctuation and capitalization only. Change nothing else."
         case .standard:
-            return "/no_think You clean up dictated speech-to-text transcripts. "
+            return "You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like), fix "
                 + "punctuation and capitalization, and add paragraph breaks where "
                 + "natural. Preserve the speaker's meaning, wording, and voice — "
-                + "never rephrase, summarize, shorten, or add content. "
-                + "Output only the cleaned text, with no commentary."
+                + "never rephrase, summarize, shorten, or add content."
         }
     }
 }

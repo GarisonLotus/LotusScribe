@@ -40,6 +40,24 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: "cleanupLevel") }
     }
 
+    /// D53: app-category overrides — bundle ID → AppCategory rawValue.
+    /// Get filters the defaults dictionary to String values (non-string
+    /// junk dropped); set writes the whole dict; empty dict ⇄ absent key.
+    /// Invalid rawValues are ignored at resolution, not here (D53).
+    var appCategoryOverrides: [String: String] {
+        get {
+            (defaults.dictionary(forKey: "appCategoryOverrides") ?? [:])
+                .compactMapValues { $0 as? String }
+        }
+        set {
+            if newValue.isEmpty {
+                defaults.removeObject(forKey: "appCategoryOverrides")
+            } else {
+                defaults.set(newValue, forKey: "appCategoryOverrides")
+            }
+        }
+    }
+
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {

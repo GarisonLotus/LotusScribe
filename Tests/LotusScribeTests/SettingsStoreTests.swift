@@ -68,6 +68,42 @@ final class SettingsStoreTests {
         #expect(store.llmModel == nil)
     }
 
+    // MARK: appCategoryOverrides (D53)
+
+    @Test func appCategoryOverridesRoundTrip() {
+        let store = SettingsStore(defaults: defaults)
+        store.appCategoryOverrides = ["com.apple.mail": "personalMessaging"]
+        #expect(
+            defaults.dictionary(forKey: "appCategoryOverrides") as? [String: String]
+                == ["com.apple.mail": "personalMessaging"])
+        #expect(store.appCategoryOverrides == ["com.apple.mail": "personalMessaging"])
+    }
+
+    @Test func absentOverridesKeyReadsAsEmptyDict() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.appCategoryOverrides == [:])
+    }
+
+    /// D53: empty dict ⇄ absent key — writing empty removes the key.
+    @Test func emptyOverridesWriteRemovesKey() {
+        let store = SettingsStore(defaults: defaults)
+        store.appCategoryOverrides = ["com.apple.mail": "code"]
+        store.appCategoryOverrides = [:]
+        #expect(defaults.object(forKey: "appCategoryOverrides") == nil)
+        #expect(store.appCategoryOverrides == [:])
+    }
+
+    /// D53: the getter filters to String values — non-string junk written
+    /// via raw `defaults write` is dropped, never crashes resolution.
+    @Test func nonStringOverrideValuesAreFiltered() {
+        defaults.set(
+            ["com.apple.mail": "email", "com.example.junk": 7],
+            forKey: "appCategoryOverrides")
+
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.appCategoryOverrides == ["com.apple.mail": "email"])
+    }
+
     @Test func valuesPersistAcrossStoreInstances() {
         let writer = SettingsStore(defaults: defaults)
         writer.sttModel = "whisper-1"

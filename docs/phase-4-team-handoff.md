@@ -24,13 +24,20 @@ References: `PLAN.md` §Phase 4; `docs/phase-4-spec.md` (4A/4B/4C);
 
 ## §3. Current state
 
-**Where we are:** Phase 4 bootstrapped (spec + docs set staged, D50–D55
-locked). Baseline 126 tests / 16 suites at 75822bc.
+**Where we are:** 4A committed (see below). Baseline 145 tests / 17
+suites at the 4A commit.
 
-**RESUME POINT (next):** dispatch 4A engineer per spec §4A (AppCategory
-map + prompt composition + service plumbing, pure/headless; D51
-byte-identity floor for `.other`). Then 4B (key-down capture adapter),
-4C (override UI). Gate each; commit each.
+**4A CLOSED 2026-07-05** (this commit): AppCategory core, 4-way gated,
+145/17 green ×3 runners, D51 byte-identity floor pinned.
+
+**RESUME POINT (next):** dispatch 4B engineer per spec §4B — capture
+`NSWorkspace.frontmostApplication?.bundleIdentifier` at key-down in
+DictationController.startRecording, thread it to
+cleanup(transcript:frontmostBundleID:) (~12 LoC, no seam, no new tests
+per D49 posture; suite stays 145/17). Then 4C (override UI per spec
+§4C, window 390→560 via the R40 constant). Gate + commit each.
+Token-limit watch: if a session dies mid-sub-phase, staged work
+survives on disk; re-dispatch from this doc.
 
 **BLOCKED-BATCH queue (needs vLLM/STT back):** Phase-3 human gate
 (D45 cleaned dictation, 3D two-stage pill + amber, 3C settings checks,

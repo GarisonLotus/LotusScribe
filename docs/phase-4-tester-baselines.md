@@ -40,7 +40,11 @@ effect Messages vs Mail; unmapped-app neutrality), 4C verify 3–4
 
 | gate | date | staged base | counts | runs | result |
 |------|------|-------------|--------|------|--------|
-|      |      |             |        |      |        |
+| 4A | 2026-07-05 | a4d65b0 (staged, not committed) | 145 tests / 17 suites | ×2 | GREEN ×2, 0 failures, 0 flakes |
+
+**4A per-suite delta (126/16 → 145/17, +19/+1):** AppCategoryTests
++10 (new suite), SettingsStoreTests +4 (7→11), CleanupLevelTests +3
+(6→9), CleanupServiceTests +2 (11→13). Matches engineer claim exactly.
 
 ## Flake registry
 

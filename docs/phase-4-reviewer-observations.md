@@ -14,11 +14,50 @@
 | R41 | 3C (carried) | Latent test-hygiene hazard: SettingsWindowController's default warm-up closure runs a REAL `CleanupService.warmUp()` network Task; XCTestSessionIdentifier guard covers only the AppDelegate launch trigger. Every current test stubs `warmUp:` or never persists a changed LLM config. Blocked-window ruling: stays backlog; revisit only if a test ever constructs the controller without a stub. **Phase-4 relevance: 4C touches SettingsWindowControllerTests — new tests there MUST keep stubbing `warmUp:`** | open (note only, 4C watch) |
 | R42 | 3D (carried) | Slot-1 truthfulness wrinkle on the stale-drop path: staged slot 1 shows "STT succeeded" at transcript-accept, pre-insert; a deliberate overlapping dictation drops gen N after that display. Accepted as D47's framing (slot 1 = STT proof, not insert proof); note only | open (note only) |
 
+## Gate notes
+
+### 4A gate — staged review (2026-07-05)
+
+**VERDICT: PASS — approve for commit.** Independent `make test`: green,
+145 tests / 17 suites (baseline 126/16; matches expected delta).
+
+- D51 byte-identity floor: `otherStandardPromptIsByteIdenticalToPhase3Fixture`
+  and `otherLightPromptIsByteIdenticalToPhase3Fixture` pin LITERAL strings
+  (compile-time literal concatenation, identical to the pre-4A fixture
+  literals per the removed diff lines) against `systemPrompt(for: .other)` —
+  not composition-vs-composition. Invariant is genuinely test-enforced.
+- D50: taxonomy + displayNames exact per spec; built-in map is an
+  exact-match dictionary (all 20 spec bundle IDs verified, no
+  prefix/wildcard); overrides consulted before built-in; garbage rawValue
+  falls through — both mapped→built-in and unmapped→`.other` tested.
+- D53: getter = `defaults.dictionary` + `compactMapValues { $0 as? String }`;
+  empty⇄absent tested in both directions; non-string junk filtered (tested);
+  diff never touches SettingsWindowController/draft — no probe/warm-up
+  coupling introduced.
+- D52: `cleanup(transcript:frontmostBundleID:)` has NO default value;
+  DictationController passes literal `nil` at the sole production call
+  site; no NSWorkspace import or API use anywhere in the diff (two
+  doc-comment mentions only — R43).
+- Tone splice: structural test `tonedPromptsSpliceToneBeforeFinalCloser`
+  derives toned = neutral-with-tone-before-closer for 4 toned categories ×
+  2 levels; `.off` → nil for ALL categories via `allCases` loop.
+- Hot path unchanged: temperature 0 asserted; key-set tripwire
+  `Set(json.keys) == ["model", "messages", "temperature"]` intact;
+  `warmUp()` untouched (it never used `systemPrompt`).
+- LoC overages (AppCategory.swift 90 vs ~85; test deltas +52/+45/+36 raw
+  vs ceilings, engineer-flagged): ACCEPTED per R6 precedent — overage is
+  verbatim fixture strings plus mechanical call-site signature churn, no
+  logic bloat.
+- Minor, no action owed: the `cleanup category:` log line fires before the
+  notConfigured guard, so a category is logged even when cleanup then
+  throws `.notConfigured` — log-only, matches D52's "logged at resolution
+  time" wording.
+
 ## New items
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
-|    | (none yet)   |      |        |
+| R43 | 4A | Spec §4A verify #3 says "no NSWorkspace reference anywhere in 4A's diff"; a literal grep hits two DOC-COMMENT mentions (AppCategory.swift header, AppCategoryTests.swift header) explaining the D52/D14 adapter split. No import or API use — ruled pass-as-intended (the check's target is framework coupling). Noted so 4B's verify grep isn't misread as a 4A regression | closed (note only) |
 
 ## Convention-violation tracking
 

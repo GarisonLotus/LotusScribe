@@ -71,12 +71,18 @@ struct CleanupService {
     /// Cleans `transcript` per the resolved level. Success = HTTP 200 +
     /// non-empty trimmed `choices[0].message.content`; trimmed-empty throws
     /// (D39: never insert emptiness for spoken words). 8 s timeout (D45).
-    func cleanup(transcript: String) async throws -> String {
+    /// `frontmostBundleID` (D52 — explicit, no default: a forgotten
+    /// pass-through must not compile) resolves to an AppCategory here at
+    /// request time, with a fresh overrides read (D40 live-read posture).
+    func cleanup(transcript: String, frontmostBundleID: String?) async throws -> String {
+        let category = AppCategory.category(
+            forBundleID: frontmostBundleID, overrides: settings.appCategoryOverrides)
+        Self.logger.info("cleanup category: \(category.rawValue, privacy: .public)")
         guard
             let endpoint = settings.llmEndpointURL,
             let url = URL(string: endpoint),
             let model = settings.llmModel,
-            let prompt = CleanupLevel.resolve(settings.cleanupLevel).systemPrompt
+            let prompt = CleanupLevel.resolve(settings.cleanupLevel).systemPrompt(for: category)
         else { throw CleanupError.notConfigured }
 
         let body = ChatRequest(

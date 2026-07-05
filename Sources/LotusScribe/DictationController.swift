@@ -123,7 +123,9 @@ final class DictationController {
                     // the information (bounded by CleanupService's timeout).
                     pill.update(.stagedSuccess(cleanup: .pending))
                     do {
-                        text = try await cleanup.cleanup(transcript: text)
+                        // 4A: literal nil → .other → byte-identical prompt
+                        // (D51/D52); 4B replaces this with the key-down capture.
+                        text = try await cleanup.cleanup(transcript: text, frontmostBundleID: nil)
                         terminal = .stagedSuccess(cleanup: .done)
                     } catch {
                         // D43: never eat the user's words — any cleanup
