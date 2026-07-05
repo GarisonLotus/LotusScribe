@@ -30,14 +30,15 @@ suites at the 4A commit.
 **4A CLOSED 2026-07-05** (this commit): AppCategory core, 4-way gated,
 145/17 green ×3 runners, D51 byte-identity floor pinned.
 
-**RESUME POINT (next):** dispatch 4B engineer per spec §4B — capture
-`NSWorkspace.frontmostApplication?.bundleIdentifier` at key-down in
-DictationController.startRecording, thread it to
-cleanup(transcript:frontmostBundleID:) (~12 LoC, no seam, no new tests
-per D49 posture; suite stays 145/17). Then 4C (override UI per spec
-§4C, window 390→560 via the R40 constant). Gate + commit each.
-Token-limit watch: if a session dies mid-sub-phase, staged work
-survives on disk; re-dispatch from this doc.
+**4B CLOSED 2026-07-05** at bf9c533 (key-down capture, trivial-change
+path, reviewer PASS, 145/17 unchanged).
+
+**RESUME POINT (next):** dispatch 4C engineer per spec §4C — override
+settings UI (App Categories section, running-apps add menu,
+draft-buffered per D26/D53, window 390→560 via SettingsForm.contentSize
+R40 constant). Then gate (reviewer sequential, architect+tester
+parallel) → ONE commit → Phase-4 machine work complete; everything
+else is BLOCKED-BATCH.
 
 **BLOCKED-BATCH queue (needs vLLM/STT back):** Phase-3 human gate
 (D45 cleaned dictation, 3D two-stage pill + amber, 3C settings checks,
