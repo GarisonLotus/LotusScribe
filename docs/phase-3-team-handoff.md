@@ -30,21 +30,19 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** Phase 3 bootstrapped. Spec §3A authored (architect,
-2026-07-05): Save button probes the drafted STT endpoint before closing
-— D36 (silent-WAV round-trip probe, 10 s timeout, drafts never the
-store), D37 (success saves + auto-closes ~2 s with green checkmark;
-failure sheet Close Anyway = persist + close, Cancel = keep editing;
-amends D26), D38 ("never alerts" scoped to the autonomous dictation
-loop; settings-window direct-response dialogs permitted).
+**Where we are:** 3A IMPLEMENTED, 4-way GATED, COMMITTED 4f21c17
+(ConnectionProbe + probe-gated Save per D36/D37/D38; reviewer R36/R37
+notes; architect ratified lean items; 89/13 green ×2 ×3 runners).
+Sheet labels renamed per user directive 2026-07-05: Save Anyway (was
+Close Anyway), Try Again (was Cancel) — behavior unchanged, orchestrator
+trivial-change edit, rides in the label-rename commit after 4f21c17.
 
-**RESUME POINT (next):** dispatch 3A engineer per spec §3A
-(ConnectionProbe + SettingsWindowController delta, injected-probe test
-seam). Then 4-way gate → ONE commit → HUMAN-AT-SCREEN verify items in
-spec §3A.
+**RESUME POINT (next):** HUMAN-AT-SCREEN spec §3A verify 2–5 (success
+flow, failure sheet, mid-test close, D38 dictation regression) — user
+at screen. Then 3A closes; next is 3B (LLM cleanup per PLAN.md §Phase 3
+items 1–4; spec §3B to be authored by architect).
 
-**Baseline:** 80 tests / 12 suites green ×2 at e6b6fe6 (Phase 2 close
-6c45c3c).
+**Baseline:** 89 tests / 13 suites green ×2 at 4f21c17.
 
 **Working tree:** untracked RESEARCH.md, claude.md (user's files).
 

@@ -204,8 +204,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let alert = NSAlert()
         alert.messageText = "There's a problem with the connection."
         alert.informativeText = reason
-        alert.addButton(withTitle: "Close Anyway")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Save Anyway")
+        alert.addButton(withTitle: "Try Again")
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self else { return }
             if response == .alertFirstButtonReturn {

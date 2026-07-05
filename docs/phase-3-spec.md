@@ -59,10 +59,10 @@ endpoint yet); the surface generalizes per-endpoint in 3B.
 - Failure → NSAlert sheet on the window: message "There's a problem with
   the connection.", informative text = brief reason (invalid URL / HTTP
   status / transport error / unexpected response / timed out). Buttons:
-  **Close Anyway** = `draft.save()` then close (user clicked Save; "close
-  anyways" means save-then-close — settings DO persist on this path);
-  **Cancel** = dismiss sheet, back to editing, drafts intact, nothing
-  written.
+  **Save Anyway** = `draft.save()` then close (user clicked Save —
+  settings DO persist on this path); **Try Again** = dismiss sheet, back
+  to editing, drafts intact, nothing written. (Labels renamed from Close
+  Anyway / Cancel per user directive, 2026-07-05.)
 - Titlebar close / Esc mid-test: cancel the probe task, write nothing (D26
   cancel semantics). Reopen resets probe state to idle.
 
@@ -104,8 +104,8 @@ await Save's async leg; probe tests use a dedicated ProbeStubURLProtocol.
    whisper-large-v3) → Save → spinner, then green checkmark, window closes
    by itself after ~2 s; reopen shows values persisted.
 3. HUMAN-AT-SCREEN (failure): bogus URL (e.g. https://nope.invalid/v1/x) →
-   Save → sheet "There's a problem with the connection." + reason; Cancel →
-   editing resumes with edits intact; Save again → Close Anyway → window
+   Save → sheet "There's a problem with the connection." + reason; Try Again →
+   editing resumes with edits intact; Save again → Save Anyway → window
    closes; reopen proves the bogus URL persisted.
 4. HUMAN-AT-SCREEN: titlebar close (or Esc) during the spinner → window
    closes, nothing written (reopen shows old values).
@@ -113,7 +113,7 @@ await Save's async leg; probe tests use a dedicated ProbeStubURLProtocol.
    change — loop behavior and its no-alert policy untouched.
 
 **Invariants:** probe reads drafts only, never SettingsStore; store writes
-happen exactly at probe-success or Close Anyway, both via `draft.save()`
+happen exactly at probe-success or Save Anyway, both via `draft.save()`
 (D25 empty→nil preserved); no alert ever originates outside the settings
 window (D38); probe never blocks the main thread; dictation loop untouched.
 
