@@ -5,7 +5,7 @@
 > state. Docs carry phase numbers (CLAUDE.md §5); phase-0/1/2 files are
 > the archives of those phases.
 
-**Last updated:** 2026-07-05, mid-3C — engineer dispatch died (session limit); see §3 resume point.
+**Last updated:** 2026-07-05 evening — machine-verifiable work complete; human queue blocked on vLLM (§3).
 
 ## §1. How to use this doc
 
@@ -102,17 +102,19 @@ Per skill. Project-specific:
 ## §6. Locked decisions carried forward
 
 D1–D28 (phase-0/1 logs), D29–D35 (phase-2 log; D29a rescinded by D34),
-D36–D38 locked in docs/phase-3-architect-log.md.
+D36–D49 in docs/phase-3-architect-log.md (D45 cleanup latency, D46–D48
+two-stage pill, D49 tap re-enable).
 
 ## §7. Open decisions / questions
 
-- R4 (carried): close by exercising a Keychain read under the new
-  identity — 3A touches settings; opportunity if a key field is read.
+- (none) — R4 closed 2026-07-05, moot until an API-key feature exists;
+  binding reopen trigger recorded in the architect log.
 
 ## §8. Non-blocking items
 
-Carried in docs/phase-3-reviewer-observations.md: R3, R7, R30, R31,
-R32, R34, R35.
+Note-only remainder in docs/phase-3-reviewer-observations.md: R7
+(Phase 7+), R34, R41, R42; R35 is a standing rule.R3/R4/R30/R31/R32/
+R36–R40 all closed.
 
 ## §9. How to resume
 
@@ -129,3 +131,5 @@ Skill's Resume-from-crash pattern; phase-3 file set + this doc.
 ## §11. Revision notes
 
 Rev A — Phase 3 bootstrap (3A save-test spec + docs set), 2026-07-05.
+Rev B — 3A/3B/3C/3D + D45/D49 all gated + committed; human queue
+blocked on vLLM access; backlog burned to note-only, 2026-07-05.
