@@ -1,4 +1,4 @@
-# Phase 3 Spec — 3A: Settings Save connection test; 3B+ LLM cleanup (TBD)
+# Phase 3 Spec — 3A: Settings Save connection test; 3B/3C: LLM cleanup
 
 > Authored by architect, 2026-07-05 (incrementally: §3A now; §3B+ appended
 > when PLAN.md §Phase 3 LLM-cleanup work starts). Placement ruling: this is
@@ -119,3 +119,142 @@ window (D38); probe never blocks the main thread; dictation loop untouched.
 
 **Out of scope (3B+):** LLM endpoint probing, CleanupService, cleanup
 levels, warm-up, PLAN.md Phase 4+ items.
+
+---
+
+# §3B/§3C — LLM cleanup (PLAN.md §Phase 3 items 1–4)
+
+> Authored 2026-07-05 after 3A close (638b11d, 89 tests / 13 suites ×2).
+> Rulings D39–D44 in docs/phase-3-architect-log.md. Slices: 3B = service +
+> dictation pipeline (headless-heavy); 3C = settings surface + per-endpoint
+> probe (folds R36/R37). Store already carries `llmEndpointURL`/`llmModel`
+> (D9) and the form shows both fields — 3B adds no settings UI.
+> Endpoint-agnostic: any `/v1/chat/completions` server; user infra is vLLM,
+> but nothing may assume Ollama or vLLM.
+
+## Cross-cutting (3B/3C)
+
+- **History/undo (D41):** PLAN item 2's "undo cleanup" history mirror
+  DEFERRED to the Phase-5+ history feature; 3B ships the raw-transcript
+  fallback only. PLAN.md annotation owed (orchestrator applies).
+- **Effective-enabled rule (D40):** cleanup runs iff `llmEndpointURL` and
+  `llmModel` are both set (D25: empty saved as nil) AND resolved level ≠
+  `.off`. Otherwise the transcript inserts untouched — no request, no error.
+- **Failure policy (D43, extends D23/D38):** any cleanup failure (timeout
+  ~4 s, HTTP/transport, undecodable or empty output) → insert the RAW
+  transcript, log, pill flashes `.success` (the words landed — that is the
+  success). No new pill state (cleanup runs under `.processing`); `.error`
+  stays transcription-failure-only; no alert ever. Generation re-checked
+  after the cleanup await: stale → drop, no insert, no pill touch.
+
+## Sub-phase 3B — CleanupService + dictation pipeline
+
+**Levels (D40):** `CleanupLevel.swift` (~30): `enum CleanupLevel: String,
+CaseIterable { case off, light, standard }`; `static func resolve(_ raw:
+String?) -> CleanupLevel` (nil / unrecognized → `.standard`);
+`var systemPrompt: String?` (`.off` → nil). Prompts (RESEARCH.md §4 —
+verbatim, they are test fixtures):
+- `.standard`: "You clean up dictated speech-to-text transcripts. Remove
+  filler and pause words (um, uh, you know, like), fix punctuation and
+  capitalization, and add paragraph breaks where natural. Preserve the
+  speaker's meaning, wording, and voice — never rephrase, summarize,
+  shorten, or add content. Output only the cleaned text, with no
+  commentary."
+- `.light`: same first + last sentences, middle replaced by: "Remove filler
+  and pause words (um, uh, you know, like) and fix punctuation and
+  capitalization only. Change nothing else."
+
+**Service (D39):** `CleanupService.swift` (~90), mirrors
+TranscriptionService: `init(settings: SettingsStore, session: URLSession =
+.shared)`; `var isEnabled: Bool` (D40 rule); `func cleanup(transcript:
+String) async throws -> String`; `func warmUp() async`. Cleanup request:
+JSON POST to `llmEndpointURL` (full URL, as with STT), body exactly
+`{"model", "messages": [system, user(transcript)], "temperature": 0}` —
+strictly OpenAI-standard, no `keep_alive` on the hot path (D42);
+`timeoutInterval` 4 (PLAN item 4). Success = 200 + decodable
+`choices[0].message.content`, trimmed; trimmed-empty → throw (never insert
+emptiness for spoken words). Errors mirror TranscriptionError.
+
+**Warm-up (D42):** `warmUp()` fire-and-forget, log-only, never touches the
+pill: body `{"model", "messages": [user("ok")], "max_tokens": 1,
+"keep_alive": -1}`, `timeoutInterval` 30 (cold start 3–10 s); non-2xx →
+retry ONCE without `keep_alive` (strict OpenAI-compat validators may 400 on
+unknown fields — vLLM must still warm). Skipped when not effective-enabled.
+Launch trigger: AppDelegate, inside the existing `XCTestSessionIdentifier`
+guard (tests never fire network warm-ups); endpoint-change trigger is 3C.
+
+**Pipeline:** DictationController delta (~30): after the non-empty
+transcript guard, if `cleanup.isEnabled` → `try await cleanup.cleanup(...)`
+with do/catch → raw fallback per D43; re-check `capturedGeneration ==
+generation` after the await; insert, `.success`. SettingsStore delta (~8):
+`cleanupLevel: String?` following the existing key pattern.
+
+**Tests (D14 headless):** `CleanupLevelTests` (~35): resolve mapping (nil,
+garbage, each raw); prompt fixtures. `CleanupServiceTests` (~120, dedicated
+stub URLProtocol per 3A precedent, serialized): request shape (URL, model,
+level→system prompt, temperature 0, NO keep_alive, timeout 4); 200+content
+→ trimmed text; 200 empty-content / non-200 / transport / non-JSON → throw;
+`isEnabled` matrix; warm-up shape (`max_tokens` 1, `keep_alive` -1) +
+4xx-then-retry-without-keep_alive. Timing + live loop human-verified.
+
+**Verify (3B):**
+1. `make test` green ×2 (delta ≈ +16 tests, +2 suites vs 89/13).
+2. HUMAN-AT-SCREEN: with the USER'S LLM endpoint/model saved (user supplies
+   at the gate — spec hardcodes none), dictate "um so basically I think we
+   should uh ship it tomorrow" → cleaned text (fillers gone) lands.
+3. HUMAN-AT-SCREEN (PLAN verify): point `llmEndpointURL` at a dead host →
+   dictate → RAW transcript inserted after ~4 s, pill success, failure
+   logged. Never eat the user's words.
+4. HUMAN-AT-SCREEN: `defaults write … cleanupLevel off` (picker is 3C) →
+   dictate → raw path, log shows no cleanup request.
+5. Launch app → warm-up request + outcome in the log stream.
+
+**Invariants:** cleanup failure can never block or discard an insertion; no
+`keep_alive` on cleanup requests; pill states untouched (D31); no alerts
+from the loop (D38); TranscriptionService untouched.
+
+## Sub-phase 3C — Settings level picker + per-endpoint probe
+
+**Probe (D44, generalizes D36):** `ConnectionProbe.testLLM(endpoint:model:)
+async -> ProbeResult` (~50 delta): POST `{"model", "messages":
+[user("ping")], "max_tokens": 1}` (no keep_alive — probe body stays
+strictly standard), 10 s timeout, success = 200 + decodable
+`choices[0].message`; same invalid-URL / error mapping as `testSTT`. Save
+flow: probe each endpoint whose DRAFTED URL is non-empty (level-independent
+— one rule, mirrors D36's empty-skip), sequentially STT then LLM, stop at
+first failure; sheet reason prefixed with the endpoint name ("Speech to
+Text: …" / "Cleanup LLM: …"). Both empty → save+close unchanged. D37
+otherwise unchanged.
+
+**Controller delta (~60):** second injected probe closure (LLM) beside the
+STT one; R36 FOLD: `save()` cancels any prior `probeTask`/`autoCloseTask`
+first; warm-up hook (D42's endpoint-change trigger): after any
+`draft.save()` (success or Save Anyway) where `llmEndpointURL`/`llmModel`
+changed and cleanup is effective-enabled, fire injected warm-up closure
+(default `CleanupService(settings:).warmUp()` in a Task). R37 FOLD: extract
+`SettingsForm` to `SettingsForm.swift` (mechanical move + picker row, net
+new ~15). Form: `Picker("Cleanup", …)` Off/Light/Standard in the Cleanup
+LLM section; draft gains `cleanupLevel: CleanupLevel` (reload via
+`resolve`, save writes rawValue).
+
+**Tests:** `ConnectionProbeTests` delta (~50): testLLM shape (max_tokens 1,
+no keep_alive, timeout 10) + success/failure mapping.
+`SettingsWindowControllerTests` delta (~45, stub probes): empty LLM URL →
+LLM probe not invoked; STT failure → LLM probe not invoked; both stubbed
+green → save + success phase; LLM-change save → warm-up closure fired once,
+no-change save → not fired; R36: second save() cancels the first task pair.
+
+**Verify (3C):**
+1. `make test` green ×2 (delta ≈ +9 tests vs 3B baseline).
+2. HUMAN-AT-SCREEN: picker shows Off/Light/Standard, persists across
+   reopen; Save with both endpoints valid (user's) → spinner → checkmark →
+   auto-close.
+3. HUMAN-AT-SCREEN: valid STT + bogus LLM URL → sheet names "Cleanup LLM";
+   Try Again / Save Anyway behave per D37.
+4. HUMAN-AT-SCREEN: change LLM model → Save → warm-up fires (log); Save
+   with nothing changed → no warm-up line.
+5. HUMAN-AT-SCREEN (D38 regression): one end-to-end dictation untouched.
+
+**Invariants:** probes read drafts only; store writes only via
+`draft.save()` at probe-success or Save Anyway (D25/D37); warm-up never
+blocks Save or close; SettingsForm extraction is behavior-neutral.

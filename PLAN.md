@@ -60,7 +60,7 @@ Xcode project, `LSUIElement = YES`, NSStatusItem menu bar presence, settings sto
 > (D36–D38). LLM-cleanup items below become 3B+.
 
 1. `CleanupService`: chat completion against configured endpoint. System prompt pattern (per RESEARCH.md §4): fix filler/punctuation/paragraphs, preserve meaning and voice verbatim otherwise, output cleaned text only.
-2. Cleanup levels: Off / Light / Standard (maps to prompt variants); per-utterance raw-transcript fallback kept in history ("undo cleanup" mirror of Wispr).
+2. Cleanup levels: Off / Light / Standard (maps to prompt variants); per-utterance raw-transcript fallback kept in history ("undo cleanup" mirror of Wispr). *(History/"undo cleanup" mirror deferred to the Phase-5+ history feature per D41 — 3B ships raw-transcript fallback only; spec: docs/phase-3-spec.md §3B/§3C.)*
 3. Warm-up: on launch and endpoint change, fire minimal request with `keep_alive: -1` (Ollama) to defeat the 3–10 s cold start.
 4. Timeout (~4 s) → insert raw transcript instead; never eat the user's words.
 

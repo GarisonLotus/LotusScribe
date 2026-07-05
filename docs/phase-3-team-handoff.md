@@ -40,11 +40,12 @@ trivial-change edit, rides in the label-rename commit after 4f21c17.
 **3A CLOSED 2026-07-05:** human verify 2–5 all passed (user-confirmed
 at 638b11d).
 
-**RESUME POINT (next):** 3B — LLM cleanup (PLAN.md §Phase 3 items 1–4:
-CleanupService, Off/Light/Standard levels, warm-up, ~4 s timeout →
-raw-transcript fallback). Architect authors spec §3B first; note the
-LLM endpoint is a NEW user setting — user's actual endpoint/model
-needed by the human gate, not by the spec.
+**RESUME POINT (next):** 3B implementation per spec §3B (D39–D44
+locked 2026-07-05): CleanupLevel + CleanupService + pipeline hop +
+launch warm-up. Then 3C (settings level picker + per-endpoint Save
+probe, folds R36/R37). User's LLM endpoint URL + model needed at the
+3B/3C human gates (spec hardcodes none; SettingsStore already carries
+the LLM URL/model fields).
 
 **Baseline:** 89 tests / 13 suites green ×2 at 4f21c17.
 
