@@ -19,6 +19,7 @@
 | D21 | 2026-07-04 | Settings pane = SwiftUI Form in NSHostingController-backed window, opened from status-item menu | No storyboard/SwiftUI-App churn; macOS 14 baseline (D5); fewest LoC without deps | 1E |
 | D22 | 2026-07-04 | Keep `CGRequestListenEventAccess()` at launch, guarded from test hosts (rules R5) | Deterministic, user-visible prompt → clean §1A-verify-3 TCC record; dropping it = silent failure until user finds System Settings; Phase 7 owns real onboarding | 1A |
 | D23 | 2026-07-04 | Overlapping dictation (R11): generation counter — only the latest dictation's transcript inserts; stale results logged + dropped. No cancel/serialize plumbing | Simplest guaranteed fix for stale insertion (CLAUDE.md); cancel adds Task bookkeeping + CancellationError noise, serialize locks the user out for up to 20 s | 1D |
+| D24 | 2026-07-04 | D23 refinement: generation bump precedes `recorder.start()` — a failed start also invalidates any in-flight transcript | User's latest intent wins even when the new capture fails; strictly-stronger reading of "bump on each start", locked so a future refactor can't reorder it | 1D |
 
 ## Open questions
 
@@ -41,3 +42,8 @@ tap), 1B (mic), 1D (final matrix incl. synthetic paste).
 dictation; spec §1C verify-2 amended to make temp-write removal explicit (R10).
 2026-07-04: 1C shape approved. R11 ruled → D23 (generation counter, spec
 §1D). R12: required in 1D — one-line timeout assertion in the 1C test.
+2026-07-04: 1D shape non-object. Bump-before-start locked as D24 (spec §1D
+amended). Check ordering, @MainActor inserter, strong-self capture (R15):
+implementation-level, no spec text. R16 (CGEvent failure leaves transcript
+on clipboard, no paste) is covered by the §1D clobber-accepted invariant —
+add to the HUMAN-AT-SCREEN failure matrix, no spec change.

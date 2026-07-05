@@ -5,7 +5,7 @@
 > git state. All docs/ files carry the phase number (CLAUDE.md §5);
 > phase-0 files are the archive of that phase.
 
-**Last updated:** 2026-07-04, 1C closed.
+**Last updated:** 2026-07-04, 1D closed (code gate).
 
 ## §1. How to use this doc
 
@@ -29,11 +29,12 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** Phase 1 sub-phases 1A (hotkey, 11c5efd), 1B (audio,
-89a4aa7), 1C (TranscriptionService, this commit) closed — 4-way gates
-passed. Spec: docs/phase-1-spec.md (slicing D14: 1A–1E). Baselines: 43
-tests / 6 suites green ×2 (tester log). Real-endpoint round-trip verified
-twice (engineer probe + tester's independent oracle).
+**Where we are:** Phase 1 sub-phases 1A (11c5efd), 1B (89a4aa7),
+1C (8578c0e), 1D (this commit) closed — 4-way gates passed. 1D landed
+TextInserter (pasteboard + Cmd-V, D20) + generation-counter loop wiring
+(D23/D24) + R12 assertion. Spec: docs/phase-1-spec.md (slicing D14:
+1A–1E). Baselines: 43 tests / 6 suites green ×2, reviewer/tester counts
+matched (tester log).
 
 **Verified facts for Phase 1 (orchestrator probes, 2026-07-04):**
 - STT endpoint LIVE and verified end-to-end: POST 16kHz mono WAV multipart
@@ -45,11 +46,11 @@ twice (engineer probe + tester's independent oracle).
   Xcode (0 identities). DEVELOPMENT_TEAM wired once user completes
   Xcode → Settings → Accounts.
 
-**Active sub-phase:** 1D next — insertion (pasteboard + Cmd-V, D20) +
-core-loop wiring with generation counter (D23); includes R12 one-line
-timeout assertion in 1C test. Then 1E settings UI. HUMAN-AT-SCREEN
-remainders (1A/1B TCC records + 1D dictation matrix) owed before phase
-close — see tester log.
+**Active sub-phase:** 1E next (bare settings pane, D21) — last code
+sub-phase. Phase close BLOCKED on HUMAN-AT-SCREEN remainders: 1D phase-gate
+dictation matrix (TextEdit/Slack/browser/Terminal vs D13 endpoint), TCC
+record #3 (+ carried 1A/1B records), password-field negative, R16
+clipboard-residue note — full list in tester log.
 
 **Working tree:** untracked PLAN.md, RESEARCH.md, claude.md (user's files).
 

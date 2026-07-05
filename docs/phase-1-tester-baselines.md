@@ -5,7 +5,33 @@
 
 ## Last gate
 
-**Sub-phase:** 1C
+**Sub-phase:** 1D
+**Test command:** `make test` — run TWICE (carried concurrency surface:
+serialized TranscriptionServiceTests + URLProtocol global handler); both runs
+identical.
+**Counts (both runs):** 43 tests in 6 suites, 0 failures, 0 build warnings
+(run 1 xcresult — the run that compiled the 1D delta incl. new
+TextInserter.swift — issues block empty, testsCount 49 = 43 runner tests +
+parameterized ×7 expansion; run 2 full log has zero `warning:` lines; run 2
+was incremental/no-compile, so run 1's xcresult is the warning evidence).
+- HotkeyStateMachineTests: 14 · WavEncoderTests: 6 · SettingsStoreTests: 6 ·
+  KeychainStoreTests: 5 · MultipartBodyTests: 5 · TranscriptionServiceTests: 6
+  · smoke appDelegateInitializes: 1 (freestanding — runner reports 6 suites)
+- Matches reviewer's inline counts exactly (43 in 6 suites ×2; 1D adds no new
+  tests — R12 is a new assertion inside existing requestMatchesSpec, which
+  passed both runs).
+- Known-noise present in run-2 log, all already in flake registry
+  (logging-persist/DetachedSignatures, XPC 4097, WarnOnce, "Not vending
+  elements"); no new noise. The R3 "'is' test is always true" warning in
+  SmokeTests.swift again did not surface (file unchanged; incremental) —
+  still tracked as pre-existing.
+
+**Git hygiene at gate:** staged code surface = exactly 3 files
+(TextInserter.swift new + DictationController.swift,
+TranscriptionServiceTests.swift edits), matching the announced 1D delta.
+
+### 1C archive
+
 **Test command:** `make test` — run TWICE (new concurrency surface: serialized
 TranscriptionServiceTests + URLProtocol global handler); both runs identical.
 **Counts (both runs):** 43 tests in 6 suites, 0 failures, 0 build warnings
@@ -67,12 +93,30 @@ followed by `[EventTapMonitor] event tap started` — listen-only tap creation
 succeeded without TCC grants (no failure path exercised), host did not crash,
 all 26 tests passed.
 
-## HUMAN-AT-SCREEN remainder at 1C close (user owes before phase close)
+## HUMAN-AT-SCREEN remainder at 1D close (user owes before phase close)
 
-Unchanged from 1B (mic TCC record #2 + speak/afinfo, below). 1C's own
-in-app step — spec 1C verify 2, speak a known sentence and confirm the
-transcript in the log — folds into 1D's phase-gate dictation matrix rather
-than being owed separately.
+1D verify is the PLAN.md phase gate — the whole end-to-end loop, user at
+screen:
+
+1. **Dictation matrix** against the live D13 endpoint
+   (https://vllm.garison.com/v1/audio/transcriptions): hold hotkey, speak,
+   release, transcript lands in the focused app — record pass/fail per
+   target: TextEdit, Slack, browser textarea, Terminal.
+2. **TCC record #3 — final prompt matrix:** on a fresh build, record every
+   prompt/toggle needed for the full loop (Microphone, Accessibility for the
+   Cmd-V synthetic keystroke), and explicitly note whether Input Monitoring
+   ever fires → this file.
+3. **Password-field negative observation:** focus a secure text field
+   (e.g. Safari password box), dictate — record what happens (expected: no
+   insertion or OS-blocked paste; note actual behavior).
+4. **R16 (reviewer) — clipboard residue on paste failure:** if Cmd-V paste
+   fails in any matrix cell but the pasteboard was already written, note the
+   transcript-left-on-clipboard behavior in that matrix row (transcript
+   remains user-visible on the clipboard).
+
+Carried from 1C: spec 1C verify 2 (speak a known sentence, confirm
+transcript in log) folds into matrix item 1 above. 1A/1B records below
+remain owed.
 
 ## HUMAN-AT-SCREEN remainder for 1B close (user owes before phase close)
 

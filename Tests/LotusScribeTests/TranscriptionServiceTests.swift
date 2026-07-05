@@ -93,6 +93,7 @@ final class TranscriptionServiceTests {
         let (request, body) = try #require(captured)
         #expect(request.url?.absoluteString == endpoint)
         #expect(request.httpMethod == "POST")
+        #expect(request.timeoutInterval == 20)  // R12: 20 s per PLAN
 
         let contentType = try #require(request.value(forHTTPHeaderField: "Content-Type"))
         let boundary = try #require(

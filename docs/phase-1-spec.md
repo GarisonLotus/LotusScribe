@@ -126,6 +126,8 @@ is byte-for-byte unit-tested; 20 s timeout enforced.
   non-empty → insert; errors logged, nothing inserted. Overlapping dictation
   (R11, D23): generation counter — bump an Int on each start, capture it in
   the transcribe Task; insert only if still current, else log + drop.
+  Bump precedes `recorder.start()` (D24): a failed start still invalidates
+  any in-flight transcript — the user's latest intent wins.
   No new unit tests (adapter-only; logic already covered in 1A–1C), except:
   add `#expect(request.timeoutInterval == 20)` to the existing 1C
   request-shape test (R12 — required in 1D).
