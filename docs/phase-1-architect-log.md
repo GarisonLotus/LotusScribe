@@ -21,6 +21,7 @@
 | D23 | 2026-07-04 | Overlapping dictation (R11): generation counter — only the latest dictation's transcript inserts; stale results logged + dropped. No cancel/serialize plumbing | Simplest guaranteed fix for stale insertion (CLAUDE.md); cancel adds Task bookkeeping + CancellationError noise, serialize locks the user out for up to 20 s | 1D |
 | D24 | 2026-07-04 | D23 refinement: generation bump precedes `recorder.start()` — a failed start also invalidates any in-flight transcript | User's latest intent wins even when the new capture fails; strictly-stronger reading of "bump on each start", locked so a future refactor can't reorder it | 1D |
 | D25 | 2026-07-04 | Settings pane: emptying a field writes nil to SettingsStore, never "" — unset keeps its phase-0 meaning (nil → code-path defaults, D15/D18 pattern) | "" would silently defeat every nil-fallback; locked so a future form rewrite can't regress it | 1E |
+| D26 | 2026-07-04 | Settings pane is buffered-edit: fields edit local drafts, Save (default button, Return) writes all four D9 keys (empty → nil per D25) and closes; Cancel (Esc) and titlebar close write nothing; reopening re-seeds drafts from the store; URL hint runs live on drafts | User rejected write-through-per-keystroke in Phase-1 verification; supersedes the write-through aspect of the 1E shape note below | 1E |
 
 ## Open questions
 
@@ -56,3 +57,6 @@ SettingsStore stays the single backing store); StatusItemController as
 NSObject subclass (NSMenuItem target needs ObjC dispatch); activate +
 makeKeyAndOrderFront + lazy retained controller for LSUIElement focus;
 keyEquivalent "," on Settings… (standard macOS, cosmetic in a status menu).
+2026-07-04: Phase-1 human verification: user rejected write-through-per-
+keystroke settings → D26 buffered-edit (Save/Cancel); spec §1E amended
+(deliverable ~120 LoC, verify-2, invariants). D25 unchanged, applies at Save.

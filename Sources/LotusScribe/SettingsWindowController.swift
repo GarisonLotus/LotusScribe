@@ -16,22 +16,75 @@ enum SettingsValidation {
     }
 }
 
+/// Buffered drafts for the settings pane (D26): fields edit these; `save()`
+/// is the only path that writes to SettingsStore (empty → nil per D25).
+@MainActor
+final class SettingsDraft: ObservableObject {
+    @Published var sttEndpointURL = ""
+    @Published var sttModel = ""
+    @Published var llmEndpointURL = ""
+    @Published var llmModel = ""
+
+    private let store: SettingsStore
+
+    init(store: SettingsStore) {
+        self.store = store
+        reload()
+    }
+
+    /// Re-seed drafts from the store. Called on every `show()` so reopening
+    /// discards abandoned edits.
+    func reload() {
+        sttEndpointURL = store.sttEndpointURL ?? ""
+        sttModel = store.sttModel ?? ""
+        llmEndpointURL = store.llmEndpointURL ?? ""
+        llmModel = store.llmModel ?? ""
+    }
+
+    /// Write all four D9 keys; empty → nil per D25 (unset keeps its meaning).
+    func save() {
+        store.sttEndpointURL = stored(sttEndpointURL)
+        store.sttModel = stored(sttModel)
+        store.llmEndpointURL = stored(llmEndpointURL)
+        store.llmModel = stored(llmModel)
+    }
+
+    private func stored(_ value: String) -> String? {
+        value.isEmpty ? nil : value
+    }
+}
+
 /// Bare settings pane (D21): SwiftUI `Form` hosted in an NSHostingController-backed
 /// window, opened from the status-item menu. Touches only the four D9 keys;
 /// SettingsStore remains the single backing store (spec §1E invariants).
+/// Buffered-edit per D26: Save is the only write path; Cancel and the
+/// titlebar close button write nothing (drafts are local, so titlebar close
+/// is automatically a Cancel — there is no other write path).
 final class SettingsWindowController: NSWindowController {
     private static let logger = Logger(
         subsystem: "com.garisonlotus.LotusScribe", category: "SettingsWindowController")
 
-    convenience init(store: SettingsStore) {
+    let draft: SettingsDraft
+
+    init(store: SettingsStore) {
+        draft = SettingsDraft(store: store)
+        super.init(window: nil)
         let window = NSWindow(contentViewController: NSHostingController(
-            rootView: SettingsForm(store: store)))
+            rootView: SettingsForm(
+                draft: draft,
+                onSave: { [weak self] in self?.save() },
+                onCancel: { [weak self] in self?.cancel() })))
         window.title = "LotusScribe Settings"
         // NSHostingController's fitting size collapses to 0x0 on macOS 26
         // (title-bar-only window), even with an explicit root .frame — size
         // the window directly. Must match SettingsForm's root frame.
-        window.setContentSize(NSSize(width: 420, height: 300))
-        self.init(window: window)
+        window.setContentSize(NSSize(width: 420, height: 350))
+        self.window = window
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
     }
 
     /// Parameterless form must be spelled out: with only a defaulted
@@ -45,54 +98,65 @@ final class SettingsWindowController: NSWindowController {
     /// or the window appears behind the frontmost app without key focus.
     func show() {
         Self.logger.info("show() entered")
+        // StatusItemController caches this controller, so the window (and its
+        // hosting root) survives close. Re-seed the drafts instead of
+        // rebuilding the contentViewController — @Published refreshes the
+        // cached form's fields in place (D26 reopen behavior, minimal path).
+        draft.reload()
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         Self.logger.info(
             "post-show: window=\(self.window != nil ? "non-nil" : "nil", privacy: .public) isVisible=\(self.window?.isVisible ?? false, privacy: .public) frame=\(String(describing: self.window?.frame), privacy: .public)")
     }
-}
 
-/// Four text fields write through to SettingsStore on every change; empty
-/// fields store nil so "unset" keeps its meaning (defaults come from code paths
-/// that read nil). Invalid URLs are saved anyway — the hint is advisory.
-private struct SettingsForm: View {
-    let store: SettingsStore
-
-    @State private var sttEndpointURL: String
-    @State private var sttModel: String
-    @State private var llmEndpointURL: String
-    @State private var llmModel: String
-
-    init(store: SettingsStore) {
-        self.store = store
-        _sttEndpointURL = State(initialValue: store.sttEndpointURL ?? "")
-        _sttModel = State(initialValue: store.sttModel ?? "")
-        _llmEndpointURL = State(initialValue: store.llmEndpointURL ?? "")
-        _llmModel = State(initialValue: store.llmModel ?? "")
+    /// Save button / Return: persist all four keys, then close (D26).
+    func save() {
+        draft.save()
+        window?.close()
     }
 
+    /// Cancel button / Esc: close without writing (D26).
+    func cancel() {
+        window?.close()
+    }
+}
+
+/// Four text fields edit local drafts only (D26) — no store writes while
+/// typing. Save/Cancel actions come from the controller. Invalid URLs are
+/// saved anyway — the hint is advisory and runs live on the drafts.
+private struct SettingsForm: View {
+    @ObservedObject var draft: SettingsDraft
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
     var body: some View {
-        Form {
-            Section("Speech to Text") {
-                endpointField("Endpoint URL", text: $sttEndpointURL)
-                TextField("Model", text: $sttModel)
+        VStack(spacing: 0) {
+            Form {
+                Section("Speech to Text") {
+                    endpointField("Endpoint URL", text: $draft.sttEndpointURL)
+                    TextField("Model", text: $draft.sttModel)
+                }
+                Section("Cleanup LLM") {
+                    endpointField("Endpoint URL", text: $draft.llmEndpointURL)
+                    TextField("Model", text: $draft.llmModel)
+                }
             }
-            Section("Cleanup LLM") {
-                endpointField("Endpoint URL", text: $llmEndpointURL)
-                TextField("Model", text: $llmModel)
+            .formStyle(.grouped)
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: onSave)
+                    .keyboardShortcut(.defaultAction)
             }
+            .padding([.horizontal, .bottom])
         }
-        .formStyle(.grouped)
         // Both dimensions fixed: on macOS 26 the NSHostingController fitting
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
-        // take either), leaving a title-bar-only window. 300 pt fits the four
-        // fields, two section headers, and hint rows.
-        .frame(width: 420, height: 300)
-        .onChange(of: sttEndpointURL) { store.sttEndpointURL = stored(sttEndpointURL) }
-        .onChange(of: sttModel) { store.sttModel = stored(sttModel) }
-        .onChange(of: llmEndpointURL) { store.llmEndpointURL = stored(llmEndpointURL) }
-        .onChange(of: llmModel) { store.llmModel = stored(llmModel) }
+        // take either), leaving a title-bar-only window. 350 pt fits the four
+        // fields, two section headers, hint rows, and the button row.
+        .frame(width: 420, height: 350)
     }
 
     @ViewBuilder
@@ -104,9 +168,5 @@ private struct SettingsForm: View {
                 .font(.caption)
                 .foregroundStyle(.orange)
         }
-    }
-
-    private func stored(_ value: String) -> String? {
-        value.isEmpty ? nil : value
     }
 }

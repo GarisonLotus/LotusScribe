@@ -147,22 +147,29 @@ anywhere in the app; clipboard clobbering is accepted Phase-1 behavior.
 ## Sub-phase 1E — Bare settings pane
 
 **Deliverables:**
-- `SettingsWindowController.swift` (~100): SwiftUI `Form` in an
-  `NSHostingController`-backed window (D21) — four text fields bound to
-  SettingsStore (the four D9 keys, no new ones); URL-field hint via pure
-  `SettingsValidation.isValidEndpointURL` (http/https scheme + host).
-  Invalid values still saved (hint only). Emptying a field stores nil —
-  never "" — so unset keeps its phase-0 meaning (D25). App stays LSUIElement.
+- `SettingsWindowController.swift` (~120): SwiftUI `Form` in an
+  `NSHostingController`-backed window (D21) — four text fields editing
+  local draft state (the four D9 keys, no new ones); no store writes while
+  typing (D26). Save button (default, Return) writes all four keys via
+  SettingsStore — empty → nil per D25, applied at Save time — then closes
+  the window. Cancel (Esc) closes without writing; titlebar close = Cancel.
+  Reopening re-seeds drafts from the store. URL-field hint stays live on
+  the draft values via pure `SettingsValidation.isValidEndpointURL`
+  (http/https scheme + host); invalid values still saved (hint only).
+  App stays LSUIElement.
 - `StatusItemController.swift` delta (~10): "Settings…" menu item above Quit.
 - `Tests/SettingsValidationTests.swift` (~30): valid/invalid URL cases.
 
 **Verify:**
 1. `make test` green.
-2. HUMAN-AT-SCREEN: open Settings from menu; edit sttModel; quit + relaunch;
-   value persists (`defaults read` confirms) and next dictation uses it.
+2. HUMAN-AT-SCREEN: open Settings from menu; edit sttModel; Save; quit +
+   relaunch; value persists (`defaults read` confirms) and next dictation
+   uses it. Edit again, Cancel: no write (`defaults read` unchanged).
 
 **Invariants:** pane touches only the four D9 keys; SettingsStore remains
-the single backing store; no Keychain UI (no authed endpoint yet).
+the single backing store; the only path that writes is Save — Cancel and
+the titlebar close button write nothing (D26); no Keychain UI (no authed
+endpoint yet).
 
 **Out of scope (Phase 2+):** pill overlay/RMS, cleanup LLM, app-aware
 context, AX insertion, clipboard restore, onboarding UI, event swallowing,
