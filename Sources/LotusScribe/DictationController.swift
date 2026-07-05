@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 
@@ -66,9 +67,18 @@ final class DictationController {
         }
     }
 
+    /// D52: frontmost app at key-down — the app the user is dictating INTO.
+    /// Snapshotted per-Task in stopRecording (D23 discipline).
+    private var capturedBundleID: String?
+
     private func startRecording() {
         generation += 1  // D23: invalidates any still-in-flight transcript.
         engineLive = false
+        // D52: capture at key-down, not at cleanup time — by then the user
+        // may have switched apps. Nil (no frontmost) degrades to .other.
+        capturedBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        Self.logger.info(
+            "frontmost at key-down: \(self.capturedBundleID ?? "nil", privacy: .public)")
         do {
             try recorder.start()
             isRecording = true
@@ -98,6 +108,9 @@ final class DictationController {
         pill.update(.processing)
 
         let capturedGeneration = generation
+        // D52/D23: snapshot so this Task carries its own dictation's app —
+        // a newer capture can never bleed into an older in-flight Task.
+        let capturedBundleID = capturedBundleID
         Task {
             do {
                 var text = try await transcription.transcribe(wav: wav)
@@ -123,9 +136,8 @@ final class DictationController {
                     // the information (bounded by CleanupService's timeout).
                     pill.update(.stagedSuccess(cleanup: .pending))
                     do {
-                        // 4A: literal nil → .other → byte-identical prompt
-                        // (D51/D52); 4B replaces this with the key-down capture.
-                        text = try await cleanup.cleanup(transcript: text, frontmostBundleID: nil)
+                        text = try await cleanup.cleanup(
+                            transcript: text, frontmostBundleID: capturedBundleID)
                         terminal = .stagedSuccess(cleanup: .done)
                     } catch {
                         // D43: never eat the user's words — any cleanup

@@ -53,6 +53,41 @@
   throws `.notConfigured` — log-only, matches D52's "logged at resolution
   time" wording.
 
+### 4B gate — staged review (2026-07-05)
+
+**VERDICT: PASS — approve for commit.** Independent `make test`: green,
+145 tests / 17 suites (unchanged vs 4A gate, per spec — no new tests owed,
+D49 precedent).
+
+- Diff scope: UNSTAGED working-tree diff touches ONLY
+  `DictationController.swift` (+15/−3): AppKit import, `capturedBundleID`
+  instance var, capture + log in `startRecording`, per-Task local snapshot
+  in `stopRecording`, snapshot passed to `cleanup(transcript:
+  frontmostBundleID:)`. Removed lines are only the 4A placeholder comment
+  ("4B replaces this") plus the literal `nil` — exactly what 4B owes.
+- D52 capture point: `NSWorkspace.shared.frontmostApplication?
+  .bundleIdentifier` read in `startRecording` (key-down), not at cleanup
+  time. Capture sits BEFORE the recorder `do/catch` — spec-conformant
+  ("before/alongside `recorder.start()` — exact line order engineer's
+  choice"). Recorder-start-FAILURE leg is safe: `isRecording` stays false,
+  `stopRecording` guards on it, so the orphaned capture is never consumed
+  and is overwritten at the next key-down.
+- D23 no-bleed: `let capturedBundleID = capturedBundleID` shadows the
+  instance var directly alongside `capturedGeneration`, before the Task —
+  a newer dictation's capture cannot reach an older in-flight Task.
+- Log line at capture present (`frontmost at key-down:`, nil-coalesced,
+  `.public`); category resolution/logging stays in CleanupService (single
+  map-read site, per spec).
+- No DI seam (direct NSWorkspace call — 3B no-seam ruling / D49 adapter
+  posture); nil frontmost degrades via the existing nil→`.other` path;
+  no pill/UI change; D43 failure policy untouched.
+- Orchestrator-direct edit (engineer dispatch skipped): ACCEPTABLE for
+  this diff — ~18 lines, single file, spec §4B prescribes the exact code
+  nearly line-for-line, D49-precedent trivial-change path. No flag.
+- Remaining before gate closes fully: 4B verify #2 (HUMAN-AT-SCREEN log
+  check, not vLLM-dependent) and #3/#4 (BLOCKED-BATCH tone checks) are
+  still owed per spec; my PASS covers the machine-verifiable surface.
+
 ## New items
 
 | id | first raised | item | status |
