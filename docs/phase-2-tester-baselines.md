@@ -19,6 +19,17 @@ prompt fires at first recording start, not launch.
 
 ## Phase 2 gates
 
+**PHASE GATE (human, final): PASSED** (2026-07-05, orchestrator-recorded
+from user at-screen report). Spec §2C verify 1–6 all confirmed working:
+focus-steal, fullscreen overlay, waveform-tracks-voice (passed after the
+D35 dBFS fix; initial FAIL), cold-start warming behavior, state flashes,
+no-9-leak swallowing regression — plus the folded-in 2A no-9-leak item.
+User's blanket confirmation: "Everything is working now." Observed
+`.warming` duration was NOT quantified by the user — recorded as
+"working, unquantified" (Q6 already closed by D34; no decision hangs on
+the number). Phase 2 code baseline at close: 80 tests / 12 suites green
+at e6b6fe6.
+
 **Last gate: 2C-waveform-fix** (2026-07-05, PARALLEL mode — reviewer +
 architect ran concurrently; staged, NOT committed; base 5c7cd80, i.e.
 on top of c83031f/5c7cd80).

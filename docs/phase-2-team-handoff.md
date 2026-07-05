@@ -5,8 +5,7 @@
 > state. Docs carry phase numbers (CLAUDE.md §5); phase-0/phase-1 files
 > are the archives of those phases.
 
-**Last updated:** 2026-07-05, 2C committed — phase gate is HUMAN-AT-SCREEN
-verification, waiting on user (§3).
+**Last updated:** 2026-07-05, PHASE 2 CLOSED — human gate passed (§3).
 
 ## §1. How to use this doc
 
@@ -37,12 +36,20 @@ found by orchestrator lldb at launch verification, D29a rescinded
 composition roots). Q5 closed: `event tap started (defaultTap)` under
 existing grants. Q6 closed by D34. All automated gates clear.
 
-**RESUME POINT (next): HUMAN-AT-SCREEN phase gate** — spec §2C verify
-1–6 (focus-steal, fullscreen, waveform, cold-start incl. observed
-warming duration → baselines, state flashes, swallowing regression)
-PLUS folded 2A no-9-leak check. Results → tester baselines. Phase 2
-closes after these pass; then Phase 3 bootstrap (new docs set per
-CLAUDE.md §5).
+**PHASE 2 CLOSED 2026-07-05:** human gate passed — all §2C verify items
+confirmed by user (waveform after D35 fix, e6b6fe6). Post-2C fixes this
+phase: D34 (launch-blocking prepare(), c83031f) and D35 (frozen
+waveform, e6b6fe6), both 4-way gated.
+
+**RESUME POINT (next): user-directed feature before PLAN.md Phase 3** —
+Settings Save = test-then-close: on Save, live-test the connection with
+the buffered settings; success → green checkmark, window auto-closes
+after ~2 s; failure → dialog "problem with the connection", offer
+close-anyway / cancel. Needs architect spec first (placement vs PLAN.md
+Phase 3 LLM-cleanup, probe design, reconciliation with the no-alerts
+failure policy — user explicitly requested this dialog). Then the usual
+engineer → 4-way gate cycle. New docs set per CLAUDE.md §5 once the
+architect names the phase.
 
 **Baseline:** 75 tests / 12 suites green ×2 at c83031f (D34 gate).
 
