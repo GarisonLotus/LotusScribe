@@ -5,7 +5,7 @@
 > git state. All docs/ files carry the phase number (CLAUDE.md §5);
 > phase-0 files are the archive of that phase.
 
-**Last updated:** 2026-07-04, Phase 1 bootstrap (pre-spec).
+**Last updated:** 2026-07-04, 1C closed.
 
 ## §1. How to use this doc
 
@@ -29,8 +29,11 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** Phase 0 closed (commits b3bb2f9, f0cd857, 5ba19cb).
-Phase 1 spec being authored.
+**Where we are:** Phase 1 sub-phases 1A (hotkey, 11c5efd), 1B (audio,
+89a4aa7), 1C (TranscriptionService, this commit) closed — 4-way gates
+passed. Spec: docs/phase-1-spec.md (slicing D14: 1A–1E). Baselines: 43
+tests / 6 suites green ×2 (tester log). Real-endpoint round-trip verified
+twice (engineer probe + tester's independent oracle).
 
 **Verified facts for Phase 1 (orchestrator probes, 2026-07-04):**
 - STT endpoint LIVE and verified end-to-end: POST 16kHz mono WAV multipart
@@ -42,7 +45,11 @@ Phase 1 spec being authored.
   Xcode (0 identities). DEVELOPMENT_TEAM wired once user completes
   Xcode → Settings → Accounts.
 
-**Active sub-phase:** none — spec pending.
+**Active sub-phase:** 1D next — insertion (pasteboard + Cmd-V, D20) +
+core-loop wiring with generation counter (D23); includes R12 one-line
+timeout assertion in 1C test. Then 1E settings UI. HUMAN-AT-SCREEN
+remainders (1A/1B TCC records + 1D dictation matrix) owed before phase
+close — see tester log.
 
 **Working tree:** untracked PLAN.md, RESEARCH.md, claude.md (user's files).
 

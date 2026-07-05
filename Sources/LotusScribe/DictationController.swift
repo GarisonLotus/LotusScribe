@@ -1,15 +1,16 @@
 import Foundation
 import os
 
-/// Main-actor owner of the dictation loop (spec §1B v1 wiring): hotkey
-/// start → recorder.start(); stop → WAV to a temp file, log the path.
-/// 1C replaces the temp-file hand-off with TranscriptionService.
+/// Main-actor owner of the dictation loop (spec §1C wiring): hotkey
+/// start → recorder.start(); stop → TranscriptionService → log the
+/// transcript. Insertion is 1D.
 @MainActor
 final class DictationController {
     private static let logger = Logger(
         subsystem: "com.garisonlotus.LotusScribe", category: "DictationController")
 
     private let recorder = AudioRecorder()
+    private let transcription = TranscriptionService(settings: SettingsStore())
     private var isRecording = false
 
     func handle(_ action: HotkeyAction) {
@@ -40,14 +41,16 @@ final class DictationController {
         isRecording = false
         let wav = recorder.stop()
 
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("LotusScribe-\(UUID().uuidString).wav")
-        do {
-            try wav.write(to: url)
-            Self.logger.info("wav written: \(url.path, privacy: .public)")
-        } catch {
-            Self.logger.error(
-                "wav write failed: \(String(describing: error), privacy: .public)")
+        let transcription = self.transcription
+        Task {
+            do {
+                let text = try await transcription.transcribe(wav: wav)
+                Self.logger.info("transcript: \(text, privacy: .public)")
+            } catch {
+                // Failure policy (spec §cross-cutting): log, do nothing.
+                Self.logger.error(
+                    "transcription failed: \(String(describing: error), privacy: .public)")
+            }
         }
     }
 }

@@ -18,6 +18,7 @@
 | D20 | 2026-07-04 | Insertion = pasteboard write + synthesized Cmd-V only; no clipboard save/restore (no pasteboard reads anywhere) in Phase 1 | Restore needs a pasteboard read → upcoming privacy alert (RESEARCH §2); restore is Phase 6 | 1D |
 | D21 | 2026-07-04 | Settings pane = SwiftUI Form in NSHostingController-backed window, opened from status-item menu | No storyboard/SwiftUI-App churn; macOS 14 baseline (D5); fewest LoC without deps | 1E |
 | D22 | 2026-07-04 | Keep `CGRequestListenEventAccess()` at launch, guarded from test hosts (rules R5) | Deterministic, user-visible prompt → clean §1A-verify-3 TCC record; dropping it = silent failure until user finds System Settings; Phase 7 owns real onboarding | 1A |
+| D23 | 2026-07-04 | Overlapping dictation (R11): generation counter — only the latest dictation's transcript inserts; stale results logged + dropped. No cancel/serialize plumbing | Simplest guaranteed fix for stale insertion (CLAUDE.md); cancel adds Task bookkeeping + CancellationError noise, serialize locks the user out for up to 20 s | 1D |
 
 ## Open questions
 
@@ -38,3 +39,5 @@ tap), 1B (mic), 1D (final matrix incl. synthetic paste).
 2026-07-04: docs/phase-1-spec.md authored (sub-phases 1A–1E, D14–D21).
 2026-07-04: 1B shape approved (post-R8). R9 tail-drop accepted for
 dictation; spec §1C verify-2 amended to make temp-write removal explicit (R10).
+2026-07-04: 1C shape approved. R11 ruled → D23 (generation counter, spec
+§1D). R12: required in 1D — one-line timeout assertion in the 1C test.

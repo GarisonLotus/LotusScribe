@@ -5,8 +5,37 @@
 
 ## Last gate
 
-**Sub-phase:** 1B
-**Test command:** `make test`
+**Sub-phase:** 1C
+**Test command:** `make test` — run TWICE (new concurrency surface: serialized
+TranscriptionServiceTests + URLProtocol global handler); both runs identical.
+**Counts (both runs):** 43 tests in 6 suites, 0 failures, 0 build warnings
+(run 1 xcresult issues block empty — 0 errors / 0 warnings / 0 analyzer
+warnings; run 2 full log has zero `warning:` lines; xcresult testsCount 49 =
+43 runner tests + parameterized ×7 expansion).
+- HotkeyStateMachineTests: 14 · WavEncoderTests: 6 · SettingsStoreTests: 6 ·
+  KeychainStoreTests: 5 · MultipartBodyTests: 5 · TranscriptionServiceTests: 6
+  · smoke appDelegateInitializes: 1 (freestanding — runner reports 6 suites)
+- Matches reviewer's inline counts (43 in 6 suites; new suites
+  MultipartBodyTests 5, TranscriptionServiceTests 6 serialized).
+- Note: the R3 "'is' test is always true" warning in SmokeTests.swift again
+  did not surface (file unchanged; incremental) — still tracked as
+  pre-existing.
+
+**Real-endpoint oracle (tester-independent, no-app check):** synthesized a
+fresh sentence ("The lotus blooms at midnight over silent water", `say` +
+`afconvert` → 16 kHz / 1 ch / Int16 WAV, 2.85 s), curl multipart POST to
+https://vllm.garison.com/v1/audio/transcriptions with model=whisper-large-v3
+→ HTTP 200 in 1.08 s, body
+`{"text":" The lotus blooms at midnight over silent water."}` — exact match.
+Independent of engineer's "quick brown fox" probe.
+
+**Git hygiene at gate:** staged = exactly 6 files (MultipartBody.swift,
+TranscriptionService.swift, MultipartBodyTests.swift,
+TranscriptionServiceTests.swift new + DictationController.swift,
+SettingsStore.swift edits).
+
+### 1B archive
+
 **Counts:** 32 tests in 4 suites, 0 failures, 0 build warnings (xcresult
 errorCount 0 / warningCount 0 / analyzerWarningCount 0).
 - HotkeyStateMachineTests: 14 (13 functions + 1 parameterized ×7 cases) ·
@@ -37,6 +66,13 @@ app binary unpermissioned; run log shows
 followed by `[EventTapMonitor] event tap started` — listen-only tap creation
 succeeded without TCC grants (no failure path exercised), host did not crash,
 all 26 tests passed.
+
+## HUMAN-AT-SCREEN remainder at 1C close (user owes before phase close)
+
+Unchanged from 1B (mic TCC record #2 + speak/afinfo, below). 1C's own
+in-app step — spec 1C verify 2, speak a known sentence and confirm the
+transcript in the log — folds into 1D's phase-gate dictation matrix rather
+than being owed separately.
 
 ## HUMAN-AT-SCREEN remainder for 1B close (user owes before phase close)
 

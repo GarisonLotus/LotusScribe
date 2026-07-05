@@ -123,8 +123,12 @@ is byte-for-byte unit-tested; 20 s timeout enforced.
   `.maskCommand` posted to `.cghidEventTap`. No clipboard save/restore (D20
   — restore requires a pasteboard *read*, deferred to Phase 6).
 - `DictationController.swift` delta (~40): key-up → stop → transcribe →
-  non-empty → insert; errors logged, nothing inserted. No new unit tests
-  (adapter-only; logic already covered in 1A–1C).
+  non-empty → insert; errors logged, nothing inserted. Overlapping dictation
+  (R11, D23): generation counter — bump an Int on each start, capture it in
+  the transcribe Task; insert only if still current, else log + drop.
+  No new unit tests (adapter-only; logic already covered in 1A–1C), except:
+  add `#expect(request.timeoutInterval == 20)` to the existing 1C
+  request-shape test (R12 — required in 1D).
 
 **Verify (all HUMAN-AT-SCREEN — this is the PLAN.md phase gate):**
 1. Dictate into TextEdit, Slack, a browser textarea, and Terminal against

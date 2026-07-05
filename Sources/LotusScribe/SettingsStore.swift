@@ -2,8 +2,8 @@ import Foundation
 
 /// UserDefaults-backed settings storage. See docs/phase-0-spec.md §Sub-phase 0B.
 ///
-/// Keys are exactly the four below (D9); all default nil. Secrets never live
-/// here — API keys go through KeychainStore.
+/// Keys are the four D9 keys plus `sttLanguage` (D18); all default nil.
+/// Secrets never live here — API keys go through KeychainStore.
 final class SettingsStore {
     private let defaults: UserDefaults
 
@@ -29,5 +29,12 @@ final class SettingsStore {
     var llmModel: String? {
         get { defaults.string(forKey: "llmModel") }
         set { defaults.set(newValue, forKey: "llmModel") }
+    }
+
+    /// D18: optional STT language; nil → omitted from requests. Not a D9
+    /// settings-pane key — seeded via `defaults write` only in Phase 1.
+    var sttLanguage: String? {
+        get { defaults.string(forKey: "sttLanguage") }
+        set { defaults.set(newValue, forKey: "sttLanguage") }
     }
 }
