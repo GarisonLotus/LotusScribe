@@ -74,6 +74,11 @@ struct HotkeyStateMachine {
     // physically held (survives the modifier-release stop path, where
     // isCapturing goes false before the trailing keyUp arrives).
     private var chordKeyDownSwallowed = false
+    // R29: true while a chord-key press that passed through unswallowed is
+    // physically held — later autorepeats (even with modifiers now present)
+    // must not start capture, or the eventual keyUp would be swallowed
+    // unbalanced. Cleared on keyUp (fresh press required).
+    private var chordKeyDownPassedThrough = false
 
     init(chord: HotkeyChord) {
         self.chord = chord
@@ -119,7 +124,9 @@ struct HotkeyStateMachine {
             }
             // isSuperset: real events carry extra flag bits (device-dependent,
             // non-coalesced); only the chord's modifiers must be present.
-            guard !isCapturing, flags.isSuperset(of: modifiers) else {
+            guard !isCapturing, !chordKeyDownPassedThrough,
+                  flags.isSuperset(of: modifiers) else {
+                chordKeyDownPassedThrough = true
                 return HotkeyDecision(action: .none, swallow: false)
             }
             isCapturing = true
@@ -132,6 +139,7 @@ struct HotkeyStateMachine {
             // Pair balance (D30): swallow iff the matching down was swallowed.
             let swallow = chordKeyDownSwallowed
             chordKeyDownSwallowed = false
+            chordKeyDownPassedThrough = false
             guard isCapturing else {
                 return HotkeyDecision(action: .none, swallow: swallow)
             }

@@ -12,6 +12,7 @@
 | D30 | 2026-07-04 | Event swallowing (D28 promotion): tap becomes `.defaultTap`; swallow = callback returns nil. Scope: chord keycode's keyDown (start + autorepeats while `chordKeyDownSwallowed` — swallowed press physically held, strict superset of while-capturing; ratified from 2A implementation) and its keyUp, pair-balanced — keyUp swallowed iff its keyDown was (covers the modifier-release stop path). Never flagsChanged, never other keycodes, never `.fnHold`. If `.defaultTap` creation fails, retry `.listenOnly` + log the fallback | Modifiers are shared system state — swallowing flagsChanged breaks other shortcuts; pair balance means no app ever sees half a down/up pair; fallback: Phase-1 leakage beats a dead hotkey | 2A |
 | D31 | 2026-07-04 | Pill metrics, single definition site `PillMetrics`: content 260×52 pt, bottom-center of `NSScreen.main` at `visibleFrame.minY + 24`, 24 waveform bars, 0.8 s success/error flash. Panel sized via explicit `setContentSize`; tests assert `contentLayoutRect` | R23: macOS 26 fitting-size autosizing is broken for SwiftUI-hosted windows; R21: shared constant once a literal wants a 3rd site | 2B |
 | D32 | 2026-07-04 | RMS plumbing: pure `AudioLevel.rms(pcm16:) -> Float` (0…1); AudioRecorder gains `onLevel` closure, computed per converted chunk on the audio thread, value dispatched to main. First callback doubles as the D29 engine-live signal | D14 split: math pure/headless, delivery adapter thin; no Combine/ObservableObject in the recorder | 2A |
+| D33 | 2026-07-05 | R33 ruling — accept the widened PillController surface: 2C-facing API stays the four methods (show/update/push/hide); read-only observability (internal `let panel`, computed `var state`) is ratified as part of the surface, test/assert access only. Spec §2B round-tripped | R24 precedent (test observability over NSApp-hosted windows); `state` is computed read-only and `panel` is `let` — no state-ownership change; narrowing buys no encapsulation, costs test reach | 2B |
 
 ## Open questions
 
@@ -21,6 +22,13 @@
 | — | carried | R4 (phase 0): close by exercising a Keychain read under the 5RC66Q82V9 identity — precondition satisfied since R27 | open | any authed-endpoint work |
 
 ## Notes
+
+2026-07-05: 2B SHAPE NON-OBJECTION. R33 accepted (D33, spec §2B round-tripped).
+Other 4 beyond-spec additions (`isReleasedWhenClosed = false`, setContentSize
+re-assert, paddedLevels fill-from-right, optional-screen guard) confirmed
+execution-level — no shape change, no round-trip. R29 fix code-verified:
+`chordKeyDownPassedThrough` refuses start/swallow until a clean keyUp (R29
+option 1) under the D30 pair-balance invariant — matches mandated disposition.
 
 2026-07-04: docs/phase-2-spec.md authored — sub-phases 2A (swallowing + RMS,
 pure logic first) → 2B (PillPanel + waveform, unreachable but committable)

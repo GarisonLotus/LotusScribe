@@ -152,6 +152,25 @@ struct HotkeyStateMachineTests {
             == HotkeyDecision(action: .none, swallow: false))
     }
 
+    @Test func bareDownThenModifiersNeverStartsCaptureOrSwallows() {
+        // R29 regression (D30 pair balance): the physical press began
+        // unswallowed, so autorepeat downs after the modifiers arrive must
+        // not start capture — the app saw the down; it must see the up.
+        var machine = HotkeyStateMachine(chord: Self.ctrlAltZ)
+        #expect(machine.handle(.keyDown(6, []))
+            == HotkeyDecision(action: .none, swallow: false))
+        #expect(machine.handle(.flagsChanged([.maskControl, .maskAlternate])).swallow == false)
+        #expect(machine.handle(.keyDown(6, [.maskControl, .maskAlternate]))
+            == HotkeyDecision(action: .none, swallow: false))
+        #expect(machine.handle(.keyDown(6, [.maskControl, .maskAlternate]))
+            == HotkeyDecision(action: .none, swallow: false))
+        #expect(machine.handle(.keyUp(6))
+            == HotkeyDecision(action: .none, swallow: false))
+        // A fresh press with the chord held is a normal start again.
+        #expect(machine.handle(.keyDown(6, [.maskControl, .maskAlternate]))
+            == HotkeyDecision(action: .startCapture, swallow: true))
+    }
+
     @Test func fnHoldModeNeverSwallows() {
         var machine = HotkeyStateMachine(chord: .fnHold)
         #expect(machine.handle(.flagsChanged(.maskSecondaryFn)).swallow == false)

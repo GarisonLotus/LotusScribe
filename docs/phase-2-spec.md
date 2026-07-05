@@ -93,7 +93,9 @@ Phase-1 behavior exactly; RMS math is pure and headless-tested.
   pattern). Hosted via NSHostingView with `.ignoresSafeArea()`.
 - `PillController.swift` (~50): owns panel + hosting view + view model;
   `show(_ state:)`, `update(_ state:)`, `push(level:)`, `hide()`;
-  success/error auto-hide after `flashDuration`.
+  success/error auto-hide after `flashDuration`. Ratified surface (D33)
+  also carries read-only observability: internal `let panel` + computed
+  `var state` — test/assert access only; all mutation via the four methods.
 - `Tests/PillPanelTests.swift` (~50): materialize PillController; assert
   `contentLayoutRect` ≥ 260×52 (R23 — content area, not window frame);
   `canBecomeKey == false`; collectionBehavior contains both flags; level ==

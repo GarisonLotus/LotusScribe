@@ -5,7 +5,7 @@
 > state. Docs carry phase numbers (CLAUDE.md §5); phase-0/phase-1 files
 > are the archives of those phases.
 
-**Last updated:** 2026-07-04, Phase 2 spec authored — implementation not started.
+**Last updated:** 2026-07-05, 2B gate closed — next is 2C dispatch (§3).
 
 ## §1. How to use this doc
 
@@ -28,12 +28,24 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** Phase 1 complete and pushed at b148cff (stable
-personal-team signing 5RC66Q82V9, empty-audio guard, full empirical TCC
-record in docs/phase-1-tester-baselines.md). Phase 2 spec authored
-2026-07-04; no Phase 2 code exists yet.
+**Where we are:** 2B gate CLOSED 2026-07-05 (sequential): reviewer
+approved-with-notes (R29 fix verified, R23 closed, R32/R33 raised),
+architect non-objected (R33 → D33: PillController read-only
+observability ratified, spec round-tripped), tester green ×2 74/12
+cross-checked, orchestrator spot-checks clean. Commit is the one this
+doc rides in.
 
-**Baseline:** 54 tests / 9 suites green at b148cff (see phase-2 tester file).
+**RESUME POINT (next):** dispatch 2C engineer — DictationController
+wiring (pill state transitions per spec §2C) + `engine.prepare()`
+(D29a). Then the HUMAN-AT-SCREEN phase gate (spec §2C verify 1–6),
+which also folds in the owed 2A checks below.
+
+**Baseline:** 74 tests / 12 suites green ×2 (reviewer + tester
+independent runs, 2B gate).
+
+**HUMAN-AT-SCREEN owed (2A, folds into 2C phase gate):** no-9-leak
+dictation check; Q5 defaultTap TCC record ("event tap started (mode)"
+Console line). Phase-1 signing is stable — rebuilds no longer break TCC.
 
 **Key facts for Phase 2:**
 - STT endpoint live: https://vllm.garison.com/v1/audio/transcriptions,
@@ -43,9 +55,8 @@ record in docs/phase-1-tester-baselines.md). Phase 2 spec authored
   whether `.defaultTap` works under those grants — 2A human verify.
 - R23 lesson binds 2B: explicit `setContentSize`, test `contentLayoutRect`.
 
-**Active sub-phase:** none — next step is dispatching 2A (swallowing + RMS,
-pure logic first). Slicing: 2A → 2B (pill panel + view, unreachable but
-committable) → 2C (state wiring + cold-start, HUMAN-AT-SCREEN phase gate).
+**Active sub-phase:** 2C next (state wiring + cold-start, HUMAN-AT-SCREEN
+phase gate). 2A committed at 51a040d; 2B committed with this doc.
 
 **Working tree:** untracked RESEARCH.md, claude.md (user's files).
 
@@ -101,3 +112,5 @@ Skill's Resume-from-crash pattern; phase-2 file set + this doc.
 ## §11. Revision notes
 
 Rev A — Phase 2 bootstrap (spec + docs set), 2026-07-04.
+Rev B — 2B gate closed (reviewer/architect/tester/orchestrator clear,
+D33 locked, R23/R29/R33 closed), resume point → 2C, 2026-07-05.

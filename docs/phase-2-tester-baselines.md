@@ -19,7 +19,33 @@ prompt fires at first recording start, not launch.
 
 ## Phase 2 gates
 
-**Last gate: 2A** (2026-07-04, PARALLEL mode — tester ran without reviewer
+**Last gate: 2B** (2026-07-05, SEQUENTIAL mode — staged, NOT committed;
+base commit 51a040d).
+- **Counts:** 74 tests in 12 suites, 0 failures — `make test` run TWICE,
+  both runs identical (74/12 green each, TEST SUCCEEDED). Delta vs 2A
+  baseline: +8 tests / +2 suites (66/10 at 51a040d → 74/12), matching
+  engineer claim and reviewer's independent run exactly: +1 R29-regression
+  in HotkeyStateMachineTests (21→22), +5 in new PillPanelTests, +2 in new
+  PillViewModelTests.
+- **Per-suite (run 2):** AudioLevelTests 5, DictationControllerTests 3,
+  HotkeyStateMachineTests 22, KeychainStoreTests 5, MultipartBodyTests 5,
+  PillPanelTests 5, PillViewModelTests 2, SettingsStoreTests 6,
+  SettingsValidationTests 2, SettingsWindowControllerTests 5,
+  TranscriptionServiceTests 6, WavEncoderTests 6 = 72 in suites + 2
+  top-level tests (appDelegateInitializes, mainMenuRoutesPaste) = 74.
+- **Cross-check:** matches reviewer's independent 74/12 TEST SUCCEEDED and
+  their claimed delta breakdown. No divergence.
+- **Staged surface:** `git diff --cached --stat` = 6 source (5 new Pill*
+  + HotkeyStateMachine.swift R29 fix), 3 test files (HotkeyStateMachineTests
+  + new PillPanelTests, PillViewModelTests), 2 docs — matches handoff §3.
+- **Warnings:** only registry noise observed (destination auto-pick,
+  Accessibility-not-vending, WarnOnce layoutSubtreeIfNeeded,
+  DetachedSignatures, task-name-port). No compile step ran in the verified
+  runs (incremental), so the pre-existing "'is' test is always true" 0A
+  smoke-test compile warning did not surface; nothing new-in-this-diff.
+- **Flakes:** none — no pass-on-second-run tests; both runs identical.
+
+**Prior gate: 2A** (2026-07-04, PARALLEL mode — tester ran without reviewer
 counts; orchestrator collates post-hoc).
 - **Counts:** 66 tests in 10 suites, 0 failures — `make test` run TWICE,
   both runs identical (66/10 green each). Delta vs baseline: +12 tests /
