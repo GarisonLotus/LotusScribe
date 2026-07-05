@@ -5,7 +5,8 @@
 > state. Docs carry phase numbers (CLAUDE.md §5); phase-0/phase-1 files
 > are the archives of those phases.
 
-**Last updated:** 2026-07-05, 2B gate closed — next is 2C dispatch (§3).
+**Last updated:** 2026-07-05, 2C committed — phase gate is HUMAN-AT-SCREEN
+verification, waiting on user (§3).
 
 ## §1. How to use this doc
 
@@ -28,20 +29,21 @@ Primary references:
 
 ## §3. Current state
 
-**Where we are:** 2B gate CLOSED 2026-07-05 (sequential): reviewer
-approved-with-notes (R29 fix verified, R23 closed, R32/R33 raised),
-architect non-objected (R33 → D33: PillController read-only
-observability ratified, spec round-tripped), tester green ×2 74/12
-cross-checked, orchestrator spot-checks clean. Commit is the one this
-doc rides in.
+**Where we are:** all three sub-phases committed + pushed: 2A 51a040d,
+2B 3a8a83e (D33 locked, R23/R29/R33 closed), 2C afe0c98 (pill wiring +
+prepare(); reviewer approved, architect non-objected — D23 error-path
+guard ruling-consistent, D29a pending Q6; tester green ×2). All
+automated gates clear.
 
-**RESUME POINT (next):** dispatch 2C engineer — DictationController
-wiring (pill state transitions per spec §2C) + `engine.prepare()`
-(D29a). Then the HUMAN-AT-SCREEN phase gate (spec §2C verify 1–6),
-which also folds in the owed 2A checks below.
+**RESUME POINT (next): HUMAN-AT-SCREEN phase gate** — spec §2C verify
+1–6 (focus-steal, fullscreen, waveform, cold-start warming duration →
+closes Q6, state flashes, swallowing regression) PLUS folded 2A items
+(no-9-leak, Q5 defaultTap Console record). Results → tester baselines
+by orchestrator or a dispatched tester; Q5/Q6 closures → architect log.
+Phase 2 closes only after these pass; then Phase 3 bootstrap (new docs
+set per CLAUDE.md §5).
 
-**Baseline:** 74 tests / 12 suites green ×2 (reviewer + tester
-independent runs, 2B gate).
+**Baseline:** 74 tests / 12 suites green ×2 at afe0c98 (2C gate).
 
 **HUMAN-AT-SCREEN owed (2A, folds into 2C phase gate):** no-9-leak
 dictation check; Q5 defaultTap TCC record ("event tap started (mode)"
@@ -55,8 +57,8 @@ Console line). Phase-1 signing is stable — rebuilds no longer break TCC.
   whether `.defaultTap` works under those grants — 2A human verify.
 - R23 lesson binds 2B: explicit `setContentSize`, test `contentLayoutRect`.
 
-**Active sub-phase:** 2C next (state wiring + cold-start, HUMAN-AT-SCREEN
-phase gate). 2A committed at 51a040d; 2B committed with this doc.
+**Active sub-phase:** none in flight — 2A/2B/2C all committed; phase
+gate (human verification) is the sole remaining Phase-2 item.
 
 **Working tree:** untracked RESEARCH.md, claude.md (user's files).
 
@@ -114,3 +116,5 @@ Skill's Resume-from-crash pattern; phase-2 file set + this doc.
 Rev A — Phase 2 bootstrap (spec + docs set), 2026-07-04.
 Rev B — 2B gate closed (reviewer/architect/tester/orchestrator clear,
 D33 locked, R23/R29/R33 closed), resume point → 2C, 2026-07-05.
+Rev C — 2C gate closed + committed (afe0c98); resume point →
+HUMAN-AT-SCREEN phase gate, 2026-07-05.
