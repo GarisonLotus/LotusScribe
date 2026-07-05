@@ -45,8 +45,12 @@ not an incident.
 **3A warnings:** known-noise only (destination auto-pick, NSCGS/CA during
 PillPanelTests, task-name-port, CursorUI ViewBridge). No new entries.
 
-**HUMAN-AT-SCREEN:** spec §3A verify items 2–5 pending (probe-gated Save
-behavior against live endpoint not machine-verifiable).
+**HUMAN-AT-SCREEN:** spec §3A verify items 2–5 **PASSED** (2026-07-05,
+orchestrator-recorded from user at-screen report at 638b11d — sheet
+labels renamed Save Anyway / Try Again before the verify): success flow
+(spinner → checkmark → ~2 s auto-close → persisted), failure sheet both
+buttons per D37, mid-test close writes nothing, D38 dictation
+regression clean. **3A CLOSED at 638b11d; code baseline 89/13.**
 
 ## Flake registry (known-noise, carried from phase 2)
 
