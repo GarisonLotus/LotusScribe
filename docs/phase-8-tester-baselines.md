@@ -69,6 +69,15 @@ run2: 6 + 6 — count nondeterministic OS chatter, up from ×6 at 8B, same
 family, no action). No compiler warnings, no new flakes. Cross-check:
 matches reviewer's 230/22 ×1 at APPROVED.
 
+## Live-leg results (user at-screen, orchestrator-recorded)
+
+**8C Slack leg CLOSED 2026-07-06 09:13:** dictation into Slack landed
+(screenshot evidence); log shows `insertion route: pasteboard (AX
+denylist …)` for com.tinyspeck.slackmacgap, then `insertion route: ax`
+for TextEdit immediately after (no over-blocking). Cleanup category
+workMessaging fired on the Slack leg — register-correct output, which
+also serves as Phase-4 workMessaging tone evidence.
+
 ## Flake registry
 
 Carried unchanged — see docs/phase-3-tester-baselines.md §Flake registry
