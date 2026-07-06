@@ -5,10 +5,10 @@ generate:
 	xcodegen generate
 
 build: generate
-	xcodebuild -project LotusScribe.xcodeproj -scheme LotusScribe -configuration Debug build
+	xcodebuild -project LotusScribe.xcodeproj -scheme LotusScribe -configuration Debug -derivedDataPath build build
 
 test: generate
-	xcodebuild test -project LotusScribe.xcodeproj -scheme LotusScribe -destination 'platform=macOS'
+	xcodebuild test -project LotusScribe.xcodeproj -scheme LotusScribe -destination 'platform=macOS' -derivedDataPath build
 
 # Release recipes (D71) — dry-run clean without creds. Developer ID enters only
 # here: SIGN_IDENTITY re-signs inside scripts/make-dmg.sh; NOTARY_PROFILE gates
