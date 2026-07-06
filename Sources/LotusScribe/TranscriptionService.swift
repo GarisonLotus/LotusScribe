@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Errors surfaced by TranscriptionService (spec §1C).
 enum TranscriptionError: Error {
@@ -13,6 +14,9 @@ enum TranscriptionError: Error {
 /// §"Sub-phase 1C". Never touches TCC-bearing APIs; no API-key header in
 /// Phase 1 (D13).
 struct TranscriptionService {
+    private static let logger = Logger(
+        subsystem: "com.garisonlotus.LotusScribe", category: "TranscriptionService")
+
     private let settings: SettingsStore
     private let session: URLSession
 
@@ -34,6 +38,22 @@ struct TranscriptionService {
         // D18: optional language field; nil → omitted entirely.
         if let language = settings.sttLanguage {
             body.addField(name: "language", value: language)
+        }
+        // D58: dictionary biasing via the Whisper initial `prompt` field;
+        // empty list → omitted entirely (D18 idiom — empty-dictionary
+        // request bytes stay identical to Phase 4).
+        let terms = settings.dictionaryTerms
+        if let prompt = DictionaryPrompt.sttPrompt(terms: terms) {
+            body.addField(name: "prompt", value: prompt)
+            // D59: builder is pure — the caller logs when the cap dropped
+            // terms. Prefix joins grow strictly, so exactly one N matches.
+            let included = (1...terms.count).first {
+                terms.prefix($0).joined(separator: ", ") == prompt
+            } ?? terms.count
+            if included < terms.count {
+                Self.logger.info(
+                    "STT prompt truncated (D59 cap): dropped \(terms.count - included) of \(terms.count) dictionary terms")
+            }
         }
         body.addFile(name: "file", filename: "audio.wav", contentType: "audio/wav", data: wav)
 

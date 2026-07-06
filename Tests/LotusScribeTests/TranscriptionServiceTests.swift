@@ -129,6 +129,50 @@ final class TranscriptionServiceTests {
         #expect(body == expected.data)
     }
 
+    /// Captures the outgoing request + drained body via the shared stub.
+    private func capturedBody() async throws -> (request: URLRequest, body: Data) {
+        nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
+        StubURLProtocol.handler = { request in
+            captured = (request, StubURLProtocol.bodyData(of: request))
+            return (Self.okResponse(for: request), Data(#"{"text":"ok"}"#.utf8))
+        }
+        _ = try await service().transcribe(wav: wav)
+        return try #require(captured)
+    }
+
+    /// Rebuilds the expected multipart bytes (model, optional prompt, file)
+    /// with the request's own boundary.
+    private func expectedBody(of request: URLRequest, prompt: String?) throws -> Data {
+        let contentType = try #require(request.value(forHTTPHeaderField: "Content-Type"))
+        let boundary = try #require(
+            contentType.wholeMatch(of: /multipart\/form-data; boundary=(.+)/)?.1)
+        var expected = MultipartBody(boundary: String(boundary))
+        expected.addField(name: "model", value: "whisper-large-v3")
+        if let prompt { expected.addField(name: "prompt", value: prompt) }
+        expected.addFile(name: "file", filename: "audio.wav", contentType: "audio/wav", data: wav)
+        return expected.data
+    }
+
+    @Test func dictionaryTermsSentAsPromptField() async throws {
+        settings.dictionaryTerms = ["Garison", "LotusScribe"]
+        let (request, body) = try await capturedBody()
+        #expect(body == (try expectedBody(of: request, prompt: "Garison, LotusScribe")))
+    }
+
+    @Test func emptyDictionaryOmitsPromptFieldEntirely() async throws {
+        let (request, body) = try await capturedBody()
+        #expect(body.range(of: Data(#"name="prompt""#.utf8)) == nil)  // D58 neutrality floor
+        #expect(body == (try expectedBody(of: request, prompt: nil)))
+    }
+
+    @Test func overBudgetDictionarySendsStrictPrefixOfTerms() async throws {
+        // 300 + 2 + 296 = 598 ≤ 600; adding ", ccc" would hit 603 → dropped (D59).
+        let fits = [String(repeating: "a", count: 300), String(repeating: "b", count: 296)]
+        settings.dictionaryTerms = fits + ["ccc"]
+        let (request, body) = try await capturedBody()
+        #expect(body == (try expectedBody(of: request, prompt: fits.joined(separator: ", "))))
+    }
+
     @Test func successDecodesText() async throws {
         StubURLProtocol.handler = { request in
             (Self.okResponse(for: request), Data(#"{"text":"hello world"}"#.utf8))

@@ -49,9 +49,26 @@ slices land now, same posture as Phase 4.
 the BLOCKED-BATCH queue (when-vllm-is-back.md §A/§B). Architect has NOT
 declared Phase 3 or 4 complete.
 
-**RESUME POINT (next):** fix the 4C Save/Cancel overlap defect (small
-SettingsForm layout fix, at-screen verify by user), then dispatch 5B
-(Whisper `prompt` injection per spec §5B).
+**Overlap defect FIXED** at 6a98dfb; retroactively reviewer-APPROVED at
+the 5B gate (R49 watch: button row now outside Form's disabled scope).
+User re-persisted overrides via Save Anyway — confirmed on disk.
+
+**5B CLOSED 2026-07-05** (this commit): Whisper `prompt` multipart
+injection (D58/D59), 4-way gated, 173/18 green ×2 on three runners.
+R48 pinned in architect log (truncation-log recovery ↔ strict-prefix
+contract).
+
+**5C BUILT in isolated worktree** (concurrent with 5B gate, user-
+directed): 174/18 green ×2 there; diff (+137/−5, SettingsForm +
+controller + tests) awaiting apply → gate → commit in main tree.
+
+**AUTONOMOUS RUN (user away, 2026-07-05):** user directed: continue
+through phases until they return ("I'm back"). Queue: land 5C → Phase 5
+machine-complete → bootstrap Phase 6 (insertion hardening, PLAN.md §6)
+→ Phase 7 (distribution) as far as machine-verifiable. All at-screen /
+vLLM items accumulate in when-vllm-is-back.md.
+
+**RESUME POINT (next):** apply 5C worktree diff, gate, commit.
 
 **Cleanup endpoints:** vLLM (verified, down): chat/completions +
 Qwen/Qwen3.6-35B-A3B-FP8. STT: https://vllm.garison.com/v1/audio/transcriptions

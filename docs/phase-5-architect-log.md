@@ -68,3 +68,17 @@ may exceed 224 tokens for non-Latin terms): no D59 change — the ~3
 chars/token assumption is stated in the row; fold a non-Latin-terms
 sanity check into the Q5-2 BLOCKED-BATCH verify. No objections; 5A
 shape conforms.
+
+2026-07-05: 5B NON-OBJECTION (architect, staged-diff shape gate).
+Verified against D58/D59 + spec §5B on the staged TranscriptionService
+diff: `prompt` field added after the D18 language block, before the
+file part; injection gated only on non-empty normalized terms — no
+cleanup-level / effective-enabled check (D58); builder stays pure, the
+service owns the truncation log (Logger subsystem/category match the
+CleanupService pattern); empty list → nil → field absent (D18 idiom).
+D59 CONTRACT PIN (R48): the service-side dropped-count recovery assumes
+sttPrompt returns EXACTLY a first-N ", "-joined strict prefix of terms;
+any future change to the cap rule (separator, reordering, per-term
+elision) must also change the recovery or return the count explicitly.
+R49: no pre-5C amendment — carry as a gate check item at the 5C gate
+(button row's own .disabled is the sole guard). No objections.
