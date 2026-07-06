@@ -151,8 +151,11 @@ enum InsertionPolicy {
 **Verify (6B):**
 1. MACHINE: `make test` green ×2 (delta ≈ +4 tests, +1 suite vs 6A gate).
 2. MACHINE: grep — InsertionPolicy.swift imports Foundation only; no
-   AX symbol outside TextInserter.swift (Permissions.swift's
-   `AXIsProcessTrusted` excepted).
+   AX *usage* (imports/calls in code) outside TextInserter.swift
+   (Permissions.swift's `AXIsProcessTrusted` excepted; comment-only
+   mentions of AX names, e.g. kAXSelectedText in doc comments, are
+   tolerated — R57). Same reading applies wherever this grep re-runs
+   (6C gate).
 3. BLOCKED-BATCH (insertion matrix — for each app dictate a short
    utterance and check Console for the route log): TextEdit (expect
    route=ax; text lands at caret; then select a word first and dictate —

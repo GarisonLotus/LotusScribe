@@ -60,3 +60,14 @@ no insert-time re-check. Color: `.foregroundStyle(.orange)` accepted —
 spec's "systemOrange" names the color, not an API; SwiftUI `.orange` is
 the system-adaptive orange and is the file's existing D48 amber idiom
 (PillView lines 37/77). No pinning needed; no spec amendment warranted.
+
+2026-07-05: 6B NON-OBJECTION (SHAPE). Staged InsertionPolicy.swift +
+TextInserter.swift conform to D61/D65: policy pure/Foundation-only with
+headless 4-cell truth table; AX confined adapter-side direct (D49/D52);
+probe chain exact (system-wide → 0.25 s messaging timeout →
+CFGetTypeID-guarded focused-element copy → IsAttributeSettable); no
+readback, no denylist; D43 fall-through in the SAME call, write-before-
+Cmd-V preserved; one route log per insertion (ax/pasteboard/ax-fallback).
+RULED (R57): spec §6B verify item 2 amended — grep contract is "no AX
+*usage* (imports/calls) outside TextInserter"; the 2 comment-only
+kAXSelectedText mentions (InsertionPolicy + tests) are tolerated.

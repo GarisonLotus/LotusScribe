@@ -50,8 +50,14 @@ collated from partial return after an API cutoff — source checks pass +
 approval). vLLM RESTORED + user back at screen 2026-07-05 — batch
 testing (when-vllm-is-back.md) begins.
 
-**RESUME POINT (next):** 6B (built in worktree, apply → gate → commit),
-then 6C; user batch-testing runs interleaved.
+**6B CLOSED 2026-07-05** (this commit): AX-first insertion + fallback
+(D61/D65), 4-way gated, 183/19 green (×2 tester, ×1 reviewer, ×1
+orchestrator). Spec §6B verify-2 wording amended (AX *usage* grep, R57).
+User defers batch testing to TOMORROW MORNING — orchestrator continues
+autonomously; when-vllm-is-back.md keeps growing.
+
+**RESUME POINT (next):** 6C (clipboard save/restore), then Phase 7
+bootstrap (machine-verifiable slices only).
 
 **Working tree:** untracked RESEARCH.md, claude.md, when-vllm-is-back.md
 (never commit).

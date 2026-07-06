@@ -27,6 +27,8 @@
 |----|--------------|------|--------|
 | R54 | 6A | DictationController delta +9 vs spec ceiling ~8; overage is the 3-line why-comment pinning the D63 order invariant (guard before generation bump). Comment is load-bearing documentation of exactly the invariant a future edit would break — accepted per R6 judgment, not a pattern to repeat silently | closed (accepted) |
 | R55 | 6A | Blocked arm uses `.foregroundStyle(.orange)` rather than D64's literal "systemOrange"; matches the file's existing D48 idiom (PillView.swift:77 already `.orange`). Architect ruled acceptable, no pinning | closed (accepted) |
+| R56 | 6B | TextInserter gross delta +65 vs spec ceiling ~55; overage is doc/why comments (rewritten header invariant block, probe semantics, D43-chain and D65 log-contract inline comments). Code additions ~41, within ceiling. Comments pin exactly the invariants a future edit would break — accepted per R6 judgment, mirrors R54; not a pattern to repeat silently | closed (accepted) |
+| R57 | 6B | Spec 6B verify 2 ("no AX symbol outside TextInserter.swift") hits two comment-only strings: `kAXSelectedText` in InsertionPolicy.swift:16 doc comment (engineer-flagged) AND InsertionPolicyTests.swift:5 doc comment (unflagged). Zero AX API usage outside TextInserter — grep is clean when read as symbol-usage. For 6C's grep-enforced D62 boundary, word the check as API-call patterns (e.g. `data(forType:`) not bare identifiers, or comment mentions will false-positive again | open (note for 6C) |
 
 ## Convention-violation tracking
 

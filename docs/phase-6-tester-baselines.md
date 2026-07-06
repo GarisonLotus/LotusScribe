@@ -29,6 +29,7 @@ when-vllm-is-back.md.
 | gate | date | staged base | counts | runs | result |
 |------|------|-------------|--------|------|--------|
 | 6A | 2026-07-05 | 94c4b5d + staged 6A diff (PillState, PillView, DictationController, PillStateTests) | 179 tests / 18 suites, 0 failures | ×2 green | PASS |
+| 6B | 2026-07-05 | 6575fe3 + staged 6B diff (InsertionPolicy, TextInserter, InsertionPolicyTests) | 183 tests / 19 suites, 0 failures | ×2 green | PASS |
 
 6A per-suite delta vs 177/18 baseline (5C): PillStateTests 6→8 (new:
 blockedFlashesAtBlockedFlashDuration, blockedIsNonSticky); all other 17
@@ -44,6 +45,23 @@ warnings. No new flake entries.
 
 **6A CROSS-CHECK:** reviewer reported 179/18 — MATCHED (tester
 independent ×2: 179 tests / 18 suites, green both runs).
+
+6B per-suite delta vs 179/18 (6A): NEW suite InsertionPolicyTests = 4
+(foundAndSettableRoutesToAX, foundButNotSettableRoutesToPasteboard,
+settableWithoutFocusedElementRoutesToPasteboard,
+neitherFoundNorSettableRoutesToPasteboard); all other 18 suites + 2
+top-level AppDelegate tests unchanged (PillStateTests still 8).
+
+**6B warnings:** known-noise only, same set as 6A (destination
+auto-pick; NSCGS/CA + `[API] cannot add handler` during
+SettingsWindowControllerTests; NSURLErrorDomain -1001/-1004 task logs
+from deliberate failure-path tests; task-name-port). Intentional
+`STT prompt truncated (D59 cap)` line present once per run (NOT noise).
+Zero compiler warnings. No new flake entries.
+
+**6B CROSS-CHECK:** reviewer + orchestrator reported 183/19 (×2
+combined) — MATCHED (tester independent ×2: 183 tests / 19 suites,
+green both runs).
 
 ## Flake registry
 
