@@ -21,7 +21,7 @@
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
 | Q6-1 | 2026-07-05 | Under `EnablePasteboardPrivacyDeveloperPreview` with no grant, does `NSPasteboard.general.accessBehavior` report `.ask` (D62's assumption — restore skips cleanly, no alert) or stay `.default` while reads alert anyway? If the latter, re-rule the D62 gate (likely: strict alwaysAllow-only) | answered (indicative, CLI — see Notes 2026-07-05; signed-app at-screen §E.6 run remains the authority) | 6C batch verify item 5 (vLLM) |
-| Q6-2 | 2026-07-05 | Does any matrix app report AX `.success` on set-kAXSelectedText WITHOUT actually inserting (silent AX failure)? If yes, rule the per-bundle fallback denylist (D61 escape hatch) | open | 6B batch matrix (vLLM) |
+| Q6-2 | 2026-07-05 | Does any matrix app report AX `.success` on set-kAXSelectedText WITHOUT actually inserting (silent AX failure)? If yes, rule the per-bundle fallback denylist (D61 escape hatch) | answered (YES — Slack, live 2026-07-06; denylist ruled D75, built in Phase 8 sub-phase 8C. See Notes 2026-07-06 amendment) | 6B batch matrix (vLLM) |
 | Q6-3 | 2026-07-05 | Terminal (Secure Keyboard Entry OFF): does the AX route land text where Phase-1's Cmd-V did not (closes Phase-1 Q3's deferred handling)? Record route + outcome | open | 6B batch matrix (vLLM) |
 
 (status: open / answered / deferred / closed-as-moot)
@@ -143,3 +143,23 @@ verify lists).
   tests" posture already ruled acceptable. A quick at-screen spot-check is
   RECOMMENDED but does not block close.
 CLOSED as of 2026-07-06.
+
+2026-07-06 (later): **AMENDMENT to the PHASE 6 CLOSED note above** (the
+original note stands unedited as the paper trail; this entry corrects it).
+The close's HUMAN/LIVE line "Slack/VS Code fallback, text lands
+everywhere (§6B v3)" and the ruling "Q6-2 … implicitly answered … no
+denylist demanded" were WRONG for Slack — the close relied on an
+inaccurate user #21 report. Live evidence 2026-07-06 (on-device, HEAD
+13ddec6): dictation into Slack (com.tinyspeck.slackmacgap) inserts
+NOTHING; Console shows `insertion route: ax` on both attempts — Slack's
+focused element reports kAXSelectedText settable and the AX set returns
+`.success`, but the Electron/Chromium layer silently discards it, so the
+D61 fallback never fires. This is exactly Q6-2's silent-AX-success case.
+Q6-2 status flipped open → answered (YES); the D61 escape hatch is now
+ruled and built as Phase 8 sub-phase 8C (D75, phase-8 log/spec):
+per-bundle denylist in pure InsertionPolicy forcing the pasteboard route,
+seeded with Slack only. Mail/Spark (route=pasteboard) and TextEdit
+(route=ax) results from the same live run were accurate and stand. The
+VS Code leg also stands (fails the settable probe → natural fallback —
+distinct from Slack's lying probe). Phase 6 remains CLOSED; the
+correction is Phase 8 scope.

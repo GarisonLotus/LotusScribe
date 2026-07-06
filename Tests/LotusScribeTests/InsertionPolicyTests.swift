@@ -10,13 +10,15 @@ struct InsertionPolicyTests {
     @Test func foundAndSettableRoutesToAX() {
         #expect(
             InsertionPolicy.route(
-                focusedElementFound: true, selectedTextSettable: true) == .ax)
+                targetBundleID: nil, focusedElementFound: true,
+                selectedTextSettable: true) == .ax)
     }
 
     @Test func foundButNotSettableRoutesToPasteboard() {
         #expect(
             InsertionPolicy.route(
-                focusedElementFound: true, selectedTextSettable: false) == .pasteboard)
+                targetBundleID: nil, focusedElementFound: true,
+                selectedTextSettable: false) == .pasteboard)
     }
 
     /// Physically unreachable from the probe (settability is only asked of
@@ -24,13 +26,57 @@ struct InsertionPolicyTests {
     @Test func settableWithoutFocusedElementRoutesToPasteboard() {
         #expect(
             InsertionPolicy.route(
-                focusedElementFound: false, selectedTextSettable: true) == .pasteboard)
+                targetBundleID: nil, focusedElementFound: false,
+                selectedTextSettable: true) == .pasteboard)
     }
 
     @Test func neitherFoundNorSettableRoutesToPasteboard() {
         #expect(
             InsertionPolicy.route(
-                focusedElementFound: false, selectedTextSettable: false) == .pasteboard)
+                targetBundleID: nil, focusedElementFound: false,
+                selectedTextSettable: false) == .pasteboard)
+    }
+
+    // MARK: - axDenylist routing (spec §8C, D75)
+
+    /// The Q6-2 case the denylist exists for: Slack's AX reports settable
+    /// and returns .success without inserting — the probe is a liar, so a
+    /// denylisted bundle forces pasteboard even on a perfect probe.
+    @Test func denylistedBundleForcesPasteboardDespiteSettableProbe() {
+        #expect(
+            InsertionPolicy.route(
+                targetBundleID: "com.tinyspeck.slackmacgap",
+                focusedElementFound: true,
+                selectedTextSettable: true) == .pasteboard)
+    }
+
+    /// Denylisted bundle with a failed probe also lands on pasteboard —
+    /// the D61 fallback and the denylist agree.
+    @Test func denylistedBundleWithFailedProbeRoutesToPasteboard() {
+        #expect(
+            InsertionPolicy.route(
+                targetBundleID: "com.tinyspeck.slackmacgap",
+                focusedElementFound: true,
+                selectedTextSettable: false) == .pasteboard)
+    }
+
+    /// A non-denylisted bundle rides the D61 table unchanged — no
+    /// over-blocking of apps whose AX is honest.
+    @Test func nonDenylistedBundleKeepsAXRoute() {
+        #expect(
+            InsertionPolicy.route(
+                targetBundleID: "com.apple.TextEdit",
+                focusedElementFound: true,
+                selectedTextSettable: true) == .ax)
+    }
+
+    /// nil bundle (pid or bundle lookup failed at probe time) → D61 table
+    /// unchanged; no denylist match is possible.
+    @Test func nilBundleKeepsAXRoute() {
+        #expect(
+            InsertionPolicy.route(
+                targetBundleID: nil, focusedElementFound: true,
+                selectedTextSettable: true) == .ax)
     }
 
     // MARK: - shouldSaveClipboard truth table (spec §6C, D62)

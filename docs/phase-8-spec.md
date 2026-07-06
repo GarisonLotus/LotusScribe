@@ -1,4 +1,4 @@
-# Phase 8 Spec — 8A: reasoning-suppression setting; 8B: warm-up at recording start
+# Phase 8 Spec — 8A: reasoning-suppression setting; 8B: warm-up at recording start; 8C: per-bundle AX denylist (Slack)
 
 > Authored by architect, 2026-07-06. Live-test corrections — correction
 > phase, not new architecture. Rulings D72–D74 in
@@ -188,9 +188,99 @@ by the existing show/update calls; blocked/failed starts fire nothing;
 generation/stale semantics (D23/D43) untouched; warm-up remains the only
 request carrying keep_alive (D42).
 
+## Sub-phase 8C — Per-bundle AX denylist (Q6-2 fired live: Slack)
+
+> Appended 2026-07-06 by architect. Live evidence at HEAD 13ddec6:
+> dictation into Slack (com.tinyspeck.slackmacgap) inserts NOTHING; route
+> log shows `insertion route: ax` both attempts. Slack's focused element
+> reports kAXSelectedText SETTABLE and `AXUIElementSetAttributeValue`
+> returns `.success`, but the Electron/Chromium layer silently discards
+> the set — the exact Q6-2 silent-AX-success case D61 pre-authorized the
+> denylist escape hatch for. Mail/Spark (route=pasteboard) and TextEdit
+> (route=ax) landed correctly. Ruling D75 in phase-8-architect-log.md;
+> amends D61; answers Q6-2 (phase-6 log).
+
+**Route change (D75, pure — InsertionPolicy.swift):** denylist lives in
+the pure policy (D65 policy-in-one-file; D14 headless):
+
+```swift
+/// D75: bundles whose AX reports kAXSelectedText settable AND returns
+/// .success on set WITHOUT inserting (silent AX failure). Evidence-gated:
+/// add a bundle only on a confirmed live silent failure, never
+/// prophylactically — over-blocking costs AX-route quality (no clipboard
+/// traffic) in apps where AX is honest.
+static let axDenylist: Set<String> = ["com.tinyspeck.slackmacgap"]
+
+static func route(
+    targetBundleID: String?, focusedElementFound: Bool,
+    selectedTextSettable: Bool
+) -> InsertionRoute
+```
+
+Logic: `targetBundleID` in `axDenylist` → `.pasteboard` regardless of the
+probe; otherwise the existing D61 table unchanged; nil bundle → unchanged
+(no denylist match possible). Seed = Slack ONLY: pre-adding other Electron
+bundles REJECTED — most Electron elements fail the settable probe and fall
+back naturally (VS Code confirmed live), so only lying-AX apps ever need a
+row, and each addition is one line + one truth-table cell when evidence
+demands.
+
+**Plumbing (D75, adapter — TextInserter.swift):** `targetBundleID` is
+derived at PROBE time from the focused element itself:
+`AXUIElementGetPid(focused, &pid)` →
+`NSRunningApplication(processIdentifier: pid)?.bundleIdentifier`; any
+failure → nil (route unchanged). `probeFocusedElement()` tuple grows to
+`(element, selectedTextSettable, targetBundleID)`. RULED OVER the two
+candidate plumbings: (a) threading the D52 key-down `capturedBundleID` —
+rejected because routing must bind to the element actually written at
+insert time (the probe and both landing paths act on live focus; a
+key-down binding reintroduces silent loss in reverse when the user
+switches INTO Slack mid-flight; D52's intent-binds-at-key-down serves
+cleanup tone, a different concern — capture stays untouched); (b)
+re-reading `NSWorkspace.frontmostApplication` at insert — workable but the
+element's own PID is exact and equally direct (both symbols already
+imported). Zero DictationController changes. Log (D65 one-line-per-
+insertion): the denylist-forced branch logs
+`insertion route: pasteboard (AX denylist <bundle>)` so the live verify
+reads Console, not guesses.
+
+**Readback verification: re-rejected** (D61 grounds stand, strengthened):
+an AX layer that returns `.success` without inserting cannot be trusted to
+return an honest kAXSelectedText/kAXValue readback either — Chromium's
+a11y tree can echo the set value without committing it to the DOM input —
+so readback adds latency and fragility while remaining blind to exactly
+the failure class it exists to catch.
+
+**Tests (D14 headless — InsertionPolicyTests):** existing 4-cell route
+table amended to pass `targetBundleID: nil` (asserts nil → D61 table
+unchanged). NEW ≈ +4: denylisted + found + settable → pasteboard;
+denylisted + probe-failed → pasteboard; non-denylisted bundle (e.g.
+`com.apple.TextEdit`) + found + settable → ax; nil + found + settable → ax.
+
+**LoC ceilings (8C):** InsertionPolicy ~14; TextInserter ~10;
+InsertionPolicyTests ~30. No other files.
+
+**Verify (8C):**
+1. MACHINE: `make test` green ×2 — delta ≈ +4 tests, +0 suites (≈230/22
+   cumulative; tester records exacts).
+2. LIVE-DICTATION (the gating leg): dictate into Slack → Console shows
+   `insertion route: pasteboard (AX denylist com.tinyspeck.slackmacgap)`
+   → text LANDS in the Slack message box.
+3. LIVE-DICTATION (no over-blocking): dictate into TextEdit → still
+   `insertion route: ax`, text lands.
+
+**Invariants:** D43 untouched — pasteboard route is the universal landing
+path, so a denylist hit can never lose text; D61's probe chain, fallback,
+and no-readback posture unchanged for all non-denylisted bundles; AX usage
+stays confined to TextInserter (6B grep, R57); D62 save/restore rides the
+pasteboard route unchanged; D52 capture untouched.
+
 ## Slicing & gates
 
 8A first (unblocks the live cleanup-quality backlog), 8B second — 8B's
-live verify needs 8A's parameter on the warm-up body. Each sub-phase gates
-on `make test` ×2 + its AT-SCREEN steps; LIVE-DICTATION steps run in the
-user's next human batch (same posture as phases 3–7).
+live verify needs 8A's parameter on the warm-up body. 8C third —
+independent of 8A/8B (live-surfaced insertion correction; can land any
+time after 8B). Each sub-phase gates on `make test` ×2 + its AT-SCREEN
+steps; LIVE-DICTATION steps run in the user's next human batch (same
+posture as phases 3–7). 8C's Slack leg is its own gate — the sub-phase is
+not closed until text demonstrably lands in Slack.

@@ -31,6 +31,7 @@ struct TextInserter {
     func insert(_ text: String) {
         let probe = Self.probeFocusedElement()
         let route = InsertionPolicy.route(
+            targetBundleID: probe.targetBundleID,
             focusedElementFound: probe.element != nil,
             selectedTextSettable: probe.selectedTextSettable)
 
@@ -47,6 +48,12 @@ struct TextInserter {
             // route in the SAME call — AX failure never loses the text.
             Self.logger.info(
                 "insertion route: ax-fallback (AX set error \(status.rawValue))")
+        } else if let bundleID = probe.targetBundleID,
+            InsertionPolicy.axDenylist.contains(bundleID)
+        {
+            // D75: denylist-forced route gets its own log line so the live
+            // verify reads Console, not guesses.
+            Self.logger.info("insertion route: pasteboard (AX denylist \(bundleID))")
         } else {
             Self.logger.info("insertion route: pasteboard")
         }
@@ -57,8 +64,11 @@ struct TextInserter {
     /// settability. "Found" = `.success` + a non-nil AXUIElement;
     /// "settable" = `.success` && true. The 0.25 s messaging timeout
     /// bounds a beachballing target so insertion cannot stall for seconds.
+    /// D75: `targetBundleID` comes from the focused element's OWN pid at
+    /// probe time (insert-time binding — NOT the D52 key-down capture, which
+    /// serves cleanup tone); any failure → nil (route unchanged).
     private static func probeFocusedElement()
-        -> (element: AXUIElement?, selectedTextSettable: Bool)
+        -> (element: AXUIElement?, selectedTextSettable: Bool, targetBundleID: String?)
     {
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, 0.25)
@@ -69,14 +79,19 @@ struct TextInserter {
         guard copyStatus == .success, let focusedRef,
             CFGetTypeID(focusedRef) == AXUIElementGetTypeID()
         else {
-            return (nil, false)
+            return (nil, false, nil)
         }
         let focused = focusedRef as! AXUIElement
+
+        var pid: pid_t = 0
+        let bundleID: String? =
+            AXUIElementGetPid(focused, &pid) == .success
+            ? NSRunningApplication(processIdentifier: pid)?.bundleIdentifier : nil
 
         var settable = DarwinBoolean(false)
         let settableStatus = AXUIElementIsAttributeSettable(
             focused, kAXSelectedTextAttribute as CFString, &settable)
-        return (focused, settableStatus == .success && settable.boolValue)
+        return (focused, settableStatus == .success && settable.boolValue, bundleID)
     }
 
     /// D62 gate mapping: NSPasteboard.AccessBehavior → pure gate. Pre-15.4

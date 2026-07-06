@@ -50,10 +50,24 @@ after successful recorder.start(), 30 s debounce via pure predicate),
 MACHINE-SCOPE COMPLETE (architect-declared); live legs open (8A steps
 3/4, 8B #16 re-verify).
 
-**RESUME POINT (next):** user's remaining live batch — retest cleanup-
-quality items (#7/#13/#14/#18/#19), #16 amber-gone, #25 pasteboard
-preview, #26 onboarding rerun (with the corrected two-command reset),
-#27/Q7-4, #28, Q7-5 Local Network observation.
+**8C CLOSED (machine legs) 2026-07-06** (this commit): AX denylist
+(D75 — Slack's AX reports settable + set-success but silently drops the
+text; Q6-2 fired live). Denylist in pure InsertionPolicy, Slack-only
+seed, bundle bound at insert time from the probed element's PID. 4-way
+gated, 230/22 green. GATING LIVE LEG OPEN: Slack dictation lands via
+the denylist log line; TextEdit still routes ax.
+
+**Phase-close status (architect audit, this morning):** Phases 0–3, 5,
+6 CLOSED (Phase-6 close amended: Q6-2 fired live, corrected here).
+OPEN: Phase 4 (tone live legs — Mail/TextEdit passed, Messages +
+override + neutral pending), Phase 7 (onboarding walkthrough with the
+two-command reset, Q7-4, Q7-5; distribution BLOCKED-USER), Phase 8
+(§G retest + the 8C Slack leg).
+
+**RESUME POINT (next):** user's remaining live batch — 8C Slack leg,
+Phase-4 remaining tone legs, #16 amber-gone over spaced dictations,
+reasoning-toggle OFF/ON check, #25 pasteboard preview, #26 onboarding
+(two-command reset), #27/Q7-4, #28, Q7-5 observation.
 
 **Live-test status:** most of the human batch (when-vllm-is-back.md)
 passed; open cleanup-quality items (#7/#13/#14/#18/#19) are blocked on

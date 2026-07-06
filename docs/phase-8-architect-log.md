@@ -11,6 +11,7 @@
 | D72 | 2026-07-06 | Reasoning suppression = USER SETTING `suppressModelReasoning` (Bool, DEFAULT TRUE; getter special-cases the absent key — `defaults.object(forKey:) == nil \|\| defaults.bool(forKey:)` — because `defaults.bool` reads absent as false), draft-buffered per D26. Mechanism: top-level `reasoning_effort: "none"` on ChatRequest (optional String, nil-omitted); `chat_template_kwargs:{enable_thinking:false}` REJECTED — vLLM-only + nested struct for one bool, vs an OpenAI-API scalar (D39 endpoint-agnostic posture). Scope (amends D45's scope clause): cleanup AND warmUp() carry it when true (warm-up must warm the real inference path — 8B); the D42 non-2xx retry drops keep_alive ONLY, reasoning_effort stays; ConnectionProbe.testLLM UNCHANGED (content-indifferent, max_tokens 1, reads only its arguments per D36). R45 invariant: the key must NOT join persist()'s (llmEndpointURL, llmModel) warm-up tuple or any probe trigger | Empirical 2026-07-06: /no_think prefix ignored by Qwen3.6 (19.5 s); both body params → 0.3 s, harmless on Phi. USER DECISION: setting, not hardcode — a reasoning-model user may want thinking ON. Parameter changes request shape, not model residency → no warm-up trigger | 8A |
 | D73 | 2026-07-06 | `/no_think ` prefix (D45/D51 position 0): KEEP, verbatim. D51/D45's suppression rationale recorded OBSOLETE — the prefix is empirically inert on Qwen3.6; suppression now rides D72's body param. Caveat: on a hypothetical soft-switch-honoring model, suppress-OFF still carries the prefix; revisit only if such a model surfaces live | Stripping churns the locked byte-identity fixtures (CleanupLevelTests D51/D57 neutrality invariants, byte-for-byte) for zero runtime benefit; CLAUDE.md §3 surgical-change | 8A |
 | D74 | 2026-07-06 | Record-start warm-up (amends D42's trigger set: launch + endpoint-change + NOW recording start): in startRecording, after the D63 secure-input guard, generation bump, and a SUCCESSFUL recorder.start() (inside the do, after pill.show(.warming)), fire-and-forget `Task { await cleanup.warmUp() }` — D42 posture verbatim (log-only, self-skips when not effective-enabled, never touches the pill, never blocks). Debounce: ≥ 30 s between record-start warm-ups via `lastRecordWarmUp: Date?` + pure `nonisolated static shouldFireRecordWarmUp(now:last:)` (hasUsableAudio precedent — headless-testable). Rejected: in-flight Task tracking/cancel plumbing (warm-up is idempotent, a timestamp is the whole guard). No test may reach startRecording (no controller DI seam, 3B ruling stands; real URLSession) — headless surface is the pure function only | #16: vLLM evicts among 6 models; D42's launch/endpoint-change triggers leave between-dictation evictions cold → 8 s amber. Warming at pill-show loads the model while the user speaks. 30 s covers hotkey spam without stacking cold loads (cold start 3–10 s) | 8B |
+| D75 | 2026-07-06 | Per-bundle AX denylist (AMENDS D61 — the pre-authorized Q6-2 escape hatch, now built; ANSWERS Q6-2: YES — Slack): pure `InsertionPolicy.axDenylist: Set<String>`, seed `["com.tinyspeck.slackmacgap"]` ONLY (evidence-gated additions; prophylactic Electron pre-adds rejected — most Electron elements fail the settable probe and fall back naturally, VS Code confirmed live; over-blocking costs AX quality where AX is honest). `route(targetBundleID:focusedElementFound:selectedTextSettable:)` — denylisted → `.pasteboard` regardless of probe; nil bundle → D61 table unchanged. Plumbing adapter-side in TextInserter: `targetBundleID` derived at probe time from the focused element's own PID (`AXUIElementGetPid` → `NSRunningApplication.bundleIdentifier`; failure → nil) — RULED OVER threading the D52 key-down capture (routing must bind to the element actually written at insert time; the probe and both landing paths act on live focus; a key-down binding reintroduces silent loss in reverse when the user switches INTO Slack mid-flight; D52 serves cleanup tone and stays untouched) and over an NSWorkspace re-read (element PID is exact, both symbols already imported). Readback verification RE-REJECTED, grounds strengthened: an AX layer returning `.success` without inserting cannot be trusted to give an honest readback either (Chromium a11y tree can echo the set without committing it to the DOM), so readback stays blind to exactly the failure class it would exist to catch. Denylist-forced route logs `insertion route: pasteboard (AX denylist <bundle>)` (D65 one-line) | Live 2026-07-06 at HEAD 13ddec6: Slack reports kAXSelectedText settable, set returns `.success`, NOTHING lands — the D61 fallback never fires because AX lies about success; Mail/Spark (pasteboard) and TextEdit (ax) landed. The pasteboard route works in Slack, so forcing it is a pure win there | 8C |
 
 ## Open questions
 
@@ -104,3 +105,31 @@ Remaining feature-verification legs:
   the record-start warm-up loads the model while the user speaks, so no
   cold-reload timeout → raw fallback. Confirm the amber that intermittently
   appeared in the earlier batch no longer occurs.
+
+2026-07-06: 8C SPEC APPENDED (docs/phase-8-spec.md §8C, D75) — live
+insertion bug: Slack silent-AX-success (Q6-2 fired; the Phase 6 close's
+"Slack fallback worked" line rested on an inaccurate user #21 report —
+close note amended in phase-6-architect-log.md, Q6-2 flipped to
+answered). Fix = per-bundle denylist in pure InsertionPolicy (seed:
+com.tinyspeck.slackmacgap only), target bundle derived adapter-side from
+the probed element's PID at insert time — NOT the D52 key-down capture
+(routing binds to the element actually written; D52 stays cleanup-only)
+— readback re-rejected (a lying AX cannot be trusted to read back
+honestly). Code-verified against source: `InsertionPolicy.route` is the
+only route site and TextInserter its only caller; `capturedBundleID` is
+threaded to cleanup only, never to `inserter.insert` — no controller
+change needed under the PID plumbing; AppKit + ApplicationServices
+already imported in TextInserter (AXUIElementGetPid /
+NSRunningApplication add no imports). Expected delta ≈ +4 tests
+(≈230/22), suites unchanged. Verify: MACHINE route truth table;
+LIVE-DICTATION Slack-lands is the gating leg (plus TextEdit still
+route=ax, no over-blocking). 8C independent of 8A/8B.
+
+2026-07-06: 8C NON-OBJECTION (architect, staged diff vs D75). Denylist +
+route(targetBundleID:...) live in pure InsertionPolicy, spec-snippet
+faithful; denylist check precedes the D61 table, nil bundle → table
+unchanged. PID binding is insert-time from the probed element's own pid
+(AXUIElementGetPid → NSRunningApplication), failure → nil; D52 capture
+untouched; AX symbols stay in TextInserter (R57). Seed Slack-only with
+the evidence-gated comment. Log: exactly one route line per insertion;
+denylist branch unreachable from ax-fallback. NOTHING to round-trip.

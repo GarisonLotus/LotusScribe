@@ -12,15 +12,28 @@ enum InsertionRoute: Equatable {
 /// is Foundation-only and the truth table is headless (D65: policy in one
 /// file, exactly the CleanupLevel/AppCategory proven shape).
 enum InsertionPolicy {
+    /// D75: bundles whose AX reports kAXSelectedText settable AND returns
+    /// .success on set WITHOUT inserting (silent AX failure). Evidence-gated:
+    /// add a bundle only on a confirmed live silent failure, never
+    /// prophylactically — over-blocking costs AX-route quality (no clipboard
+    /// traffic) in apps where AX is honest.
+    static let axDenylist: Set<String> = ["com.tinyspeck.slackmacgap"]
+
     /// AX only when the focused element was found AND reports
     /// kAXSelectedText settable (D61); anything less → pasteboard.
     /// Settable-selected-text is the one probe that means "this element
     /// accepts programmatic text replacement" — Electron/Chromium elements
     /// typically fail it, giving the PLAN-required natural fallback.
+    /// D75: a denylisted target bundle forces pasteboard regardless of the
+    /// probe (its AX lies about success); nil bundle → D61 table unchanged.
     static func route(
-        focusedElementFound: Bool, selectedTextSettable: Bool
+        targetBundleID: String?, focusedElementFound: Bool,
+        selectedTextSettable: Bool
     ) -> InsertionRoute {
-        focusedElementFound && selectedTextSettable ? .ax : .pasteboard
+        if let targetBundleID, axDenylist.contains(targetBundleID) {
+            return .pasteboard
+        }
+        return focusedElementFound && selectedTextSettable ? .ax : .pasteboard
     }
 }
 
