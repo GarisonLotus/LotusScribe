@@ -51,8 +51,15 @@ final class StatusItemController: NSObject {
     }
 
     // 7B (D67): reopens regardless of the onboardingCompleted flag —
-    // same lazy caching idiom as openSettings.
+    // same lazy caching idiom as openSettings. Sole creation site for
+    // OnboardingWindowController (R67): AppDelegate's launch hook calls
+    // showOnboarding() so "Rerun Onboarding…" can never race a second
+    // window against the launch-shown one.
     @objc private func openOnboarding() {
+        showOnboarding()
+    }
+
+    func showOnboarding() {
         if onboardingWindowController == nil {
             onboardingWindowController = OnboardingWindowController()
         }
