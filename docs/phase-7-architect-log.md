@@ -9,12 +9,12 @@
 
 | id | date | decision | rationale | sub-phase |
 |----|------|----------|-----------|-----------|
-| D66 | 2026-07-05 | Sparkle ruling on D7: recommend DEFER updates to v1.1, ship DMG-only (option b). Decision itself BLOCKED-USER (Q7-1); no Phase-7 slice depends on it | D7 held six phases; Sparkle also needs EdDSA key custody, appcast host, Developer ID — all BLOCKED-USER today; deferring forecloses nothing | cross |
+| D66 | 2026-07-05 | Sparkle ruling on D7: recommend DEFER updates to v1.1, ship DMG-only (option b). Decision itself BLOCKED-USER (Q7-1); no Phase-7 slice depends on it. AMENDED (7C gate, R69): Sparkle-adoption PRECONDITION — replace `codesign --deep` in make-dmg.sh with explicit inside-out signing (nested framework/XPC first, app last) before embedding Sparkle | D7 held six phases; Sparkle also needs EdDSA key custody, appcast host, Developer ID — all BLOCKED-USER today; deferring forecloses nothing; `--deep` is harmless on today's nested-code-free bundle but mis-signs embedded frameworks, so pin it where Sparkle work starts | cross |
 | D67 | 2026-07-05 | Onboarding = pure `OnboardingStateMachine` (`OnboardingStep.resolve(PermissionSnapshot)`, D40 shape) + checklist window (OnboardingWindowController/View, ~480×420, 1 s snapshot poll via injected provider). Shown at launch when `onboardingCompleted` unset, inside the XCTestSessionIdentifier guard; Skip + Finish both set the flag; "Rerun Onboarding…" status-menu item reopens. R35 smoke owed at introduction. AMENDED (R67 follow-up): StatusItemController is the SOLE controller owner — AppDelegate routes the launch show through it (`statusItemController?.showOnboarding()`), no AppDelegate-cached controller. Titlebar close intentionally does NOT set the flag (close ≠ Skip; R66) | no TCC change notifications exist → poll; checklist avoids paged-wizard nav state; flag-gated launch keeps existing flow intact; single owner matches how settings actually avoids dual windows (one creation site) | 7B |
 | D68 | 2026-07-05 | Input Monitoring step is UNCONDITIONAL, and AX/IM steps are System Settings deep links, not request calls; mic is the only real prompt (`AVCaptureDevice.requestAccess`) | phase-1 empirical record: BOTH IM+AX required for tap delivery; `CGRequestListenEventAccess()` silently ignored on macOS 26 | 7B |
 | D69 | 2026-07-05 | Presets = pure stateless `EndpointPreset` table (Speaches STT-only, Ollama LLM-only, vLLM both, localhost defaults); apply fills only non-nil URL fields on the DRAFT (D26); model fields never overwritten; no persisted preset selection; custom = edit fields (no menu item) | models are server-specific; stateless apply avoids selection-sync drift; draft-only keeps D26/D37 Save semantics untouched | 7A |
 | D70 | 2026-07-05 | Connection-test button reuses D37/D44 probe machinery: `SettingsWindowController.test()` mirrors save()'s probe leg via the existing seams + `probeEndpoints`, but only sets ProbeState — never persists/closes/sheets (D38 sheet stays Save-only). probeIndicator `.failure` arm becomes inline warning text | one probe implementation (D36/D44) serves both flows; Save keeps its sheet, Test stays lightweight | 7A |
-| D71 | 2026-07-05 | Release pipeline = Makefile recipes (`release`/`dmg`/`notarize`/`staple` + scripts/make-dmg.sh): `dmg` dev-signs by default, re-signs with `--options runtime` when SIGN_IDENTITY set; notarize/staple fail fast without NOTARY_PROFILE. project.yml untouched (personal team stays, D12/Q1). Homebrew cask deferred (Q7-3) | dry-runs clean without creds (machine-verifiable now); Developer ID re-sign invalidates local TCC (Q2) so it stays distribution-only | 7C |
+| D71 | 2026-07-05 | Release pipeline = Makefile recipes (`release`/`dmg`/`notarize`/`staple` + scripts/make-dmg.sh): `dmg` dev-signs by default, re-signs with `--options runtime` when SIGN_IDENTITY set; notarize/staple fail fast without NOTARY_PROFILE. project.yml untouched (personal team stays, D12/Q1). Homebrew cask deferred (Q7-3). AMENDED (7C gate, R68): no dist-clean recipe now — `dist-clean` ships WITH the first version bump (that is when a second DMG can first exist) | dry-runs clean without creds (machine-verifiable now); Developer ID re-sign invalidates local TCC (Q2) so it stays distribution-only; only v1.0 exists until a bump, so the multi-DMG glob hazard is unreachable today — a recipe now is speculative | 7C |
 
 ## Open questions
 
@@ -66,6 +66,19 @@ avoids this by having ONE creation site (AppDelegate never makes a
 SettingsWindowController); the spec gave onboarding two. D67 amended:
 StatusItemController sole owner, AppDelegate calls showOnboarding().
 NON-BLOCKING follow-up fix + re-gate; 7B may proceed to commit as staged.
+
+2026-07-05: 7C NON-OBJECTION. Staged diff conforms to D71/spec §7C:
+recipes-only Makefile (+22 LoC ≤30), make-dmg.sh 33 LoC ≤60; dev-sign
+default, SIGN_IDENTITY re-sign hardened-runtime, notarize/staple fail
+fast naming the missing credential AND its source; project.yml
+untouched; cask comment-only; .gitignore covers build//dist/. Reviewer
+verdict (exit 0, hdiutil VALID, codesign ok, script safety, 218/22)
+accepted; R67 fix commit 5335d98 folded in — R67 CLOSED. R68: DEFER —
+D71 amended: dist-clean rides with the first version bump (only v1.0
+can exist until then). R69: fine today (no nested code); D66 amended:
+inside-out signing is a Sparkle-adoption precondition. 7C may commit.
+PHASE 7 MACHINE-SCOPE COMPLETE: 7A/7B/7C all gated per spec. NOT
+closed — when-vllm-is-back.md §F legs (AT-SCREEN + BLOCKED-USER) open.
 
 2026-07-05: SPEC AUTHORED (docs/phase-7-spec.md). Slicing: 7A presets +
 connection-test button (reuses D37/D44 probe seams; R40 contentSize

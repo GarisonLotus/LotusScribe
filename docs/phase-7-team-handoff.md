@@ -55,8 +55,25 @@ filed; R66 ruled intended shape (titlebar close ≠ Skip; at-screen may
 overrule); R67 ruled non-blocking follow-up: StatusItemController
 becomes sole OnboardingWindowController owner.
 
-**RESUME POINT (next):** R67 follow-up fix (trivial-change path, fold
-into 7C gate), then 7C (release recipes).
+**R67 fix committed** at 5335d98 (single onboarding-controller owner);
+retroactively reviewer-approved at the 7C gate, R67 closed.
+
+**7C CLOSED 2026-07-05** (this commit): release recipes
+(make release/dmg/notarize/staple + scripts/make-dmg.sh, D71), 4-way
+gated — dmg dry-runs clean dev-signed (753 KB, hdiutil VALID,
+spctl-rejected baseline recorded pre-Developer-ID); notarize/staple
+fail fast without NOTARY_PROFILE; suite unchanged 218/22 ×3 runners.
+R68 deferred to first version bump (D71 amended); R69 pinned as
+Sparkle-adoption precondition (D66 amended).
+
+**PHASE 7 MACHINE-SCOPE COMPLETE** (architect-declared). Phases 3–7 all
+machine-complete; every remaining item is in when-vllm-is-back.md
+(§A–§F: at-screen + dictation batches for tomorrow morning, plus
+BLOCKED-USER distribution decisions Q7-1/2/3).
+
+**RESUME POINT (next):** user batch-testing (when-vllm-is-back.md, top
+to bottom); record results → architect closes Phases 3→7 in order as
+their legs clear.
 
 **Working tree:** untracked RESEARCH.md, claude.md, when-vllm-is-back.md
 (never commit).

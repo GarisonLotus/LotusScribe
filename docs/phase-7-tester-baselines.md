@@ -30,6 +30,7 @@ tomorrow morning.
 |------|------|-------------|--------|------|--------|
 | 7A | 2026-07-05 | staged on 4c779b1 | 201 tests / 20 suites, 0 failures | ×2 | GREEN |
 | 7B | 2026-07-05 | staged on 9bd676e | 218 tests / 22 suites, 0 failures | ×2 | GREEN |
+| 7C | 2026-07-05 | staged on 5335d98 | 218 tests / 22 suites, 0 failures; recipe legs all pass (see 7C notes) | ×2 (+dmg ×3) | GREEN |
 
 **7A per-suite delta vs 6C baseline (191/19):** EndpointPresetTests NEW
 (7 tests, incl. `parseRejectsGarbage(_:)` parameterized ×7 cases = 1
@@ -70,6 +71,36 @@ registry); NSCGS/CA-commit during PillPanelTests + SWC (phase-3 registry,
 phase-5 extension); `[API] cannot add handler` ×8 during SWC (phase-5
 registry); `STT prompt truncated (D59 cap)` ×1 = intentional, NOT noise.
 No new flakes.
+
+**7C suite delta:** NONE expected, NONE observed — 218/22 identical to
+7B ×2 (7C is app-code-free: Makefile, scripts/make-dmg.sh, .gitignore
+only). Warnings both runs: known-registry signatures only (destination
+auto-pick; WarnOnce layoutSubtreeIfNeeded; Accessibility not-vending;
+task-name-port; DetachedSignatures; NSURLErrorDomain ×3 failure-path;
+`STT prompt truncated (D59 cap)` ×1 intentional). No new flakes.
+
+**7C recipe legs (no SIGN_IDENTITY / NOTARY_PROFILE, per spec §7C):**
+- `make dmg` exit 0; prints `make-dmg: SIGN_IDENTITY not set — shipping
+  the dev-signed app.`; creates dist/LotusScribe-1.0.dmg; `hdiutil
+  verify` VALID; mounted volume contains LotusScribe.app + Applications
+  symlink; `codesign -dv` succeeds (dev signature, universal x86_64+
+  arm64); detach clean, no lingering mounts.
+- `spctl --assess --type execute` on mounted app: `rejected`, exit 3 —
+  recorded as pre-Developer-ID baseline (expected).
+- `make notarize` exit 2 (recipe exit 1 wrapped by make): "make
+  notarize: NOTARY_PROFILE is not set. Enroll in the paid Apple
+  Developer Program, run 'xcrun notarytool store-credentials
+  <profile>', then rerun with NOTARY_PROFILE=<profile>."
+- `make staple` exit 2, same message with "make staple:" prefix.
+
+**7C reproducibility:** `make dmg` rerun ×2 over existing dist/ — exit 0
+both times, overwrites in place via `hdiutil -ov`, rewritten DMG
+verifies VALID. Wrinkle (cosmetic, no action): output is functionally
+idempotent but NOT byte-identical across runs (770952 → 770946 bytes —
+codesign/UDZO timestamp nondeterminism); also `hdiutil detach
+/Volumes/LotusScribe` reports the parent whole-disk device ("disk4")
+while attach reported the slice (disk5s1) — same image, detach clean.
+dist/ correctly gitignored (absent from `git status`).
 
 ## Flake registry
 
