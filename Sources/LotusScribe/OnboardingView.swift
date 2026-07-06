@@ -28,6 +28,11 @@ struct OnboardingView: View {
     /// Which of the three steps is on screen (0 Welcome, 1 Permissions, 2 Try).
     @State private var stepIndex = 0
 
+    /// Live label for the HUD-preview hotkey chip, tracking the persisted
+    /// choice so picking a key on this step updates the preview (Phase 9).
+    @State private var hotkeyLabel =
+        HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
+
     /// Live permission resolution (unchanged) — gates Finish and highlights
     /// the current permission row.
     private var permissionStep: OnboardingStep { OnboardingStep.resolve(state.snapshot) }
@@ -43,6 +48,9 @@ struct OnboardingView: View {
         .padding(28)
         .frame(width: Self.contentSize.width, height: Self.contentSize.height)
         .lotusWindowBackground()
+        .onReceive(NotificationCenter.default.publisher(for: .lotusHotkeyChanged)) { _ in
+            hotkeyLabel = HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
+        }
     }
 
     // MARK: - Step content
@@ -119,23 +127,23 @@ struct OnboardingView: View {
     }
 
     private var tryItStep: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             kicker("STEP 3 OF 3")
             Text("Try it")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
-            Text("Hold the")
+            Text("Choose your hotkey, then hold it and talk:")
                 .font(.lotusBody)
                 .foregroundStyle(Color.lotusTextSecondary)
-            fnKeycap
-            Text("…and start talking. You'll see this:")
-                .font(.lotusBody)
-                .foregroundStyle(Color.lotusTextSecondary)
+                .multilineTextAlignment(.center)
+            HotkeyPicker()
             hudPreview
             Spacer(minLength: 0)
-            // D27: macOS 26 uses the chord — Fn guidance only, no setting.
+            // F5 = the mac Dictation key; the system shortcut must yield first.
+            // (D27: fn is dead on macOS 26 session taps — the older-macOS note
+            // stays for users who pick "fn" in the custom field.)
             VStack(spacing: 8) {
-                Text("Using the Fn key on older macOS? Set System Settings → Keyboard → “Press fn key to” → “Do Nothing”.")
+                Text("F5 is the mac dictation key — turn off the system Dictation shortcut (System Settings → Keyboard → Dictation) and keep standard function keys so it reaches LotusScribe.")
                     .font(.lotusCaption)
                     .foregroundStyle(Color.lotusTextTertiary)
                     .multilineTextAlignment(.center)
@@ -231,22 +239,11 @@ struct OnboardingView: View {
         }
     }
 
-    /// The fn key, drawn as a keycap (spec §5 — 54pt).
-    private var fnKeycap: some View {
-        Text("fn")
-            .font(.lotusMono(18))
-            .foregroundStyle(Color.lotusTextPrimary)
-            .frame(width: 54, height: 44)
-            .background(Color.lotusControlFill, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
-    }
-
     /// A non-interactive preview of the Listening HUD (spec §5): mic dot +
-    /// gradient waveform + LISTENING + hotkey chip. Animated unless Reduce
-    /// Motion is on.
+    /// gradient waveform + LISTENING + the selected-hotkey chip. Animated
+    /// unless Reduce Motion is on.
     private var hudPreview: some View {
-        HUDPreview()
+        HUDPreview(hotkeyLabel: hotkeyLabel)
     }
 
     private func open(_ deepLink: String) {
@@ -259,6 +256,7 @@ struct OnboardingView: View {
 /// decorative — no audio, no panel; it just shows the user what Listening
 /// looks like.
 private struct HUDPreview: View {
+    let hotkeyLabel: String
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let barCount = 12
 
@@ -279,7 +277,7 @@ private struct HUDPreview: View {
                 .font(.lotusMono(11))
                 .tracking(1.2)
                 .foregroundStyle(Color.lotusTextPrimary)
-            Text("fn")
+            Text(hotkeyLabel)
                 .font(.lotusMono(11))
                 .foregroundStyle(Color.lotusTextSecondary)
                 .padding(.horizontal, 7)

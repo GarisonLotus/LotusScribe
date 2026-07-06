@@ -34,6 +34,7 @@ struct SettingsForm: View {
                 cleanupCard
                 appCategoriesCard
                 dictionaryCard
+                hotkeyCard
                 appearanceCard
             }
             .padding(22)
@@ -162,6 +163,23 @@ struct SettingsForm: View {
                     monoField("Add term…", text: $newTerm)
                     Button("Add", action: addTerm)
                         .buttonStyle(LotusButtonStyle(.ghost))
+                }
+            }
+        }
+    }
+
+    // MARK: Dictation Hotkey (Phase 9 — live write-through, like Appearance)
+
+    private var hotkeyCard: some View {
+        LotusCard {
+            cardHeader("Dictation Hotkey")
+            cardRow(divider: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HotkeyPicker()
+                    Text("Hold to talk. F5 is the mac dictation key — turn off the system Dictation shortcut (System Settings → Keyboard → Dictation) so it reaches LotusScribe. Changes apply immediately.")
+                        .font(.lotusCaption)
+                        .foregroundStyle(Color.lotusTextTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

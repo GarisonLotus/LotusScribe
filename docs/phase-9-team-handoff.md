@@ -33,14 +33,17 @@ reaches the session tap.
 
 ## §3. Current state
 
-**Where we are:** 9A+9B+9C committed. Next: 9D (UI — HotkeyPicker + Settings
-card + onboarding step 3), the last sub-phase.
-**Baseline tests:** 244 tests / 23 suites green (9C close).
-**Active gate:** 9A/9C cleared (reviewer APPROVE R9A-1/2, R9C-1/2). 9B
-lightweight orchestrator gate. 9C confirmed dictation wiring preserved,
-no double-tap/leak on rebind. R9C-2 (superfluous assumeIsolated) — leave
-as-is per reviewer. **9D carries the empirical F5 acceptance** (hold F5 →
-HUD, once IM granted; custom-combo fallback if F5 is dead like fn/D27).
+**Where we are:** Phase 9 CODE-COMPLETE (9A–9D committed + reviewer-approved).
+**Baseline tests:** 244 tests / 23 suites green (9D close).
+**Active gate:** all sub-phases cleared (reviewer APPROVE R9A/9C/9D; 9B
+lightweight orchestrator gate).
+
+**OUTSTANDING — empirical F5 acceptance (human-at-screen):** grant Input
+Monitoring, launch, hold F5, confirm the log emits `hotkey action:
+startCapture` and the HUD appears. If F5 is silently dropped like fn (D27),
+the picker's custom combo (`ctrl+alt+cmd+9`, proven) is the working
+fallback — surface to the user. This is the only thing between Phase 9 and
+done.
 
 ## §4. Load-bearing constraints (do not break)
 
