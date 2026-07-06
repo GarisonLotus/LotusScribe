@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItemController: StatusItemController?
     private var hotkeyMonitor: EventTapMonitor?
+    private var onboardingWindowController: OnboardingWindowController?
     // Internal (not private) so the hosted smoke test can assert real
     // post-launch composition (R3).
     private(set) var dictationController: DictationController?
@@ -27,6 +28,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // D42: launch warm-up — fire-and-forget, log-only; skipped
             // internally when cleanup is not effective-enabled.
             Task { await CleanupService(settings: SettingsStore()).warmUp() }
+
+            // 7B (D67): first-run onboarding until Skip/Finish sets the
+            // flag. Stays inside this guard — the real controller polls
+            // live TCC, which must never run mid-`make test`.
+            if !SettingsStore().onboardingCompleted {
+                let onboarding = OnboardingWindowController()
+                onboardingWindowController = onboarding
+                onboarding.show()
+            }
         }
 
         // D15: chord from the `hotkeyChord` defaults key; nil/unparseable → hold-Fn.

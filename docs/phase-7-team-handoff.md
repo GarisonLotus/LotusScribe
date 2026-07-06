@@ -48,7 +48,15 @@ SCRIPTS (recipes that run once creds exist).
 test button (D69/D70), 4-way gated, 201/20 green (engineer ×2, reviewer
 ×1, tester ×2). R62/R63 note-only.
 
-**RESUME POINT (next):** 7B (onboarding), then 7C (release recipes).
+**7B CLOSED 2026-07-05** (this commit): onboarding state machine +
+checklist window + launch hook + Rerun menu item (D67/D68), 4-way
+gated, 218/22 green (engineer ×2, reviewer ×1, tester ×2). R64–R67
+filed; R66 ruled intended shape (titlebar close ≠ Skip; at-screen may
+overrule); R67 ruled non-blocking follow-up: StatusItemController
+becomes sole OnboardingWindowController owner.
+
+**RESUME POINT (next):** R67 follow-up fix (trivial-change path, fold
+into 7C gate), then 7C (release recipes).
 
 **Working tree:** untracked RESEARCH.md, claude.md, when-vllm-is-back.md
 (never commit).

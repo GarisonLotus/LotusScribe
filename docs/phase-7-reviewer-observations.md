@@ -28,6 +28,10 @@
 |----|--------------|------|--------|
 | R62 | 7A | Test-success leaves a persistent green "Connected" that survives subsequent field edits (only reopen/next probe/Try Again resets it) — spec-consistent (D70 sets phase only), cosmetic; AT-SCREEN 7A item already exercises the flow | open (note only) |
 | R63 | 7A | Test pressed during Save's 2 s success flash cancels autoCloseTask, so a PERSISTED save leaves the window open pending the new probe — intended R36 mirror (persist already happened, nothing lost); recording so nobody "fixes" it into a close | open (note only) |
+| R64 | 7B | LoC-ceiling counting convention is de facto comment-excluded: OnboardingWindowController is 112 raw lines vs the ≤90 ceiling but 73 code-only; 7A precedent (SettingsWindowController +36 raw vs +≤30, non-objected) already set this. Architect should state the convention in the next spec so ceilings stop being ambiguous | open (note only) |
+| R65 | 7B | `openOnboarding` omits the `logger.info` that `openSettings` has — cosmetic asymmetry, driven by StatusItemController's +≤14 ceiling (code-only added is exactly 14). Fine to leave; if the phase-1 debug log ever gets removed the asymmetry disappears the other way | open (note only) |
+| R66 | 7B | Titlebar close (red X) sets NO flag — onboarding reappears next launch. Spec is silent (only Skip/Finish set `onboardingCompleted`); "close ≠ skip → show again" is defensible, but AT-SCREEN 7B should confirm it feels intended rather than nagging | open (AT-SCREEN judges) |
+| R67 | 7B | AppDelegate and StatusItemController each cache their OWN OnboardingWindowController — launch-shown window still open + "Rerun Onboarding…" = two independent onboarding windows, both polling. Spec-conformant shape ("self-contained, mirrors SettingsWindowController") and both close/complete safely, but a one-window guarantee would need a shared instance | open (note only) |
 
 ## Convention-violation tracking
 

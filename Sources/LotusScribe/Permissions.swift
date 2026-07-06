@@ -1,4 +1,5 @@
 import ApplicationServices
+import AVFoundation
 import CoreGraphics
 import os
 
@@ -24,6 +25,21 @@ enum Permissions {
     /// True if the app is trusted for Accessibility. Never prompts.
     static func isAccessibilityTrusted() -> Bool {
         AXIsProcessTrusted()
+    }
+
+    /// True if the app may capture audio (Microphone). Never prompts —
+    /// the request fires only from the onboarding mic button (7B, D68).
+    static func isMicrophoneGranted() -> Bool {
+        AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+    }
+
+    /// One point-in-time read of all three grants for the onboarding
+    /// checklist poll (7B, D67).
+    static func snapshot() -> PermissionSnapshot {
+        PermissionSnapshot(
+            micGranted: isMicrophoneGranted(),
+            accessibilityTrusted: isAccessibilityTrusted(),
+            listenEventGranted: hasListenEventAccess())
     }
 
     /// Launch-time TCC snapshot for the phase-1 empirical record (spec §1A verify 3).

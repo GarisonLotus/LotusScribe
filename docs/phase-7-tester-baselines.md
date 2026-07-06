@@ -29,6 +29,7 @@ tomorrow morning.
 | gate | date | staged base | counts | runs | result |
 |------|------|-------------|--------|------|--------|
 | 7A | 2026-07-05 | staged on 4c779b1 | 201 tests / 20 suites, 0 failures | ×2 | GREEN |
+| 7B | 2026-07-05 | staged on 9bd676e | 218 tests / 22 suites, 0 failures | ×2 | GREEN |
 
 **7A per-suite delta vs 6C baseline (191/19):** EndpointPresetTests NEW
 (7 tests, incl. `parseRejectsGarbage(_:)` parameterized ×7 cases = 1
@@ -43,6 +44,26 @@ Tests/LotusScribeTests/SmokeTests.swift (appDelegateInitializes,
 mainMenuRoutesPaste) with SWC because they interleave adjacently in log
 order. Actual @Suite membership is 23→26; the +3 delta and totals match
 exactly.
+
+**7B per-suite delta vs 7A (201/20), per xcresult (log-order attribution
+unreliable under interleaving):** OnboardingStateMachineTests NEW (9
+tests); OnboardingWindowControllerTests NEW (6 tests); SettingsStoreTests
+17→19 (+2). All other 20 suites unchanged (SmokeTests' 2 suite-less
+top-level tests counted separately as in the 7A bookkeeping note).
+201 + 9 + 6 + 2 = 218; 20 + 2 = 22. ✓ Matches dispatch expectation and
+reviewer/engineer figure (218/22) exactly.
+
+**7B warnings:** known-noise only, NO new-in-7B signatures — destination
+auto-pick (phase-3 registry); `[WarnOnce] layoutSubtreeIfNeeded`,
+`Accessibility: Not vending elements`, task-name-port, `[logging-persist]
+DetachedSignatures` at hosted-app launch (all phase-3 registry);
+NSURLErrorDomain task logs ×3 from deliberate failure-path tests
+(phase-5/6 registry); `STT prompt truncated (D59 cap)` ×1 = intentional,
+NOT noise. Hosted onboarding-window tests emitted NO new NSWindow/CA
+noise. NSCGS/CA-commit and `[API] cannot add handler` (both registry,
+intermittent) happened to be ABSENT this gate — cosmetic, no action.
+`[Permissions] TCC at launch` + `[EventTapMonitor] event tap started`
+app logs pre-exist at HEAD 9bd676e (intentional, not noise).
 
 **7A warnings:** known-noise only — destination auto-pick (phase-3
 registry); NSCGS/CA-commit during PillPanelTests + SWC (phase-3 registry,

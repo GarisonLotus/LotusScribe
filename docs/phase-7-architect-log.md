@@ -10,7 +10,7 @@
 | id | date | decision | rationale | sub-phase |
 |----|------|----------|-----------|-----------|
 | D66 | 2026-07-05 | Sparkle ruling on D7: recommend DEFER updates to v1.1, ship DMG-only (option b). Decision itself BLOCKED-USER (Q7-1); no Phase-7 slice depends on it | D7 held six phases; Sparkle also needs EdDSA key custody, appcast host, Developer ID — all BLOCKED-USER today; deferring forecloses nothing | cross |
-| D67 | 2026-07-05 | Onboarding = pure `OnboardingStateMachine` (`OnboardingStep.resolve(PermissionSnapshot)`, D40 shape) + checklist window (OnboardingWindowController/View, ~480×420, 1 s snapshot poll via injected provider). Shown at launch when `onboardingCompleted` unset, inside the XCTestSessionIdentifier guard; Skip + Finish both set the flag; "Rerun Onboarding…" status-menu item reopens. R35 smoke owed at introduction | no TCC change notifications exist → poll; checklist avoids paged-wizard nav state; flag-gated launch keeps existing flow intact | 7B |
+| D67 | 2026-07-05 | Onboarding = pure `OnboardingStateMachine` (`OnboardingStep.resolve(PermissionSnapshot)`, D40 shape) + checklist window (OnboardingWindowController/View, ~480×420, 1 s snapshot poll via injected provider). Shown at launch when `onboardingCompleted` unset, inside the XCTestSessionIdentifier guard; Skip + Finish both set the flag; "Rerun Onboarding…" status-menu item reopens. R35 smoke owed at introduction. AMENDED (R67 follow-up): StatusItemController is the SOLE controller owner — AppDelegate routes the launch show through it (`statusItemController?.showOnboarding()`), no AppDelegate-cached controller. Titlebar close intentionally does NOT set the flag (close ≠ Skip; R66) | no TCC change notifications exist → poll; checklist avoids paged-wizard nav state; flag-gated launch keeps existing flow intact; single owner matches how settings actually avoids dual windows (one creation site) | 7B |
 | D68 | 2026-07-05 | Input Monitoring step is UNCONDITIONAL, and AX/IM steps are System Settings deep links, not request calls; mic is the only real prompt (`AVCaptureDevice.requestAccess`) | phase-1 empirical record: BOTH IM+AX required for tap delivery; `CGRequestListenEventAccess()` silently ignored on macOS 26 | 7B |
 | D69 | 2026-07-05 | Presets = pure stateless `EndpointPreset` table (Speaches STT-only, Ollama LLM-only, vLLM both, localhost defaults); apply fills only non-nil URL fields on the DRAFT (D26); model fields never overwritten; no persisted preset selection; custom = edit fields (no menu item) | models are server-specific; stateless apply avoids selection-sync drift; draft-only keeps D26/D37 Save semantics untouched | 7A |
 | D70 | 2026-07-05 | Connection-test button reuses D37/D44 probe machinery: `SettingsWindowController.test()` mirrors save()'s probe leg via the existing seams + `probeEndpoints`, but only sets ProbeState — never persists/closes/sheets (D38 sheet stays Save-only). probeIndicator `.failure` arm becomes inline warning text | one probe implementation (D36/D44) serves both flows; Save keeps its sheet, Test stays lightweight | 7A |
@@ -51,6 +51,21 @@ mirrors R36 cancels, sets phase only — never persists/closes/sheets
 Test-only surface; AT-SCREEN 7A judges tomorrow. If misleading, amend
 then as "draft edit resets ProbeState to .idle" (~1 onChange). R63 =
 intended R36 mirror. No objection — 7A may proceed to commit.
+
+2026-07-05: 7B NON-OBJECTION. Staged diff conforms to D67/D68: resolve
+order + unconditional IM byte-match spec §7B; poll weak-self, invalidated
+on every close path via windowWillClose; launch hook flag-gated inside
+the XCTestSessionIdentifier guard; Finish .done-guarded (lean accepted).
+R66 ruling: titlebar close leaving the flag UNSET is the INTENDED shape —
+Skip is the explicit "don't show again" affordance; a silent persistent
+side effect on close would be worse. No code change; AT-SCREEN 7B may
+overrule tomorrow (then: treat close as Skip, ~2 lines in complete path).
+R67 ruling: reachable, not hypothetical (launch window open + user clicks
+Rerun → second window, two pollers). Root cause is spec-authored: settings
+avoids this by having ONE creation site (AppDelegate never makes a
+SettingsWindowController); the spec gave onboarding two. D67 amended:
+StatusItemController sole owner, AppDelegate calls showOnboarding().
+NON-BLOCKING follow-up fix + re-gate; 7B may proceed to commit as staged.
 
 2026-07-05: SPEC AUTHORED (docs/phase-7-spec.md). Slicing: 7A presets +
 connection-test button (reuses D37/D44 probe seams; R40 contentSize

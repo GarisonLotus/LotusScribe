@@ -8,6 +8,7 @@ final class StatusItemController: NSObject {
         subsystem: "com.garisonlotus.LotusScribe", category: "StatusItemController")
     private let statusItem: NSStatusItem
     private var settingsWindowController: SettingsWindowController?
+    private var onboardingWindowController: OnboardingWindowController?
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -25,6 +26,13 @@ final class StatusItemController: NSObject {
         )
         settingsItem.target = self
         menu.addItem(settingsItem)
+        let onboardingItem = NSMenuItem(
+            title: "Rerun Onboarding…",
+            action: #selector(openOnboarding),
+            keyEquivalent: ""
+        )
+        onboardingItem.target = self
+        menu.addItem(onboardingItem)
         menu.addItem(NSMenuItem(
             title: "Quit LotusScribe",
             action: #selector(NSApplication.terminate(_:)),
@@ -40,5 +48,14 @@ final class StatusItemController: NSObject {
             settingsWindowController = SettingsWindowController()
         }
         settingsWindowController?.show()
+    }
+
+    // 7B (D67): reopens regardless of the onboardingCompleted flag —
+    // same lazy caching idiom as openSettings.
+    @objc private func openOnboarding() {
+        if onboardingWindowController == nil {
+            onboardingWindowController = OnboardingWindowController()
+        }
+        onboardingWindowController?.show()
     }
 }

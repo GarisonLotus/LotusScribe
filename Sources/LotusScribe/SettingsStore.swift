@@ -81,6 +81,14 @@ final class SettingsStore {
         }
     }
 
+    /// D67 (7B): true once the user dismisses first-run onboarding (Skip
+    /// or Finish); absent → false, so a fresh install shows the window.
+    /// Bool, not a D9 pane key — D25/R39 empty→nil is n/a.
+    var onboardingCompleted: Bool {
+        get { defaults.bool(forKey: "onboardingCompleted") }
+        set { defaults.set(newValue, forKey: "onboardingCompleted") }
+    }
+
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {

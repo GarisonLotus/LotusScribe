@@ -156,6 +156,21 @@ final class SettingsStoreTests {
         #expect(store.dictionaryTerms == ["Garison", "vLLM"])
     }
 
+    // MARK: onboardingCompleted (7B, D67)
+
+    /// Absent key → false: a fresh install must show onboarding.
+    @Test func onboardingCompletedDefaultsToFalse() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.onboardingCompleted == false)
+    }
+
+    @Test func onboardingCompletedRoundTrips() {
+        let store = SettingsStore(defaults: defaults)
+        store.onboardingCompleted = true
+        #expect(defaults.bool(forKey: "onboardingCompleted") == true)
+        #expect(store.onboardingCompleted == true)
+    }
+
     @Test func valuesPersistAcrossStoreInstances() {
         let writer = SettingsStore(defaults: defaults)
         writer.sttModel = "whisper-1"
