@@ -24,6 +24,7 @@
 | Q7-2 | 2026-07-05 | Developer ID credentials: paid enrollment + "Developer ID Application" cert + notarytool keychain profile — when? | open | BLOCKED-USER (Apple ID, payment) |
 | Q7-3 | 2026-07-05 | Homebrew cask: artifact hosting (GitHub Releases?) — only actionable after Q7-2 + a stapled DMG exists | deferred | Q7-2 |
 | Q7-4 | 2026-07-05 | Does the event tap deliver after AX/IM grants WITHOUT relaunch? (7B at-screen verify 4 — adjusts onboarding done-step copy) | open | AT-SCREEN |
+| Q7-5 | 2026-07-05 | Local Network permission for LAN STT/LLM endpoints — is a grant required, does the app trigger the prompt, and should onboarding gain a step? Empirical signature already observed (see Notes 2026-07-05): app-side -1009 with `_NSURLErrorNWPathKey=satisfied` against vllm.garison.com (192.168.1.158) while curl from Terminal (already granted) gets 200. Follow-ups: (a) confirm at screen whether a Local Network prompt appears on first dictation/warm-up; (b) if the app never triggers the prompt, code follow-up (Phase 8 or a 7 hotfix) to surface it; (c) onboarding-step candidate (D67/D68 cover Mic/AX/IM only). Do NOT rule the code fix before the at-screen observation | open | AT-SCREEN (user grants + observes tomorrow) |
 
 (status: open / answered / deferred / closed-as-moot)
 
@@ -91,3 +92,21 @@ NOTHING blocks on the D66 Sparkle sign-off. Expected totals: 191/19 →
 ~208–212 tests / 21 suites (+EndpointPresetTests,
 +OnboardingStateMachineTests). Non-machine verifies are copy-ready in
 spec §"Copy-ready block for when-vllm-is-back.md".
+
+2026-07-05: HIGH-PRIORITY FINDING (orchestrator, empirical) → Q7-5
+opened. The app cannot reach vLLM even though curl from the same shell
+gets HTTP 200. Evidence (after setting llmEndpointURL to the real vLLM
+and relaunching): warm-up logged `NSURLErrorDomain Code=-1009 "offline"`
+with `_NSURLErrorNWPathKey=satisfied`; vllm.garison.com resolves to
+192.168.1.158 (LAN). The app is NOT sandboxed (entitlements: only
+get-task-allow + temporary-exception file-read + mach-lookup — no
+app-sandbox, no network entitlements needed). Diagnosis: macOS 15+/26
+LOCAL NETWORK PRIVACY gate — a non-sandboxed app connecting to a LAN
+address needs a Local Network grant; until granted it fails with exactly
+this -1009/path-satisfied signature. Terminal curl works because
+Terminal already holds the grant. This gate was never exercised before
+because vLLM was down for the whole build. Implication: EVERY live
+dictation and the warm-up depend on this grant; onboarding (D67/D68)
+does NOT cover Local Network; there may be no code trigger to surface
+the system prompt. Disposition per Q7-5: at-screen observation first —
+no ruling on a trigger mechanism until then.

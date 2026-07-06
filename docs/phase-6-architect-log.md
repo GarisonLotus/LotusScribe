@@ -20,7 +20,7 @@
 
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
-| Q6-1 | 2026-07-05 | Under `EnablePasteboardPrivacyDeveloperPreview` with no grant, does `NSPasteboard.general.accessBehavior` report `.ask` (D62's assumption — restore skips cleanly, no alert) or stay `.default` while reads alert anyway? If the latter, re-rule the D62 gate (likely: strict alwaysAllow-only) | open | 6C batch verify item 5 (vLLM) |
+| Q6-1 | 2026-07-05 | Under `EnablePasteboardPrivacyDeveloperPreview` with no grant, does `NSPasteboard.general.accessBehavior` report `.ask` (D62's assumption — restore skips cleanly, no alert) or stay `.default` while reads alert anyway? If the latter, re-rule the D62 gate (likely: strict alwaysAllow-only) | answered (indicative, CLI — see Notes 2026-07-05; signed-app at-screen §E.6 run remains the authority) | 6C batch verify item 5 (vLLM) |
 | Q6-2 | 2026-07-05 | Does any matrix app report AX `.success` on set-kAXSelectedText WITHOUT actually inserting (silent AX failure)? If yes, rule the per-bundle fallback denylist (D61 escape hatch) | open | 6B batch matrix (vLLM) |
 | Q6-3 | 2026-07-05 | Terminal (Secure Keyboard Entry OFF): does the AX route land text where Phase-1's Cmd-V did not (closes Phase-1 Q3's deferred handling)? Record route + outcome | open | 6B batch matrix (vLLM) |
 
@@ -86,3 +86,19 @@ why-comments on both sites. @unknown default → .ask APPROVED: an unknown
 future behavior must degrade to the shipped Phase-1 clobber, never risk
 a mid-dictation alert (D62 rationale extends). RULED: D62a filed pinning
 restore-after-synthesis; spec §6C steps 3–4 read as amended by D62a.
+
+2026-07-05: Q6-1 ANSWERED (indicative). Orchestrator ran a throwaway
+Swift CLI calling `NSPasteboard.general.accessBehavior` (macOS 15.4 API):
+no flag → `.alwaysAllow`; with `-EnablePasteboardPrivacyDeveloperPreview
+YES` (argument domain) → `.default` (= `.standard` in the app's
+PasteboardAccessGate mirror). `.ask` was NOT observed, and no alert
+fired in the CLI. CLI-identity caveat: a CLI has a different TCC
+identity than the signed app, so this is INDICATIVE, not definitive —
+the at-screen §E.6 run inside the real signed app stays the authority.
+D62-branch clarification: D62's prose predicted "preview flag → .ask →
+restore skips cleanly"; the observed flag flips to `.standard` instead,
+which `shouldSaveClipboard` treats as SAVE (not skip). If the signed app
+also reports `.standard` under the flag, the D62 gate still
+SAVES/RESTORES — no alert was observed, so there is NO D43 violation;
+it is merely a different branch than D62's prose predicted. No code
+change; wording note only.
