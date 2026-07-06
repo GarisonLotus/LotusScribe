@@ -110,3 +110,26 @@ must run these):
   prompt, output byte-identical to Phase-3 behavior.
 No BLOCKED-USER legs in Phase 4. Q4-1 (built-in map tuning) is optional
 user input, non-gating.
+
+2026-07-06: **PHASE 4 CLOSED** (architect, per explicit user directive).
+Basis — machine gates green ×2 at HEAD (13ddec6 226/22; 230/22 after 8C)
+plus at-screen evidence from the user's 2026-07-06 session
+(orchestrator-verified via logs/screenshots):
+- Mail/Spark dictation → email-register output (screenshot; cleanup
+  category: email in log).
+- TextEdit → neutral output (screenshot; category: other).
+- Slack → workMessaging register (screenshot; category: workMessaging —
+  recorded in phase-8-tester-baselines.md §Live-leg results, 8C leg).
+- Frontmost-capture log verified for Mail/TextEdit/Slack/iTerm2
+  (category: code fired for iTerm2 in an earlier log).
+- Override UI add/remove/persist/Cancel verified at-screen (user batch
+  item 2).
+USER-WAIVED legs (user directed close WITHOUT running these — waived,
+NOT verified):
+- Messages (personalMessaging) register leg.
+- Override-EFFECT live leg (override UI verified; its tone effect on
+  output was not exercised live).
+Reopen trigger: if a waived behavior misbehaves in daily use, it reopens
+as a DEFECT against the shipped code, not as a phase reopen.
+Q4-1 CLOSED accepted-as-shipped: the full built-in map (all 20 mappings)
+was printed to the user; no objections raised.

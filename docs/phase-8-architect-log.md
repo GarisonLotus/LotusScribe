@@ -133,3 +133,28 @@ unchanged. PID binding is insert-time from the probed element's own pid
 untouched; AX symbols stay in TextInserter (R57). Seed Slack-only with
 the evidence-gated comment. Log: exactly one route line per insertion;
 denylist branch unreachable from ax-fallback. NOTHING to round-trip.
+
+2026-07-06: **PHASE 8 CLOSED** (architect, per explicit user directive).
+Basis — 8A/8B/8C all machine-gated (230/22 ×2 runners at HEAD) plus live
+evidence from the user's 2026-07-06 09:xx at-screen session
+(orchestrator-verified via logs/screenshots):
+- 8A #7 / 8B #16 (informal): the entire session (Mail, TextEdit ×2,
+  Slack ×2 dictations) produced fast, clean, register-correct output —
+  no rephrasing, no commentary leaks, no ambers reported.Contrast
+  pre-8A: ambers "every few turns" plus rephrasing.This is the #7/#16
+  resolution evidenced in normal use, and it also discharges the
+  Phase-3 D45 cleaned-output quality re-confirmation deferred here.
+- 8C Slack leg CLOSED (tester baselines §Live-leg results): log-verified
+  denylist route (`insertion route: pasteboard (AX denylist …)` for
+  com.tinyspeck.slackmacgap) with TextEdit still route=ax immediately
+  after — no over-blocking.Q6-2's resolution is COMPLETE: D75
+  live-verified.
+USER-WAIVED legs (user directed close WITHOUT running these — waived,
+NOT verified):
+- 8A #3/#4 reasoning-toggle honor check (OFF → thinking/slow returns →
+  ON → clean/fast).
+- A systematic spaced-dictation amber observation for 8B #16 (only the
+  informal same-session evidence above exists; eviction-window spacing
+  was never deliberately exercised).
+Reopen trigger: if a waived behavior misbehaves in daily use, it reopens
+as a DEFECT against the shipped code, not as a phase reopen.
