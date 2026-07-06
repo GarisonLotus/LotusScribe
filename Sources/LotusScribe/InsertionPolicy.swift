@@ -17,7 +17,10 @@ enum InsertionPolicy {
     /// add a bundle only on a confirmed live silent failure, never
     /// prophylactically — over-blocking costs AX-route quality (no clipboard
     /// traffic) in apps where AX is honest.
-    static let axDenylist: Set<String> = ["com.tinyspeck.slackmacgap"]
+    static let axDenylist: Set<String> = [
+        "com.tinyspeck.slackmacgap",  // confirmed live 2026-07-06 (8C)
+        "com.anthropic.claudefordesktop",  // confirmed live 2026-07-06
+    ]
 
     /// AX only when the focused element was found AND reports
     /// kAXSelectedText settable (D61); anything less → pasteboard.
