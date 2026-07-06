@@ -88,11 +88,59 @@ D49 precedent).
   check, not vLLM-dependent) and #3/#4 (BLOCKED-BATCH tone checks) are
   still owed per spec; my PASS covers the machine-verifiable surface.
 
+### 4C gate — staged review (2026-07-05)
+
+**VERDICT: PASS — approve for commit.** Independent `make test`: green,
+149 tests / 17 suites (145/17 at 4B gate; +4 matches spec delta).
+
+- D26/D53 buffering: every override mutation in SettingsForm (picker
+  binding set, remove button, add-menu) writes `draft.appCategoryOverrides`
+  only; the sole store write is `store.appCategoryOverrides = ...` inside
+  `draft.save()`, reached only via `persist()` (probe-success, Save Anyway,
+  or D36 empty-endpoint immediate path). `reload()` reseeds the dict on
+  every `show()`; `cancel()` and titlebar close write nothing
+  (windowWillClose only cancels tasks). Test-covered (round-trip, remove,
+  Cancel).
+- D53 no-coupling — verified against the actual `save()` path, not just
+  tests: probe gating reads only drafted `sttEndpointURL`/`llmEndpointURL`;
+  warm-up gate is `persist()`'s (llmEndpointURL, llmModel) store
+  before/after compare. Overrides feed neither. Engineer's claim holds.
+  Nuance: the no-probe TEST rides the D36 empty-endpoint path; with
+  configured endpoints Save still probes (pre-existing D37/D44 every-Save
+  behavior, triggered by drafted URLs, not overrides) — see R45.
+- Garbage tolerance: `categoryBinding` get resolves via
+  `AppCategory.category(forBundleID:overrides:)` (garbage rawValue →
+  built-in fallback display); set fires only on user pick. reload/save
+  copy the dict verbatim — no normalization pass anywhere; round-trip
+  test pins `"not-a-category"` surviving store → draft → save.
+- R40: 560 appears only at the single `SettingsForm.contentSize` site
+  (+ its own explanatory comments); controller still reads the constant.
+  Grep's only "390" hit is a pre-existing test comment
+  (SettingsWindowControllerTests.swift:28) whose ≥250 assertion still
+  holds — stale wording, comment-only, no action owed (untouched code,
+  surgical-change rule).
+- Add-menu: `.regular` activation filter; nil bundle IDs dropped; seeded
+  value = `category(forBundleID:overrides: [:])` = built-in map result
+  per spec; duplicate add is a guarded no-op (never clobbers an edited
+  row). Sane.
+- Tests: 4 new legs match spec §4C list exactly (round-trip+garbage,
+  remove-key-on-save, Cancel-discards, no-probe/no-warm-up with counting
+  stub and `Issue.record` tripwire).
+- LoC overage: tests +86 vs ~45 — ACCEPTED per R6 precedent: 4 tests ×
+  (suite/store/controller setup + multi-key dict literals in #expect +
+  decision-reference comments); boilerplate/fixture density, no logic
+  creep. Source deltas under ceiling (form +82 vs ~95, controller +9 vs
+  ~55).
+- HUMAN-AT-SCREEN legs (§4C verify #2–#4) remain owed; PASS covers the
+  machine-verifiable surface.
+
 ## New items
 
 | id | first raised | item | status |
 |----|--------------|------|--------|
 | R43 | 4A | Spec §4A verify #3 says "no NSWorkspace reference anywhere in 4A's diff"; a literal grep hits two DOC-COMMENT mentions (AppCategory.swift header, AppCategoryTests.swift header) explaining the D52/D14 adapter split. No import or API use — ruled pass-as-intended (the check's target is framework coupling). Noted so 4B's verify grep isn't misread as a 4A regression | closed (note only) |
+| R44 | 4C | R41 stub-discipline partial: only 1 of 4 new SettingsWindowController tests stubs `warmUp:`; the other 3 (round-trip, remove, Cancel) construct the controller with the REAL default warm-up closure. Safe today via R41's second leg — none persists a changed (llmEndpointURL, llmModel), so `persist()`'s tuple compare short-circuits — but this leans on the fragile carve-out R41 warned about instead of the "MUST keep stubbing" instruction. No live network fire; note-only, tighten if these tests ever draft LLM fields | open (note only) |
+| R45 | 4C | D53 log wording "an overrides-only save fires NO probe" is literally true only on the D36 empty-endpoint path (which the test exercises); with configured endpoints, Save probes on EVERY click per D37/D44 — trigger is the drafted URLs, never the overrides. Spec §4C's phrasing ("overrides never trigger a probe or warm-up") is the accurate invariant and is what the code satisfies. Wording nit for the architect log; no code action | open (note only) |
 
 ## Convention-violation tracking
 

@@ -33,12 +33,17 @@ suites at the 4A commit.
 **4B CLOSED 2026-07-05** at bf9c533 (key-down capture, trivial-change
 path, reviewer PASS, 145/17 unchanged).
 
-**RESUME POINT (next):** dispatch 4C engineer per spec §4C — override
-settings UI (App Categories section, running-apps add menu,
-draft-buffered per D26/D53, window 390→560 via SettingsForm.contentSize
-R40 constant). Then gate (reviewer sequential, architect+tester
-parallel) → ONE commit → Phase-4 machine work complete; everything
-else is BLOCKED-BATCH.
+**4C CLOSED 2026-07-05** (this commit): override settings UI, 4-way
+gated, 149/17 green ×3 runners.PHASE 4 MACHINE WORK COMPLETE — all
+three sub-phases committed; remaining Phase-4 items are at-screen
+(window fit 560, add/remove/persist/Cancel — NOT vLLM-dependent; 4B
+capture-log check also possible now) or BLOCKED-BATCH (tone effects).
+
+**RESUME POINT (next):** nothing dispatchable without the user.When
+user is at screen: 4C fit/behavior checks + 4B capture-log check.When
+vLLM/STT is back: the full BLOCKED-BATCH queue below, then Phase-3 and
+Phase-4 close gates (architect declares each complete). After that:
+PLAN.md Phase 5 (custom dictionary).
 
 **BLOCKED-BATCH queue (needs vLLM/STT back):** Phase-3 human gate
 (D45 cleaned dictation, 3D two-stage pill + amber, 3C settings checks,

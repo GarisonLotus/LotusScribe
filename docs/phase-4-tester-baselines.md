@@ -36,15 +36,26 @@ effect Messages vs Mail; unmapped-app neutrality), 4C verify 3–4
 (at-screen only, no STT needed): 4B verify 2 (capture log), 4C verify 2
 (UI fit/persist).
 
+**4C split (staged 2026-07-05):** AT-SCREEN, not vLLM-dependent —
+settings window fits at 560 width; override rows add/remove; overrides
+persist across relaunch; Cancel discards unsaved override edits.
+BLOCKED-BATCH (needs live STT) — tone-effect override end to end
+(override actually changes cleanup tone on dictated text).
+
 ## Phase 4 gates
 
 | gate | date | staged base | counts | runs | result |
 |------|------|-------------|--------|------|--------|
 | 4A | 2026-07-05 | a4d65b0 (staged, not committed) | 145 tests / 17 suites | ×2 | GREEN ×2, 0 failures, 0 flakes |
+| 4C | 2026-07-05 | 8258cd9 (staged, not committed) | 149 tests / 17 suites | ×2 | GREEN ×2, 0 failures, 0 flakes |
 
 **4A per-suite delta (126/16 → 145/17, +19/+1):** AppCategoryTests
 +10 (new suite), SettingsStoreTests +4 (7→11), CleanupLevelTests +3
 (6→9), CleanupServiceTests +2 (11→13). Matches engineer claim exactly.
+
+**4C per-suite delta (145/17 → 149/17, +4/+0):**
+SettingsWindowControllerTests +4 (staged diff shows exactly 4 new @Test
+functions). Matches engineer claim exactly.
 
 ## Flake registry
 

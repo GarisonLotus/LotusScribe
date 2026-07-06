@@ -296,6 +296,92 @@ final class SettingsWindowControllerTests {
         controller.window?.close()
     }
 
+    // MARK: 4C — app-category overrides through the draft (D53/D54)
+
+    // D53/D26: overrides round-trip store → draft → store via save(); a
+    // garbage stored value rides along untouched (only resolution ignores
+    // it — the draft and save never rewrite it).
+    @Test func overridesRoundTripThroughDraftAndKeepGarbage() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.appCategoryOverrides = [
+            "com.apple.mail": "personalMessaging",
+            "com.example.stale": "not-a-category",
+        ]
+        let controller = SettingsWindowController(store: store)
+        controller.show()
+
+        #expect(controller.draft.appCategoryOverrides == [
+            "com.apple.mail": "personalMessaging",
+            "com.example.stale": "not-a-category",
+        ])
+
+        controller.draft.appCategoryOverrides["com.apple.mail"] = "code"
+        controller.save()  // both URLs empty → immediate save+close
+
+        #expect(store.appCategoryOverrides == [
+            "com.apple.mail": "code",
+            "com.example.stale": "not-a-category",
+        ])
+        #expect(controller.window?.isVisible == false)
+    }
+
+    // D53: removing the last row removes the defaults key entirely on save
+    // (empty ⇄ absent through the store).
+    @Test func removingOverrideRemovesKeyOnSave() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.appCategoryOverrides = ["com.apple.mail": "code"]
+        let controller = SettingsWindowController(store: store)
+        controller.show()
+
+        controller.draft.appCategoryOverrides.removeValue(forKey: "com.apple.mail")
+        controller.save()
+
+        #expect(store.appCategoryOverrides == [:])
+        #expect(defaults.object(forKey: "appCategoryOverrides") == nil)
+    }
+
+    // D26: Cancel discards override edits — the store keeps its dict.
+    @Test func cancelDiscardsOverrideEdits() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.appCategoryOverrides = ["com.apple.mail": "code"]
+        let controller = SettingsWindowController(store: store)
+        controller.show()
+
+        controller.draft.appCategoryOverrides["com.apple.mail"] = "email"
+        controller.draft.appCategoryOverrides["com.hnc.Discord"] = "workMessaging"
+        controller.cancel()
+
+        #expect(store.appCategoryOverrides == ["com.apple.mail": "code"])
+    }
+
+    // D53: a save carrying only an override change fires NO probe and NO
+    // warm-up — with no drafted endpoints it takes the D36 immediate path,
+    // and overrides never feed the D42 (llmEndpointURL, llmModel) compare.
+    @Test func overridesOnlySaveFiresNoProbeAndNoWarmUp() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        let failProbe: (String, String) async -> ProbeResult = { _, _ in
+            Issue.record("no probe may run for an overrides-only save")
+            return .failure(reason: "unexpected probe")
+        }
+        var warmUpCount = 0
+        let controller = SettingsWindowController(
+            store: store, sttProbe: failProbe, llmProbe: failProbe,
+            warmUp: { warmUpCount += 1 })
+        controller.show()
+
+        controller.draft.appCategoryOverrides["com.apple.mail"] = "personalMessaging"
+        controller.save()
+
+        #expect(controller.probeTask == nil)
+        #expect(warmUpCount == 0)
+        #expect(store.appCategoryOverrides == ["com.apple.mail": "personalMessaging"])
+        #expect(controller.window?.isVisible == false)
+    }
+
     // MARK: R36 — re-entrant Save cancels stale flash tasks
 
     // R36 regression: a Save clicked during the 2 s success flash must

@@ -25,6 +25,10 @@ final class SettingsDraft: ObservableObject {
     @Published var llmEndpointURL = ""
     @Published var llmModel = ""
     @Published var cleanupLevel: CleanupLevel = .standard
+    /// D53 app-category overrides (bundle ID → AppCategory rawValue),
+    /// draft-buffered like every other field (4C). Garbage values ride
+    /// along untouched — resolution ignores them (D53).
+    @Published var appCategoryOverrides: [String: String] = [:]
 
     private let store: SettingsStore
 
@@ -41,16 +45,19 @@ final class SettingsDraft: ObservableObject {
         llmEndpointURL = store.llmEndpointURL ?? ""
         llmModel = store.llmModel ?? ""
         cleanupLevel = CleanupLevel.resolve(store.cleanupLevel)  // D40
+        appCategoryOverrides = store.appCategoryOverrides  // D53
     }
 
     /// Write the four D9 keys (empty → nil per D25 — unset keeps its
-    /// meaning) plus the D40 cleanup level's raw value.
+    /// meaning), the D40 cleanup level's raw value, and the D53 override
+    /// dictionary (empty ⇄ absent handled by the store).
     func save() {
         store.sttEndpointURL = stored(sttEndpointURL)
         store.sttModel = stored(sttModel)
         store.llmEndpointURL = stored(llmEndpointURL)
         store.llmModel = stored(llmModel)
         store.cleanupLevel = cleanupLevel.rawValue
+        store.appCategoryOverrides = appCategoryOverrides
     }
 
     private func stored(_ value: String) -> String? {
