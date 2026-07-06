@@ -110,3 +110,18 @@ dictation and the warm-up depend on this grant; onboarding (D67/D68)
 does NOT cover Local Network; there may be no code trigger to surface
 the system prompt. Disposition per Q7-5: at-screen observation first —
 no ruling on a trigger mechanism until then.
+
+2026-07-05 (later): Q7-5 diagnosis STRENGTHENED by a controlled
+discriminator (orchestrator). A `swift` CLI making the SAME URLSession
+POST to the SAME LAN vLLM host returned HTTP 200 (666 bytes), while the
+app got -1009 on the identical stack + destination + TLS. The ONLY
+variable is bundle identity → rules out URLSession-stack, ATS/TLS
+(would be -1200-range), DNS, and endpoint faults; consistent only with
+per-app Local Network privacy (my shell context holds the grant, the
+app does not). Confidence now high (~90%+). NOT 100%: (1) the app has
+not been observed SUCCEEDING post-grant — only the at-screen Allow
+proves the fix; (2) an app-specific URLSession config quirk is not
+fully excluded, though "path satisfied" argues against it. The public-
+host discriminator (point app at a non-LAN endpoint) was declined —
+auto-mode classifier blocked rerouting dictation traffic to a third
+party; correct call, left for the user if they want the last 10%.
