@@ -19,6 +19,11 @@ final class DictationController {
     private let pill = PillController()
     private var isRecording = false
 
+    /// Fired true while the mic is actively capturing (warming/recording),
+    /// false otherwise — drives the status-item magenta tint (spec §5). Wired
+    /// by AppDelegate; nil in headless tests. Not part of the dictation logic.
+    var onListeningChanged: ((Bool) -> Void)?
+
     /// False until the current capture's first level arrives (D29b —
     /// warming → recording only when the engine is demonstrably live).
     private var engineLive = false
@@ -103,6 +108,7 @@ final class DictationController {
             try recorder.start()
             isRecording = true
             pill.show(.warming)
+            onListeningChanged?(true)  // spec §5: mic open → magenta status icon
             // D74 (amends D42's trigger set): warm the model while the user
             // speaks — after a SUCCESSFUL start only, so blocked/failed
             // presses fire nothing. Fire-and-forget; warmUp() is log-only
@@ -116,6 +122,7 @@ final class DictationController {
             Self.logger.error(
                 "recorder start failed: \(String(describing: error), privacy: .public)")
             pill.show(.error)
+            onListeningChanged?(false)
         }
     }
 
@@ -123,6 +130,7 @@ final class DictationController {
         // Start may have failed (mic denied) — no stop without a start.
         guard isRecording else { return }
         isRecording = false
+        onListeningChanged?(false)  // spec §5: mic closed → status icon reverts
         let wav = recorder.stop()
 
         guard Self.hasUsableAudio(wavByteCount: wav.count) else {

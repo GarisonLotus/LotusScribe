@@ -13,10 +13,7 @@ final class StatusItemController: NSObject {
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
-        statusItem.button?.image = NSImage(
-            systemSymbolName: "mic.fill",
-            accessibilityDescription: "LotusScribe"
-        )
+        statusItem.button?.image = Self.lotusTemplateImage()
 
         let menu = NSMenu()
         let settingsItem = NSMenuItem(
@@ -64,5 +61,39 @@ final class StatusItemController: NSObject {
             onboardingWindowController = OnboardingWindowController()
         }
         onboardingWindowController?.show()
+    }
+
+    /// Magenta-tint the lotus glyph while dictation is capturing; revert to the
+    /// menu-bar template color otherwise (spec §5). Driven by DictationController
+    /// through AppDelegate.
+    func setListening(_ listening: Bool) {
+        statusItem.button?.contentTintColor = listening ? .lotusAccentPink : nil
+    }
+
+    /// The three-petal lotus mark as a monochrome template image (spec §1/§5):
+    /// a vertical center petal flanked by two petals rotated ±40° about a
+    /// shared base. Template = the menu bar tints it (and setListening overrides
+    /// to magenta).
+    private static func lotusTemplateImage() -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.black.setFill()
+        let base = NSPoint(x: size.width / 2, y: 2)
+        let petalWidth: CGFloat = 5
+        let petalHeight: CGFloat = 13
+        for angle in [-40.0, 0.0, 40.0] {
+            NSGraphicsContext.saveGraphicsState()
+            let transform = NSAffineTransform()
+            transform.translateX(by: base.x, yBy: base.y)
+            transform.rotate(byDegrees: angle)
+            transform.concat()
+            let rect = NSRect(x: -petalWidth / 2, y: 0, width: petalWidth, height: petalHeight)
+            NSBezierPath(roundedRect: rect, xRadius: petalWidth / 2, yRadius: petalWidth / 2).fill()
+            NSGraphicsContext.restoreGraphicsState()
+        }
+        image.unlockFocus()
+        image.isTemplate = true
+        return image
     }
 }

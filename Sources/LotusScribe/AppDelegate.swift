@@ -46,6 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let chord = UserDefaults.standard.string(forKey: "hotkeyChord")
             .flatMap(HotkeyChord.parse) ?? .fnHold
         let dictation = DictationController()
+        // Spec §5: tint the status-item lotus magenta while the mic is capturing.
+        dictation.onListeningChanged = { [weak self] listening in
+            self?.statusItemController?.setListening(listening)
+        }
         dictationController = dictation
         hotkeyMonitor = EventTapMonitor(chord: chord) { action in
             Self.logger.info("hotkey action: \(String(describing: action), privacy: .public)")
