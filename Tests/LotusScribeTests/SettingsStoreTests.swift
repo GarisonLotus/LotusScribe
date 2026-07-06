@@ -171,6 +171,28 @@ final class SettingsStoreTests {
         #expect(store.onboardingCompleted == true)
     }
 
+    // MARK: suppressModelReasoning (8A, D72)
+
+    /// D72: absent key reads TRUE — `defaults.bool` alone would flip the
+    /// default (contrast onboardingCompleted, where absent→false is meant).
+    @Test func suppressModelReasoningDefaultsToTrue() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.suppressModelReasoning == true)
+    }
+
+    /// D72: written false, then true, round-trips through the raw key.
+    @Test func suppressModelReasoningRoundTrips() {
+        let store = SettingsStore(defaults: defaults)
+        store.suppressModelReasoning = false
+        #expect(defaults.object(forKey: "suppressModelReasoning") != nil)
+        #expect(defaults.bool(forKey: "suppressModelReasoning") == false)
+        #expect(store.suppressModelReasoning == false)
+
+        store.suppressModelReasoning = true
+        #expect(defaults.bool(forKey: "suppressModelReasoning") == true)
+        #expect(store.suppressModelReasoning == true)
+    }
+
     @Test func valuesPersistAcrossStoreInstances() {
         let writer = SettingsStore(defaults: defaults)
         writer.sttModel = "whisper-1"

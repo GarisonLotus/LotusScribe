@@ -25,6 +25,9 @@ final class SettingsDraft: ObservableObject {
     @Published var llmEndpointURL = ""
     @Published var llmModel = ""
     @Published var cleanupLevel: CleanupLevel = .standard
+    /// D72 reasoning suppression (8A), draft-buffered like every other
+    /// field. Default true mirrors the store's absent-key default.
+    @Published var suppressModelReasoning = true
     /// D53 app-category overrides (bundle ID → AppCategory rawValue),
     /// draft-buffered like every other field (4C). Garbage values ride
     /// along untouched — resolution ignores them (D53).
@@ -48,6 +51,7 @@ final class SettingsDraft: ObservableObject {
         llmEndpointURL = store.llmEndpointURL ?? ""
         llmModel = store.llmModel ?? ""
         cleanupLevel = CleanupLevel.resolve(store.cleanupLevel)  // D40
+        suppressModelReasoning = store.suppressModelReasoning  // D72
         appCategoryOverrides = store.appCategoryOverrides  // D53
         dictionaryTerms = store.dictionaryTerms  // D56
     }
@@ -61,6 +65,7 @@ final class SettingsDraft: ObservableObject {
         store.llmEndpointURL = stored(llmEndpointURL)
         store.llmModel = stored(llmModel)
         store.cleanupLevel = cleanupLevel.rawValue
+        store.suppressModelReasoning = suppressModelReasoning  // D72 (always written, like cleanupLevel)
         store.appCategoryOverrides = appCategoryOverrides
         store.dictionaryTerms = dictionaryTerms  // D56 (empty ⇄ absent)
     }

@@ -79,10 +79,12 @@ final class CleanupServiceTests {
 
     // MARK: cleanup(transcript:frontmostBundleID:)
 
-    /// D39/D42: hot-path body is strictly OpenAI-standard — model,
-    /// system+user messages, temperature 0, and NOTHING else (no keep_alive,
-    /// no max_tokens); 8 s timeout (D45). Nil bundle ID → `.other` → the
-    /// D45 prompt unchanged (D51 neutrality invariant at request level).
+    /// D39/D42/D72: hot-path body is strictly OpenAI-standard — model,
+    /// system+user messages, temperature 0, plus `reasoning_effort: "none"`
+    /// (suppressModelReasoning defaults TRUE) and NOTHING else (no
+    /// keep_alive, no max_tokens); 8 s timeout (D45). Nil bundle ID →
+    /// `.other` → the D45 prompt unchanged (D51 neutrality invariant at
+    /// request level).
     @Test func cleanupRequestMatchesSpec() async throws {
         nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
         CleanupStubURLProtocol.handler = { request in
@@ -99,9 +101,11 @@ final class CleanupServiceTests {
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
 
         let json = try Self.json(body)
-        #expect(Set(json.keys) == ["model", "messages", "temperature"])  // D42: no keep_alive
+        // D42: no keep_alive; D72: reasoning_effort rides the default-ON setting.
+        #expect(Set(json.keys) == ["model", "messages", "temperature", "reasoning_effort"])
         #expect(json["model"] as? String == "qwen3-8b")
         #expect(json["temperature"] as? Double == 0)
+        #expect(json["reasoning_effort"] as? String == "none")
 
         let messages = try #require(json["messages"] as? [[String: String]])
         #expect(messages.count == 2)
@@ -113,6 +117,22 @@ final class CleanupServiceTests {
             messages[0]["content"]
                 == CleanupLevel.standard.systemPrompt(for: .other, dictionary: []))
         #expect(messages[1] == ["role": "user", "content": "um hello"])
+    }
+
+    /// D72: suppress OFF → the field is omitted entirely — the key set
+    /// drops back to the pre-8A strictly-standard hot-path body.
+    @Test func suppressOffOmitsReasoningEffortFromCleanup() async throws {
+        settings.suppressModelReasoning = false
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await service().cleanup(transcript: "hi", frontmostBundleID: nil)
+
+        let json = try Self.json(try #require(captured))
+        #expect(Set(json.keys) == ["model", "messages", "temperature"])
     }
 
     @Test func lightLevelSendsLightSystemPrompt() async throws {
@@ -303,8 +323,10 @@ final class CleanupServiceTests {
 
     // MARK: warmUp() (D42)
 
-    /// D42: warm-up pins the model — user("ok"), max_tokens 1,
+    /// D42/D72: warm-up pins the model — user("ok"), max_tokens 1,
     /// keep_alive -1, 30 s timeout; the ONLY request allowed keep_alive.
+    /// It carries reasoning_effort too (default-ON) — 8B warms the real
+    /// inference path.
     @Test func warmUpRequestMatchesSpec() async throws {
         nonisolated(unsafe) var captured: (request: URLRequest, body: Data)?
         CleanupStubURLProtocol.handler = { request in
@@ -319,16 +341,34 @@ final class CleanupServiceTests {
         #expect(request.timeoutInterval == 30)  // D42: cold start 3–10 s
 
         let json = try Self.json(body)
-        #expect(Set(json.keys) == ["model", "messages", "max_tokens", "keep_alive"])
+        #expect(Set(json.keys) == ["model", "messages", "max_tokens", "keep_alive", "reasoning_effort"])
         #expect(json["model"] as? String == "qwen3-8b")
         #expect(json["max_tokens"] as? Int == 1)
         #expect(json["keep_alive"] as? Int == -1)
+        #expect(json["reasoning_effort"] as? String == "none")
         let messages = try #require(json["messages"] as? [[String: String]])
         #expect(messages == [["role": "user", "content": "ok"]])
     }
 
-    /// D42: non-2xx → exactly one retry, WITHOUT keep_alive (strict
-    /// OpenAI-compat validators may 400 on unknown fields).
+    /// D72: suppress OFF → warm-up omits the field too (same conditional
+    /// as cleanup — one setting drives both request shapes).
+    @Test func suppressOffOmitsReasoningEffortFromWarmUp() async throws {
+        settings.suppressModelReasoning = false
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("ok")))
+        }
+
+        await service().warmUp()
+
+        let json = try Self.json(try #require(captured))
+        #expect(Set(json.keys) == ["model", "messages", "max_tokens", "keep_alive"])
+    }
+
+    /// D42/D72: non-2xx → exactly one retry, WITHOUT keep_alive (strict
+    /// OpenAI-compat validators may 400 on unknown fields) but WITH
+    /// reasoning_effort — it is a standard OpenAI-API field and stays.
     @Test func warmUpRetriesOnceWithoutKeepAliveOnNon2xx() async throws {
         nonisolated(unsafe) var bodies: [Data] = []
         CleanupStubURLProtocol.handler = { request in
@@ -341,7 +381,8 @@ final class CleanupServiceTests {
 
         #expect(bodies.count == 2)
         let retry = try Self.json(try #require(bodies.last))
-        #expect(Set(retry.keys) == ["model", "messages", "max_tokens"])  // keep_alive dropped
+        // keep_alive dropped, reasoning_effort kept (D72).
+        #expect(Set(retry.keys) == ["model", "messages", "max_tokens", "reasoning_effort"])
     }
 
     /// D40/D42: warm-up is skipped entirely when cleanup is not

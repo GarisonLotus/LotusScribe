@@ -89,6 +89,18 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: "onboardingCompleted") }
     }
 
+    /// D72: true (default) → cleanup/warm-up requests carry
+    /// `reasoning_effort: "none"`; false → field omitted (model default).
+    /// Absent key must read TRUE — `defaults.bool` alone would flip the
+    /// default (contrast onboardingCompleted, where absent→false is meant).
+    var suppressModelReasoning: Bool {
+        get {
+            defaults.object(forKey: "suppressModelReasoning") == nil
+                || defaults.bool(forKey: "suppressModelReasoning")
+        }
+        set { defaults.set(newValue, forKey: "suppressModelReasoning") }
+    }
+
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {

@@ -10,7 +10,7 @@ struct SettingsForm: View {
     /// Single source for the fixed settings window content size (R40):
     /// the macOS 26 fitting-size collapse forces both this form's root
     /// frame and the controller's setContentSize to agree.
-    static let contentSize = CGSize(width: 420, height: 740)  // 7A: +40 for presets row
+    static let contentSize = CGSize(width: 420, height: 780)  // 8A: +40 for reasoning toggle + caption
 
     @ObservedObject var draft: SettingsDraft
     @ObservedObject var probeState: ProbeState
@@ -38,6 +38,14 @@ struct SettingsForm: View {
             Section("Cleanup LLM") {
                 endpointField("Endpoint URL", text: $draft.llmEndpointURL)
                 TextField("Model", text: $draft.llmModel)
+                // 8A/D72: ON (default) → requests carry reasoning_effort
+                // "none"; OFF → field omitted (model default behavior).
+                Toggle("Suppress model reasoning", isOn: $draft.suppressModelReasoning)
+                Text(
+                    "Model behavior varies — some models 'think' before replying (slower) or follow cleanup instructions loosely. Qwen3.6 is recommended."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 // D40 levels. A non-empty URL is still probed on Save
                 // while Off (D44 — the URL outlives the level).
                 Picker("Cleanup", selection: $draft.cleanupLevel) {
@@ -94,8 +102,9 @@ struct SettingsForm: View {
         .onExitCommand(perform: onCancel)
         // Both dimensions fixed: on macOS 26 the NSHostingController fitting
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
-        // take either), leaving a title-bar-only window. 740 pt fits the
-        // presets row, four fields, the cleanup picker, the App Categories and Dictionary
+        // take either), leaving a title-bar-only window. 780 pt fits the
+        // presets row, four fields, the reasoning toggle + caption, the
+        // cleanup picker, the App Categories and Dictionary
         // sections (~4 rows each before the grouped Form scrolls), section
         // headers, hint rows, and the button row. Shared with the
         // controller's setContentSize (R40).

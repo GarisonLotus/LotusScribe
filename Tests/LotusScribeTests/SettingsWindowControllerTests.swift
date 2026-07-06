@@ -162,6 +162,30 @@ final class SettingsWindowControllerTests {
         #expect(controller.window?.isVisible == false)
     }
 
+    // MARK: 8A — reasoning suppression through the draft (D72/D26)
+
+    // D72/D26: reload seeds the toggle from the store (absent key → true);
+    // Save persists a flipped value; reopen re-seeds the flipped value.
+    // warmUp stubbed (R41) — the default closure is real network.
+    @Test func suppressReasoningRoundTripsThroughDraft() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        let controller = SettingsWindowController(store: store, warmUp: {})
+        controller.show()
+
+        #expect(controller.draft.suppressModelReasoning == true)  // absent key → true (D72)
+
+        controller.draft.suppressModelReasoning = false
+        controller.save()  // both URLs empty → immediate save+close
+
+        #expect(store.suppressModelReasoning == false)
+        #expect(controller.window?.isVisible == false)
+
+        controller.show()
+        defer { controller.window?.close() }
+        #expect(controller.draft.suppressModelReasoning == false)
+    }
+
     // MARK: 3C — per-endpoint Save probe (D44)
 
     // D44: an empty drafted LLM URL skips the LLM probe entirely

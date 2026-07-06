@@ -43,11 +43,13 @@ struct CleanupService {
         var temperature: Double?
         var maxTokens: Int?
         var keepAlive: Int?
+        var reasoningEffort: String?
 
         enum CodingKeys: String, CodingKey {
             case model, messages, temperature
             case maxTokens = "max_tokens"
             case keepAlive = "keep_alive"
+            case reasoningEffort = "reasoning_effort"
         }
     }
 
@@ -93,7 +95,9 @@ struct CleanupService {
                 Message(role: "system", content: prompt),
                 Message(role: "user", content: transcript),
             ],
-            temperature: 0)
+            temperature: 0,
+            // D72: read at request time (D40 live-read posture); nil → omitted.
+            reasoningEffort: settings.suppressModelReasoning ? "none" : nil)
         let request = makeRequest(url: url, body: body, timeout: 8)  // D45: 8 s
 
         let data: Data
@@ -140,10 +144,15 @@ struct CleanupService {
             model: model,
             messages: [Message(role: "user", content: "ok")],
             maxTokens: 1,
-            keepAlive: -1)
+            keepAlive: -1,
+            // D72: warm-up warms the REAL inference path (8B), so it carries
+            // the same conditional as cleanup().
+            reasoningEffort: settings.suppressModelReasoning ? "none" : nil)
 
         let status = await sendWarmUp(url: url, body: body)
         if let status, !(200...299).contains(status) {
+            // D72: the retry drops keep_alive ONLY (the known offender);
+            // reasoning_effort is a standard OpenAI-API field and stays.
             Self.logger.info("warm-up HTTP \(status) — retrying once without keep_alive")
             body.keepAlive = nil
             let retryStatus = await sendWarmUp(url: url, body: body)
