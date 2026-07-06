@@ -44,7 +44,16 @@ e9f53a7. Flake sweep: 10× green (2026-07-05).
 buffered; /no_think kept inert; toggle + guidance caption; 740→780),
 4-way gated, 223/22 green ×2 ×3 runners. R70/R71 note-only.
 
-**RESUME POINT (next):** 8B (warm-up at recording start per D74).
+**8B CLOSED 2026-07-06** (this commit): record-start warm-up (D74 —
+after successful recorder.start(), 30 s debounce via pure predicate),
+4-way gated, 226/22 green ×2 ×2 runners. R72/R73 note-only. PHASE 8
+MACHINE-SCOPE COMPLETE (architect-declared); live legs open (8A steps
+3/4, 8B #16 re-verify).
+
+**RESUME POINT (next):** user's remaining live batch — retest cleanup-
+quality items (#7/#13/#14/#18/#19), #16 amber-gone, #25 pasteboard
+preview, #26 onboarding rerun (with the corrected two-command reset),
+#27/Q7-4, #28, Q7-5 Local Network observation.
 
 **Live-test status:** most of the human batch (when-vllm-is-back.md)
 passed; open cleanup-quality items (#7/#13/#14/#18/#19) are blocked on

@@ -57,6 +57,17 @@ final class DictationController {
         wavByteCount - 44 >= 3200
     }
 
+    /// D74: last record-start warm-up fired (nil = never this launch).
+    private var lastRecordWarmUp: Date?
+
+    /// D74: ≥ 30 s between record-start warm-ups — covers hotkey spam and
+    /// rapid re-records without stacking cold loads (cold start 3–10 s,
+    /// warm-up timeout 30 s). Eviction inside a 30 s window is a
+    /// multi-client race the D43 raw fallback already absorbs.
+    nonisolated static func shouldFireRecordWarmUp(now: Date, last: Date?) -> Bool {
+        last.map { now.timeIntervalSince($0) >= 30 } ?? true
+    }
+
     func handle(_ action: HotkeyAction) {
         switch action {
         case .startCapture:
@@ -92,6 +103,14 @@ final class DictationController {
             try recorder.start()
             isRecording = true
             pill.show(.warming)
+            // D74 (amends D42's trigger set): warm the model while the user
+            // speaks — after a SUCCESSFUL start only, so blocked/failed
+            // presses fire nothing. Fire-and-forget; warmUp() is log-only
+            // and self-skips when cleanup isn't effective-enabled.
+            if Self.shouldFireRecordWarmUp(now: Date(), last: lastRecordWarmUp) {
+                lastRecordWarmUp = Date()
+                Task { await cleanup.warmUp() }
+            }
         } catch {
             // Failure policy (spec §cross-cutting): log + error flash.
             Self.logger.error(

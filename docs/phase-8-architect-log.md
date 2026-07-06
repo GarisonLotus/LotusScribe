@@ -72,3 +72,14 @@ it read-at-request-time (D40); retry nils keepAlive ONLY; probe files
 untouched (D36); R45 tuple unchanged in persist(). D73: no prompt edits
 — /no_think verbatim. 740→780 is the R40 single site; comment update is
 same-site, in-scope. NOTHING requires round-trip — 8A clear to gate.
+
+2026-07-06: 8B NON-OBJECTION (architect, staged diff vs D74). Placement
+exact: inside the do, after D63 guard + bump + successful
+recorder.start() + pill.show(.warming) — blocked/failed starts fire
+nothing. Timestamp IS the entire guard (pure nonisolated static, `>= 30`
+boundary); no Task tracking per the D74 rejection. Fire-and-forget
+`Task { await cleanup.warmUp() }` — D42 posture, no pill touch, no
+isEnabled at site. No new seams (hasUsableAudio precedent); suite stays
+construction+statics. LoC +19/+22 vs ~15/~20 — doc comments, waved.
+PHASE 8 MACHINE SCOPE COMPLETE once 8B commits (spec = 8A+8B only);
+phase NOT closed — LIVE-DICTATION legs (8A #3/#4, 8B #16) still open.
