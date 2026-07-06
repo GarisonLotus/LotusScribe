@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         subsystem: "com.garisonlotus.LotusScribe", category: "AppDelegate")
 
     private var statusItemController: StatusItemController?
-    private var hotkeyMonitor: EventTapMonitor?
+    private var hotkeyController: HotkeyController?
     // Internal (not private) so the hosted smoke test can assert real
     // post-launch composition (R3).
     private(set) var dictationController: DictationController?
@@ -49,21 +49,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // D15/D80: chord from SettingsStore.hotkeyChord; nil/unparseable → F5
-        // (fn is dead on macOS 26 session taps, D27, so it's no longer the
-        // default — reachable only via a custom "fn" string).
-        let chord = HotkeyChord.resolved(from: SettingsStore().hotkeyChord)
         let dictation = DictationController()
         // Spec §5: tint the status-item lotus magenta while the mic is capturing.
         dictation.onListeningChanged = { [weak self] listening in
             self?.statusItemController?.setListening(listening)
         }
         dictationController = dictation
-        hotkeyMonitor = EventTapMonitor(chord: chord) { action in
-            Self.logger.info("hotkey action: \(String(describing: action), privacy: .public)")
-            // EventTapMonitor delivers on the main thread (see its start()).
-            MainActor.assumeIsolated { dictation.handle(action) }
-        }
-        hotkeyMonitor?.start()
+        // D84: HotkeyController owns the tap and re-binds it live when the
+        // hotkey setting changes; it resolves the chord from the store (F5
+        // default, D80). Dictation wiring unchanged.
+        let hotkey = HotkeyController { action in dictation.handle(action) }
+        hotkeyController = hotkey
+        hotkey.start()
     }
 }

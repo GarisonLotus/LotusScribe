@@ -33,12 +33,14 @@ reaches the session tap.
 
 ## §3. Current state
 
-**Where we are:** 9A+9B committed. Next: 9C (live re-bind seam).
-**Baseline tests:** 242 tests / 22 suites green (9B close).
-**Active gate:** 9A cleared (reviewer APPROVE). 9B given a lightweight
-orchestrator gate (trivial: store property mirroring 5 existing ones + a
-1-line default swap onto the already-reviewed `resolved()`; spot-checked,
-tests green). 9C gets a full reviewer gate (AppDelegate restructure).
+**Where we are:** 9A+9B+9C committed. Next: 9D (UI — HotkeyPicker + Settings
+card + onboarding step 3), the last sub-phase.
+**Baseline tests:** 244 tests / 23 suites green (9C close).
+**Active gate:** 9A/9C cleared (reviewer APPROVE R9A-1/2, R9C-1/2). 9B
+lightweight orchestrator gate. 9C confirmed dictation wiring preserved,
+no double-tap/leak on rebind. R9C-2 (superfluous assumeIsolated) — leave
+as-is per reviewer. **9D carries the empirical F5 acceptance** (hold F5 →
+HUD, once IM granted; custom-combo fallback if F5 is dead like fn/D27).
 
 ## §4. Load-bearing constraints (do not break)
 
