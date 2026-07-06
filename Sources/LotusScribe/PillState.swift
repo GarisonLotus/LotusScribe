@@ -14,6 +14,9 @@ enum CleanupStage: Equatable {
 enum PillState: Equatable {
     case hidden, warming, recording, processing, success, error
     case stagedSuccess(cleanup: CleanupStage)
+    /// D64: secure-input blocked — pre-dictation environment state, not a
+    /// pipeline stage, hence top-level rather than the staged family.
+    case blocked
 }
 
 extension PillState {
@@ -26,6 +29,8 @@ extension PillState {
             return PillMetrics.flashDuration
         case .stagedSuccess(.done), .stagedSuccess(.missed):
             return PillMetrics.stagedFlashDuration
+        case .blocked:
+            return PillMetrics.blockedFlashDuration
         case .hidden, .warming, .recording, .processing,
              .stagedSuccess(.pending):
             return nil
@@ -42,4 +47,7 @@ enum PillMetrics {
     static let flashDuration: TimeInterval = 0.8
     /// D48: staged terminals need more read time (two symbols + amber).
     static let stagedFlashDuration: TimeInterval = 1.2
+    /// D64: a sentence ("Can't dictate here") needs more read time than
+    /// symbols.
+    static let blockedFlashDuration: TimeInterval = 1.6
 }

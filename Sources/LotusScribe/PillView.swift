@@ -27,6 +27,17 @@ struct PillView: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.title2)
                     .foregroundStyle(.red)
+            case .blocked:
+                // D64: first pill text label — a bare lock glyph is
+                // unlearnable; orange = environmental warning (red stays
+                // transcription-failure-only, D43).
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
+                    Text("Can't dictate here")
+                        .font(.callout)
+                }
             case .stagedSuccess(let stage):
                 // D48: slot 1 = STT proof (same check as .success),
                 // slot 2 = cleanup stage.

@@ -37,6 +37,18 @@ struct PillStateTests {
         }
     }
 
+    @Test func blockedFlashesAtBlockedFlashDuration() {
+        #expect(
+            PillState.blocked.flashDuration == PillMetrics.blockedFlashDuration)
+    }
+
+    /// D64: blocked is a flash, never sticky — the pill must auto-hide
+    /// after the read-time interval, not wait for a next update.
+    @Test func blockedIsNonSticky() {
+        #expect(PillState.blocked.flashDuration != nil)
+        #expect(PillMetrics.blockedFlashDuration == 1.6)
+    }
+
     @Test func stagedEqualityFollowsCleanupStage() {
         #expect(
             PillState.stagedSuccess(cleanup: .done)

@@ -1,0 +1,62 @@
+# Architect log — LotusScribe (Phase 6)
+
+> Locked decisions + open questions for Phase 6. Carry pointer: D1–D11
+> phase-0, D12–D28 phase-1, D29–D35 phase-2 (D29a rescinded by D34),
+> D36–D49 phase-3, D50–D55 phase-4, D56–D60 phase-5; all binding.
+> Numbering continues at D61. Terse entries.
+
+## Locked decisions
+
+| id | date | decision | rationale | sub-phase |
+|----|------|----------|-----------|-----------|
+| D61 | 2026-07-05 | AX-first insertion: probe = `AXUIElementCreateSystemWide()` → messaging timeout 0.25 s → copy `kAXFocusedUIElementAttribute` (`.success` + non-nil) → `AXUIElementIsAttributeSettable(el, kAXSelectedTextAttribute)` (`.success` && settable); insert = `AXUIElementSetAttributeValue(el, kAXSelectedTextAttribute, text)`; ANY non-success at any step → pasteboard+Cmd-V fallback in the same call (D43 chain: write precedes synthesis, so even CGEvent failure leaves text on the board as last resort). NO readback verification (rejected: kAXValue reads on large documents are slow/fragile); silent-AX-success apps are Q6-2, answered by the 6B batch matrix; per-bundle denylist is the escape hatch, built only if the matrix demands it. AX calls stay adapter-side direct in TextInserter (D49/D52 no-seam posture); route decision is pure `InsertionPolicy.route(focusedElementFound:selectedTextSettable:)` | Settable-selected-text is the one probe that means "this element accepts programmatic text replacement"; Electron/Chromium elements typically fail it → natural fallback (PLAN requirement); messaging timeout bounds a beachballing target so insertion cannot stall for seconds | 6B |
+| D62 | 2026-07-05 | Clipboard save/restore (pasteboard route only — AX route never touches the board): gate = pure `PasteboardAccessGate` mirror of `NSPasteboard.AccessBehavior` (macOS 15.4; pre-15.4 → `.unavailable`); save+restore when unavailable/standard/alwaysAllow, SKIP (Phase-1 clobber, logged) when ask/alwaysDeny — a read under `.ask` fires the system alert mid-dictation while synthesized Cmd-V is in flight → paste lands in the dialog (D43 violation). Snapshot = ALL `pasteboardItems` × types × `data(forType:)` (string-only rejected: PLAN says contents survive — images too); empty board snapshots as [] (restore = clear). Record written changeCount; restore via asyncAfter `restoreDelay = 0.5 s` (single site) ONLY if live changeCount still equals written (any other writer — user copy, clipboard manager, newer dictation — wins). AMENDS D20/Phase-1 §1D: pasteboard reads now allowed, confined to TextInserter's gated save path (grep-enforced). PLAN-divergence note: PLAN says "detect methods", but `detectPatterns/detectValues` return pattern metadata, not contents — they cannot rebuild a clipboard; `accessBehavior` is the privacy-aware gate that actually supports restore, and preview-flag testability is preserved | Restore requires a read; the only safe reads are the ones that cannot prompt; changeCount is the race-free "did anyone else write" primitive; 0.5 s errs long because restoring before the target app reads the board pastes the OLD clipboard (worse than clobbering) | 6C |
+| D63 | 2026-07-05 | Secure-input UX: `IsSecureEventInputEnabled()` (Carbon, direct call, no seam — D49/D52 posture) checked at KEY-DOWN as the FIRST line of `startRecording()`, BEFORE the `generation += 1` bump; true → `pill.show(.blocked)` + return — no recorder start, no generation bump (a blocked press must not invalidate an in-flight prior dictation's insert, D23/D43), `isRecording` stays false so key-up no-ops. No re-check at insert time (intent binds at key-down, D52 precedent; revisit only if live testing surfaces stale-focus pastes into secure fields). Branch unreachable headless (test runner never has secure input) → no controller test owed, D49 precedent; PillState purity carries the machine tests | Recording during password entry is both useless (insertion is blocked/misdirected) and creepy; refusing to start is the honest UX and the cheapest correct one | 6A |
+| D64 | 2026-07-05 | Pill blocked state: new TOP-LEVEL `PillState.blocked` (not the D46 staged family — pre-dictation environment state, not a pipeline stage); renders `lock.fill` systemOrange + first-ever pill text label "Can't dictate here" (.callout) in the existing 260×52; flash = new `PillMetrics.blockedFlashDuration = 1.6 s` via the D46 pure `flashDuration` mapping (D31 single-site; 0.8/1.2 untouched). Orange = environmental warning, consistent with D48 amber; red stays transcription-failure-only | A bare lock glyph is unlearnable — the user must be told WHY nothing happened; a sentence needs more read time than D48's two symbols, hence 1.6 over 1.2 | 6A |
+| D65 | 2026-07-05 | Slicing: 6A secure-input blocked state → 6B AX-first + fallback → 6C clipboard save/restore; each independently committable with green `make test` during the blocked window (Phase-4/5 posture). Decision logic concentrated in ONE new pure Foundation-only `InsertionPolicy.swift` (route + save gate + restore guard; D40/D50 pure-enum shape) grown across 6B/6C; adapters stay thin/direct. One log line per insertion names the route taken (`ax` / `pasteboard` / `ax-fallback`) — the BLOCKED-BATCH matrix reads Console instead of guessing. No new entitlements/Info.plist keys: AX rides the granted Accessibility TCC; pasteboard privacy is a runtime pane | Smallest→largest risk ordering; 6A ships user-visible value with near-zero blast radius; policy-in-one-file keeps the headless test surface single-sited exactly as CleanupLevel/AppCategory proved | 6A–6C |
+
+## Open questions
+
+| id | date raised | question | status | blocked-by |
+|----|-------------|----------|--------|------------|
+| Q6-1 | 2026-07-05 | Under `EnablePasteboardPrivacyDeveloperPreview` with no grant, does `NSPasteboard.general.accessBehavior` report `.ask` (D62's assumption — restore skips cleanly, no alert) or stay `.default` while reads alert anyway? If the latter, re-rule the D62 gate (likely: strict alwaysAllow-only) | open | 6C batch verify item 5 (vLLM) |
+| Q6-2 | 2026-07-05 | Does any matrix app report AX `.success` on set-kAXSelectedText WITHOUT actually inserting (silent AX failure)? If yes, rule the per-bundle fallback denylist (D61 escape hatch) | open | 6B batch matrix (vLLM) |
+| Q6-3 | 2026-07-05 | Terminal (Secure Keyboard Entry OFF): does the AX route land text where Phase-1's Cmd-V did not (closes Phase-1 Q3's deferred handling)? Record route + outcome | open | 6B batch matrix (vLLM) |
+
+(status: open / answered / deferred / closed-as-moot)
+
+## Notes
+
+2026-07-05: PHASE 6 BOOTSTRAP (autonomous run, user away). Phase-3/4/5
+close gates all OPEN (vLLM down, Q4-2). Phase 6 proceeds machine-first;
+NOTE insertion verifies need live dictation → most human checks are
+BLOCKED-BATCH; orchestrator records them in when-vllm-is-back.md. Spec
+must classify every verify MACHINE / AT-SCREEN (no vLLM) /
+BLOCKED-BATCH (vLLM).
+
+2026-07-05: phase-6-spec.md authored (D61–D65, Q6-1..3). Slicing note:
+6A (secure-input blocked pill, ~+2 tests) → 6B (InsertionPolicy.route +
+AX-first TextInserter, ~+4 tests +1 suite) → 6C (save/restore gate +
+snapshot + changeCount-guarded delayed restore, ~+8 tests). Expected end
+state ≈ 191/19 vs baseline 177/18 (tester records exacts per gate). All
+SDK symbols code-verified against MacOSX.sdk (NSPasteboard.accessBehavior
+macOS 15.4, detectPatterns metadata-only → D62 PLAN-divergence note,
+IsSecureEventInputEnabled in Carbon/HIToolbox tbd, kAXSelectedText /
+kAXFocusedUIElement / AXUIElementIsAttributeSettable /
+AXUIElementSetMessagingTimeout in HIServices headers); insertion-path
+symbols verified against Sources (TextInserter write→Cmd-V order,
+DictationController startRecording/stopRecording generation discipline,
+PillState/PillMetrics/PillView exhaustive switches). 6A's blocked-state
+check is the ONLY at-screen verify runnable without vLLM (warming/
+recording pill needs no network until key-up). Non-machine verify items
+written copy-ready in spec §6A/§6B/§6C for when-vllm-is-back.md.
+
+2026-07-05: 6A NON-OBJECTION (SHAPE). Staged diffs (PillState/PillView/
+DictationController) conform to D63/D64: `.blocked` top-level (not staged
+family); 1.6 s single-sited as `PillMetrics.blockedFlashDuration` via the
+D46 flashDuration mapping; guard precedes `generation += 1` (load-bearing,
+comment present); direct Carbon `IsSecureEventInputEnabled()` — no seam;
+no insert-time re-check. Color: `.foregroundStyle(.orange)` accepted —
+spec's "systemOrange" names the color, not an API; SwiftUI `.orange` is
+the system-adaptive orange and is the file's existing D48 amber idiom
+(PillView lines 37/77). No pinning needed; no spec amendment warranted.

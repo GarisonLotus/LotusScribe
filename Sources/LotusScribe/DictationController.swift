@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import Foundation
 import os
 
@@ -72,6 +73,14 @@ final class DictationController {
     private var capturedBundleID: String?
 
     private func startRecording() {
+        // D63 invariant — guard BEFORE the generation bump, order
+        // load-bearing: a blocked press must not invalidate an in-flight
+        // prior dictation (D23/D43). isRecording stays false → key-up no-ops.
+        guard !IsSecureEventInputEnabled() else {
+            Self.logger.info("secure input active — dictation blocked")
+            pill.show(.blocked)
+            return
+        }
         generation += 1  // D23: invalidates any still-in-flight transcript.
         engineLive = false
         // D52: capture at key-down, not at cleanup time — by then the user
