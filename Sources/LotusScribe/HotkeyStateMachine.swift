@@ -9,14 +9,22 @@ enum HotkeyChord: Equatable {
     case fnHold
     case combo(keyCode: Int64, modifiers: CGEventFlags)
 
-    /// Parses "fn" or "<modifier>+…+<key>" (e.g. "ctrl+alt+z"), case-insensitive.
-    /// Combos need at least one modifier; anything else returns nil.
+    /// Parses "fn", a lone function key ("f5"), or "<modifier>+…+<key>"
+    /// (e.g. "ctrl+alt+z"), case-insensitive. A single non-function-key token
+    /// (bare letter/digit) is rejected — it would swallow that key globally
+    /// (D82). Function keys may be bare (D81: the combo path swallows the whole
+    /// press, so it can't leak) or modified.
     static func parse(_ string: String) -> HotkeyChord? {
         let tokens = string.lowercased().split(separator: "+").map {
             $0.trimmingCharacters(in: .whitespaces)
         }
         if tokens == ["fn"] { return .fnHold }
-        guard tokens.count >= 2, let key = tokens.last, let keyCode = keyCodes[key] else {
+        // D81/D82: a lone function key is a bare hold — no modifier required.
+        if tokens.count == 1, let keyCode = functionKeyCodes[tokens[0]] {
+            return .combo(keyCode: keyCode, modifiers: [])
+        }
+        guard tokens.count >= 2, let key = tokens.last,
+              let keyCode = keyCodes[key] ?? functionKeyCodes[key] else {
             return nil
         }
         var modifiers: CGEventFlags = []
@@ -27,11 +35,25 @@ enum HotkeyChord: Equatable {
         return .combo(keyCode: keyCode, modifiers: modifiers)
     }
 
+    /// The persisted `hotkeyChord` string, or the F5 default (D80) when it is
+    /// absent or unparseable. Pure — the single fallback site (replaces
+    /// AppDelegate's inline `?? .fnHold`; D15/D27: fn is dead on macOS 26).
+    static func resolved(from string: String?) -> HotkeyChord {
+        string.flatMap(parse) ?? .combo(keyCode: 96, modifiers: [])
+    }
+
     private static let modifierFlags: [String: CGEventFlags] = [
         "ctrl": .maskControl, "control": .maskControl,
         "alt": .maskAlternate, "option": .maskAlternate, "opt": .maskAlternate,
         "cmd": .maskCommand, "command": .maskCommand,
         "shift": .maskShift,
+    ]
+
+    /// HIToolbox kVK_F1…F12. Positional like `keyCodes` (R7 caveat): "f5" is
+    /// the physical F5 key — the mac dictation/mic key and the Phase 9 default.
+    private static let functionKeyCodes: [String: Int64] = [
+        "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97,
+        "f7": 98, "f8": 100, "f9": 101, "f10": 109, "f11": 103, "f12": 111,
     ]
 
     /// ANSI-layout virtual key codes (HIToolbox kVK_ANSI_*), letters + digits.
@@ -42,6 +64,40 @@ enum HotkeyChord: Equatable {
         "m": 46, "1": 18, "2": 19, "3": 20, "4": 21, "5": 23, "6": 22, "7": 26,
         "8": 28, "9": 25, "0": 29,
     ]
+}
+
+/// UI ⇄ persistence bridge for the Phase 9 hotkey picker. Pure/headless (D14):
+/// maps a picker selection to the `hotkeyChord` string and back. The two UI
+/// surfaces (onboarding, settings) speak only in `HotkeyOption`.
+enum HotkeyOption: Equatable {
+    /// A bare function-key hold, F1…F12.
+    case functionKey(Int)
+    /// A raw combo string (e.g. "ctrl+alt+cmd+9") or the "fn" escape hatch.
+    case custom(String)
+
+    /// The string written to `hotkeyChord`.
+    var persisted: String {
+        switch self {
+        case .functionKey(let n): return "f\(n)"
+        case .custom(let s): return s
+        }
+    }
+
+    /// The chord this option resolves to, or nil if a custom string is invalid.
+    var chord: HotkeyChord? { HotkeyChord.parse(persisted) }
+
+    /// Reconstruct the option from a persisted string. "f1"…"f12" → function
+    /// key; absent/empty → the F5 default (D80); everything else (combos, "fn")
+    /// → custom, original casing preserved for display.
+    static func from(persisted: String?) -> HotkeyOption {
+        guard let lowered = persisted?.lowercased(), !lowered.isEmpty else {
+            return .functionKey(5)
+        }
+        if lowered.first == "f", let n = Int(lowered.dropFirst()), (1...12).contains(n) {
+            return .functionKey(n)
+        }
+        return .custom(persisted!)
+    }
 }
 
 /// Keyboard activity relevant to the hotkey, mapped from CGEvents by EventTapMonitor.

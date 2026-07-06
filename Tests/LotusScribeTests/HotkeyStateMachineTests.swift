@@ -193,8 +193,78 @@ struct HotkeyStateMachineTests {
             == .combo(keyCode: 35, modifiers: [.maskCommand, .maskShift]))
     }
 
-    @Test(arguments: ["", "banana", "z", "ctrl+", "ctrl+banana", "banana+z", "fn+z"])
+    @Test(arguments: ["", "banana", "z", "5", "9", "ctrl+", "ctrl+banana", "banana+z", "fn+z"])
     func parseRejectsGarbage(_ input: String) {
         #expect(HotkeyChord.parse(input) == nil)
+    }
+
+    // MARK: - Phase 9: function keys, resolved default, HotkeyOption
+
+    @Test func parseLoneFunctionKeyIsBareHold() {
+        #expect(HotkeyChord.parse("f5") == .combo(keyCode: 96, modifiers: []))
+        #expect(HotkeyChord.parse("F5") == .combo(keyCode: 96, modifiers: []))
+        #expect(HotkeyChord.parse("f12") == .combo(keyCode: 111, modifiers: []))
+    }
+
+    @Test func parseFunctionKeyWithModifiers() {
+        #expect(HotkeyChord.parse("shift+f5")
+            == .combo(keyCode: 96, modifiers: [.maskShift]))
+    }
+
+    @Test(arguments: ["f0", "f13", "f"])
+    func parseRejectsNonexistentFunctionKeys(_ input: String) {
+        #expect(HotkeyChord.parse(input) == nil)
+    }
+
+    @Test func resolvedDefaultsToF5() {
+        // D80: absent or unparseable → F5 bare hold.
+        #expect(HotkeyChord.resolved(from: nil) == .combo(keyCode: 96, modifiers: []))
+        #expect(HotkeyChord.resolved(from: "") == .combo(keyCode: 96, modifiers: []))
+        #expect(HotkeyChord.resolved(from: "garbage") == .combo(keyCode: 96, modifiers: []))
+    }
+
+    @Test func resolvedParsesValidStrings() {
+        #expect(HotkeyChord.resolved(from: "f6") == .combo(keyCode: 97, modifiers: []))
+        #expect(HotkeyChord.resolved(from: "fn") == .fnHold)
+        #expect(HotkeyChord.resolved(from: "ctrl+alt+z") == Self.ctrlAltZ)
+    }
+
+    @Test func hotkeyOptionRoundTrips() {
+        #expect(HotkeyOption.functionKey(5).persisted == "f5")
+        #expect(HotkeyOption.functionKey(5).chord == .combo(keyCode: 96, modifiers: []))
+        #expect(HotkeyOption.custom("ctrl+alt+z").chord == Self.ctrlAltZ)
+        #expect(HotkeyOption.from(persisted: "f5") == .functionKey(5))
+        #expect(HotkeyOption.from(persisted: "F5") == .functionKey(5))
+        #expect(HotkeyOption.from(persisted: nil) == .functionKey(5))
+        #expect(HotkeyOption.from(persisted: "") == .functionKey(5))
+        #expect(HotkeyOption.from(persisted: "ctrl+alt+z") == .custom("ctrl+alt+z"))
+        #expect(HotkeyOption.from(persisted: "fn") == .custom("fn"))
+    }
+
+    @Test func hotkeyOptionInvalidCustomHasNilChord() {
+        #expect(HotkeyOption.custom("banana").chord == nil)
+    }
+
+    // MARK: - Phase 9: bare-key D30 pair-balance (rides handleCombo unchanged)
+
+    @Test func bareFunctionKeyChordSwallowsAndPairBalances() {
+        var machine = HotkeyStateMachine(chord: .combo(keyCode: 96, modifiers: []))
+        #expect(machine.handle(.keyDown(96, []))
+            == HotkeyDecision(action: .startCapture, swallow: true))
+        // Autorepeat down while held: no action, still swallowed.
+        #expect(machine.handle(.keyDown(96, []))
+            == HotkeyDecision(action: .none, swallow: true))
+        #expect(machine.handle(.keyUp(96))
+            == HotkeyDecision(action: .stopCapture, swallow: true))
+    }
+
+    @Test func bareFunctionKeyFlagsChangedNeverStops() {
+        // Empty modifiers ⊆ every flags, so a modifier press/release mid-hold
+        // must NOT end a bare-key capture (only keyUp does).
+        var machine = HotkeyStateMachine(chord: .combo(keyCode: 96, modifiers: []))
+        #expect(machine.handle(.keyDown(96, [])).action == .startCapture)
+        #expect(machine.handle(.flagsChanged([.maskShift])).action == HotkeyAction.none)
+        #expect(machine.handle(.flagsChanged([])).action == HotkeyAction.none)
+        #expect(machine.handle(.keyUp(96)).action == .stopCapture)
     }
 }
