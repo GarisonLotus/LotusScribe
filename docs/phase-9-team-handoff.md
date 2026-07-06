@@ -33,10 +33,12 @@ reaches the session tap.
 
 ## §3. Current state
 
-**Where we are:** 9A committed (chord model). Next: 9B (persistence + F5
-default).
-**Baseline tests:** 239 tests / 22 suites green (9A close).
-**Active gate:** 9A cleared (reviewer APPROVE R9A-1/2, tests green).
+**Where we are:** 9A+9B committed. Next: 9C (live re-bind seam).
+**Baseline tests:** 242 tests / 22 suites green (9B close).
+**Active gate:** 9A cleared (reviewer APPROVE). 9B given a lightweight
+orchestrator gate (trivial: store property mirroring 5 existing ones + a
+1-line default swap onto the already-reviewed `resolved()`; spot-checked,
+tests green). 9C gets a full reviewer gate (AppDelegate restructure).
 
 ## §4. Load-bearing constraints (do not break)
 

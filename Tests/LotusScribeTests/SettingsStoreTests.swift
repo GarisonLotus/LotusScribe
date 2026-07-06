@@ -200,4 +200,31 @@ final class SettingsStoreTests {
         let reader = SettingsStore(defaults: defaults)
         #expect(reader.sttModel == "whisper-1")
     }
+
+    // MARK: - Phase 9: hotkeyChord
+
+    @Test func hotkeyChordRoundTrips() {
+        let store = SettingsStore(defaults: defaults)
+        store.hotkeyChord = "f5"
+        #expect(defaults.string(forKey: "hotkeyChord") == "f5")
+        #expect(store.hotkeyChord == "f5")
+        store.hotkeyChord = "ctrl+alt+cmd+9"
+        #expect(store.hotkeyChord == "ctrl+alt+cmd+9")
+    }
+
+    @Test func emptyHotkeyChordReadsAsNilAndResolvesToF5() {
+        let store = SettingsStore(defaults: defaults)
+        defaults.set("", forKey: "hotkeyChord")  // raw junk write bypasses UI
+        #expect(store.hotkeyChord == nil)
+        // D80: absent/empty resolves to the F5 default.
+        #expect(HotkeyChord.resolved(from: store.hotkeyChord)
+            == .combo(keyCode: 96, modifiers: []))
+    }
+
+    @Test func absentHotkeyChordResolvesToF5() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.hotkeyChord == nil)
+        #expect(HotkeyChord.resolved(from: store.hotkeyChord)
+            == .combo(keyCode: 96, modifiers: []))
+    }
 }

@@ -49,9 +49,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // D15: chord from the `hotkeyChord` defaults key; nil/unparseable → hold-Fn.
-        let chord = UserDefaults.standard.string(forKey: "hotkeyChord")
-            .flatMap(HotkeyChord.parse) ?? .fnHold
+        // D15/D80: chord from SettingsStore.hotkeyChord; nil/unparseable → F5
+        // (fn is dead on macOS 26 session taps, D27, so it's no longer the
+        // default — reachable only via a custom "fn" string).
+        let chord = HotkeyChord.resolved(from: SettingsStore().hotkeyChord)
         let dictation = DictationController()
         // Spec §5: tint the status-item lotus magenta while the mic is capturing.
         dictation.onListeningChanged = { [weak self] listening in

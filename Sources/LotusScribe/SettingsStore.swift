@@ -108,6 +108,15 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: "sttLanguage") }
     }
 
+    /// Phase 9 (D83): the push-to-talk hotkey as a `HotkeyChord.parse` string
+    /// ("f5", "ctrl+alt+cmd+9", "fn"). Absent/empty → the F5 default via
+    /// `HotkeyChord.resolved` (D80). A live write-through setting — the picker
+    /// writes here and posts `lotusHotkeyChanged`, NOT a buffered draft field.
+    var hotkeyChord: String? {
+        get { normalizedString(forKey: "hotkeyChord") }
+        set { defaults.set(newValue, forKey: "hotkeyChord") }
+    }
+
     /// D25 empty→nil applied at read time (R39): a raw `defaults write` of ""
     /// bypasses draft.save's normalization, and an empty string must never
     /// count as "set" for effective-enabled checks (D40).
