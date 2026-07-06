@@ -18,34 +18,39 @@ struct SettingsForm: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section("Speech to Text") {
-                    endpointField("Endpoint URL", text: $draft.sttEndpointURL)
-                    TextField("Model", text: $draft.sttModel)
-                }
-                Section("Cleanup LLM") {
-                    endpointField("Endpoint URL", text: $draft.llmEndpointURL)
-                    TextField("Model", text: $draft.llmModel)
-                    // D40 levels. A non-empty URL is still probed on Save
-                    // while Off (D44 — the URL outlives the level).
-                    Picker("Cleanup", selection: $draft.cleanupLevel) {
-                        ForEach(CleanupLevel.allCases, id: \.self) { level in
-                            Text(level.rawValue.capitalized).tag(level)
-                        }
+        Form {
+            Section("Speech to Text") {
+                endpointField("Endpoint URL", text: $draft.sttEndpointURL)
+                TextField("Model", text: $draft.sttModel)
+            }
+            Section("Cleanup LLM") {
+                endpointField("Endpoint URL", text: $draft.llmEndpointURL)
+                TextField("Model", text: $draft.llmModel)
+                // D40 levels. A non-empty URL is still probed on Save
+                // while Off (D44 — the URL outlives the level).
+                Picker("Cleanup", selection: $draft.cleanupLevel) {
+                    ForEach(CleanupLevel.allCases, id: \.self) { level in
+                        Text(level.rawValue.capitalized).tag(level)
                     }
-                }
-                // 4C/D54: per-app tone overrides, draft-buffered like every
-                // other field (D26) — rows edit the draft dict only.
-                Section("App Categories") {
-                    ForEach(draft.appCategoryOverrides.keys.sorted(), id: \.self) { bundleID in
-                        overrideRow(bundleID: bundleID)
-                    }
-                    addAppMenu
                 }
             }
-            .formStyle(.grouped)
-            .disabled(probeState.phase == .testing)
+            // 4C/D54: per-app tone overrides, draft-buffered like every
+            // other field (D26) — rows edit the draft dict only.
+            Section("App Categories") {
+                ForEach(draft.appCategoryOverrides.keys.sorted(), id: \.self) { bundleID in
+                    overrideRow(bundleID: bundleID)
+                }
+                addAppMenu
+            }
+        }
+        .formStyle(.grouped)
+        .disabled(probeState.phase == .testing)
+        // Button row rides a bottom safe-area inset (not a VStack sibling):
+        // on macOS 26 the grouped Form's scroll content drew underneath a
+        // sibling row (Save/Cancel floated over the last list row). The
+        // inset makes the scroll view keep its content clear of the
+        // buttons, and .bar gives the row an opaque backdrop.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack {
                 probeIndicator
                 Spacer()
@@ -55,7 +60,8 @@ struct SettingsForm: View {
                     .keyboardShortcut(.defaultAction)
             }
             .disabled(probeState.phase == .testing)
-            .padding([.horizontal, .bottom])
+            .padding()
+            .background(.bar)
         }
         // D37: Esc must still cancel mid-test while the buttons are disabled
         // — key equivalents skip disabled buttons, so cancelOperation lands
