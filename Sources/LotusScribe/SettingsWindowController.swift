@@ -133,7 +133,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
                 draft: draft,
                 probeState: probeState,
                 onSave: { [weak self] in self?.save() },
-                onCancel: { [weak self] in self?.cancel() })))
+                onCancel: { [weak self] in self?.cancel() },
+                onTest: { [weak self] in self?.test() })))
         window.title = "LotusScribe Settings"
         // NSHostingController's fitting size collapses to 0x0 on macOS 26
         // (title-bar-only window), even with an explicit root .frame — size
@@ -223,6 +224,40 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             return .failure(reason: "Cleanup LLM: \(reason)")
         }
         return .success
+    }
+
+    /// Test button (D70): probe the drafted endpoints through the same
+    /// seams as Save, but only publish the outcome to ProbeState — never
+    /// persists, never closes, never sheets (the D38 sheet stays
+    /// Save-only; the failure arm renders inline in the form). Both URLs
+    /// empty → no-op.
+    func test() {
+        // R36: cancel stale probe/flash work, same as re-entrant Save.
+        probeTask?.cancel()
+        probeTask = nil
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+
+        let sttEndpoint = draft.sttEndpointURL
+        let llmEndpoint = draft.llmEndpointURL
+        guard !sttEndpoint.isEmpty || !llmEndpoint.isEmpty else { return }
+
+        probeState.phase = .testing
+        let sttModel = draft.sttModel
+        let llmModel = draft.llmModel
+        probeTask = Task { [weak self] in
+            guard let self else { return }
+            let result = await self.probeEndpoints(
+                sttEndpoint: sttEndpoint, sttModel: sttModel,
+                llmEndpoint: llmEndpoint, llmModel: llmModel)
+            guard !Task.isCancelled else { return }
+            switch result {
+            case .success:
+                self.probeState.phase = .success
+            case .failure(let reason):
+                self.probeState.phase = .failure(reason)
+            }
+        }
     }
 
     /// Cancel button / Esc: close without writing (D26).

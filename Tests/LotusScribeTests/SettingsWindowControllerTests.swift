@@ -483,4 +483,72 @@ final class SettingsWindowControllerTests {
         #expect(controller.window?.isVisible == true)
         controller.window?.close()
     }
+
+    // MARK: 7A — connection-test button (D70)
+    // R41: warmUp stubbed even though test() never persists — the default
+    // closure is real network.
+
+    // D70: test() success only publishes .success — the store stays
+    // unwritten and the window stays open (no auto-close flash).
+    @Test func testSuccessSetsPhaseWithoutPersistingOrClosing() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        let controller = SettingsWindowController(
+            store: store, sttProbe: { _, _ in .success }, warmUp: {})
+        controller.show()
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.draft.sttModel = "whisper-large-v3"
+        controller.test()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .success)
+        #expect(store.sttEndpointURL == nil)
+        #expect(store.sttModel == nil)
+        #expect(controller.autoCloseTask == nil)
+        #expect(controller.window?.isVisible == true)
+        controller.window?.close()
+    }
+
+    // D70: test() failure publishes the endpoint-named reason for the
+    // inline indicator — no sheet path, no close, store untouched.
+    @Test func testFailureSetsReasonWithoutClosing() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        let controller = SettingsWindowController(
+            store: store,
+            sttProbe: { _, _ in .failure(reason: "HTTP 503") },
+            warmUp: {})
+        controller.show()
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.test()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .failure("Speech to Text: HTTP 503"))
+        #expect(store.sttEndpointURL == nil)
+        #expect(controller.window?.isVisible == true)
+        controller.window?.close()
+    }
+
+    // D70: both drafted URLs empty → test() is a no-op — no probe, no
+    // phase change, window stays open.
+    @Test func testWithBothURLsEmptyIsNoOp() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let failProbe: (String, String) async -> ProbeResult = { _, _ in
+            Issue.record("no probe may run when both drafted URLs are empty")
+            return .failure(reason: "unexpected probe")
+        }
+        let controller = SettingsWindowController(
+            store: SettingsStore(defaults: defaults),
+            sttProbe: failProbe, llmProbe: failProbe, warmUp: {})
+        controller.show()
+
+        controller.test()
+
+        #expect(controller.probeTask == nil)
+        #expect(controller.probeState.phase == .idle)
+        #expect(controller.window?.isVisible == true)
+        controller.window?.close()
+    }
 }

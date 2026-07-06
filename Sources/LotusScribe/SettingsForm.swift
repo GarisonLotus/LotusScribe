@@ -10,12 +10,13 @@ struct SettingsForm: View {
     /// Single source for the fixed settings window content size (R40):
     /// the macOS 26 fitting-size collapse forces both this form's root
     /// frame and the controller's setContentSize to agree.
-    static let contentSize = CGSize(width: 420, height: 700)  // 5C: +140 for Dictionary
+    static let contentSize = CGSize(width: 420, height: 740)  // 7A: +40 for presets row
 
     @ObservedObject var draft: SettingsDraft
     @ObservedObject var probeState: ProbeState
     let onSave: () -> Void
     let onCancel: () -> Void
+    let onTest: () -> Void
 
     /// Local buffer for the Dictionary add row (5C) — committed to the
     /// draft array only by the Add button.
@@ -24,6 +25,13 @@ struct SettingsForm: View {
     var body: some View {
         Form {
             Section("Speech to Text") {
+                // 7A/D69: stateless apply — fills only the preset's non-nil
+                // URLs on the draft (D26); model fields never touched.
+                Menu("Apply Preset…") {
+                    ForEach(EndpointPreset.all, id: \.name) { preset in
+                        Button(preset.name) { preset.apply(to: draft) }
+                    }
+                }
                 endpointField("Endpoint URL", text: $draft.sttEndpointURL)
                 TextField("Model", text: $draft.sttModel)
             }
@@ -69,6 +77,8 @@ struct SettingsForm: View {
             HStack {
                 probeIndicator
                 Spacer()
+                // 7A/D70: probe-only — never persists, closes, or sheets.
+                Button("Test", action: onTest)
                 Button("Cancel", action: onCancel)
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: onSave)
@@ -84,17 +94,18 @@ struct SettingsForm: View {
         .onExitCommand(perform: onCancel)
         // Both dimensions fixed: on macOS 26 the NSHostingController fitting
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
-        // take either), leaving a title-bar-only window. 700 pt fits the four
-        // fields, the cleanup picker, the App Categories and Dictionary
+        // take either), leaving a title-bar-only window. 740 pt fits the
+        // presets row, four fields, the cleanup picker, the App Categories and Dictionary
         // sections (~4 rows each before the grouped Form scrolls), section
         // headers, hint rows, and the button row. Shared with the
         // controller's setContentSize (R40).
         .frame(width: Self.contentSize.width, height: Self.contentSize.height)
     }
 
-    /// Spinner while testing, green checkmark on success (D37). Thin UI —
-    /// verified HUMAN-AT-SCREEN, not unit-tested. Failure needs no row
-    /// indicator: the sheet carries the message.
+    /// Spinner while testing, green checkmark on success (D37), inline
+    /// warning + reason on failure (7A/D70 — the Test button has no sheet;
+    /// Save's failure sheet still precedes this, and its Try Again resets
+    /// `.idle`). Thin UI — verified HUMAN-AT-SCREEN, not unit-tested.
     @ViewBuilder
     private var probeIndicator: some View {
         switch probeState.phase {
@@ -108,7 +119,13 @@ struct SettingsForm: View {
                 .foregroundStyle(.green)
             Text("Connected")
                 .font(.caption)
-        case .idle, .failure:
+        case .failure(let reason):
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(reason)
+                .font(.caption)
+                .lineLimit(2)
+        case .idle:
             EmptyView()
         }
     }
