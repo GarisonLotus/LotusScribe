@@ -19,8 +19,8 @@
 
 | id | date raised | question | status | blocked-by |
 |----|-------------|----------|--------|------------|
-| Q5-1 | 2026-07-05 | Clause/prompt EFFECTIVENESS is unproven (vLLM down — no empirical probe possible, unlike D45): does the D57 clause reliably enforce spellings on Qwen3.6, and does comma-joined vocab bias whisper-large-v3 well? Fixtures are locked as the build contract; batch-time tuning (wording only, composition rule intact) is an allowed D57 amendment if the BLOCKED-BATCH verifies show misses | open (batch time) | Q4-2 (vLLM) |
-| Q5-2 | 2026-07-05 | Does vLLM's /v1/audio/transcriptions honor the multipart `prompt` field (initial-prompt biasing)? Standard OpenAI field, worst case ignored server-side (harmless — cleanup stage still enforces). Non-blocking for build; 5B BLOCKED-BATCH verify 3 closes it | open | Q4-2 (vLLM) |
+| Q5-1 | 2026-07-05 | Clause/prompt EFFECTIVENESS is unproven (vLLM down — no empirical probe possible, unlike D45): does the D57 clause reliably enforce spellings on Qwen3.6, and does comma-joined vocab bias whisper-large-v3 well? Fixtures are locked as the build contract; batch-time tuning (wording only, composition rule intact) is an allowed D57 amendment if the BLOCKED-BATCH verifies show misses | answered (2026-07-05 orchestrator server-side probe: D57 clause corrected Garison/LotusScribe/Qwen at BOTH standard and light, incl. with email tone stacked — clause effective on Qwen3.6, no D57 wording amendment needed; in-app at-screen confirms remain in the batch as light regression checks, not open questions) | — |
+| Q5-2 | 2026-07-05 | Does vLLM's /v1/audio/transcriptions honor the multipart `prompt` field (initial-prompt biasing)? Standard OpenAI field, worst case ignored server-side (harmless — cleanup stage still enforces). Non-blocking for build; 5B BLOCKED-BATCH verify 3 closes it | answered (2026-07-05 orchestrator server-side probe: vLLM HONORS the field — biased output spelled "Garison" vs baseline "Gary-son"; biasing partial ("Lotus Scribe" stayed two words, cleanup stage completes it — the two-stage design's anticipated case); in-app at-screen confirm remains a light regression check in the batch) | — |
 
 (status: open / answered / deferred / closed-as-moot)
 
@@ -96,3 +96,27 @@ R53: D60 row AMENDED — clear-on-successful-add-only is the ruling;
 rejected adds retain the typed text. R51: note-only, no D56 change —
 the store's read-time normalization is the sole canonical fold
 (D56/R39); the guard's stricter Unicode fold only over-blocks, harmless.
+
+2026-07-05: EMPIRICAL PROBES (orchestrator-run, vLLM live; exact
+app-composed prompts, temp 0, Qwen3.6-35B-A3B-FP8; whisper-large-v3 with
+say-synthesized 16 kHz audio). (1) D45 BIG ONE server-side: filler-laden
+meeting sentence → fillers gone, meaning/voice intact. (2) Q5-1: D57
+clause corrected Garison/LotusScribe/Qwen at standard AND light, and with
+email tone stacked — clause effective, fixtures stand. (3) Q5-2: vLLM
+honors the multipart `prompt` field (bias fixed "Gary-son"→"Garison");
+biasing partial ("Lotus Scribe" stayed two words — cleanup completes it,
+as the two-stage design anticipated). (4) Tone register: email vs
+personalMessaging produced IDENTICAL output for a short input — confirms
+D51 (tone never instructs rephrasing; register effects are punctuation/
+paragraphing-scale). EXPECTATION-SETTING for the batch: at-screen tone
+checks on short dictations will read subtler than "turns formal" wording
+implies; longer dictations should differentiate via paragraphing.
+
+2026-07-05: RULING on probe finding 4 — NO amendment. D51's wording
+already states the observed behavior (tone is register/formatting
+guidance, subordinate, never rephrasing), so the finding validates D51
+rather than stressing it; D57 likewise untouched. The when-vllm-is-back
+§B.8 expectation is orchestrator-owned; RECOMMENDATION to orchestrator:
+soften §B.8's "Mail output turns formal" to expect punctuation/
+paragraphing-scale differences, and use a multi-sentence dictation for
+that check so the register effect has room to show.
