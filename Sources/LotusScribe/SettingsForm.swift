@@ -10,12 +10,16 @@ struct SettingsForm: View {
     /// Single source for the fixed settings window content size (R40):
     /// the macOS 26 fitting-size collapse forces both this form's root
     /// frame and the controller's setContentSize to agree.
-    static let contentSize = CGSize(width: 420, height: 560)  // 4C: +170 for App Categories
+    static let contentSize = CGSize(width: 420, height: 700)  // 5C: +140 for Dictionary
 
     @ObservedObject var draft: SettingsDraft
     @ObservedObject var probeState: ProbeState
     let onSave: () -> Void
     let onCancel: () -> Void
+
+    /// Local buffer for the Dictionary add row (5C) — committed to the
+    /// draft array only by the Add button.
+    @State private var newTerm = ""
 
     var body: some View {
         Form {
@@ -41,6 +45,17 @@ struct SettingsForm: View {
                     overrideRow(bundleID: bundleID)
                 }
                 addAppMenu
+            }
+            // 5C/D60: user dictionary, draft-buffered (D26). Rows stay in
+            // list order — order IS the D59 STT truncation priority.
+            Section("Dictionary") {
+                ForEach(draft.dictionaryTerms, id: \.self) { term in
+                    termRow(term)
+                }
+                HStack {
+                    TextField("Add term…", text: $newTerm)
+                    Button("Add", action: addTerm)
+                }
             }
         }
         .formStyle(.grouped)
@@ -69,10 +84,11 @@ struct SettingsForm: View {
         .onExitCommand(perform: onCancel)
         // Both dimensions fixed: on macOS 26 the NSHostingController fitting
         // size collapses to 0x0 for a grouped Form (width-only .frame didn't
-        // take either), leaving a title-bar-only window. 560 pt fits the four
-        // fields, the cleanup picker, the App Categories section (~4 rows
-        // before the grouped Form scrolls), section headers, hint rows, and
-        // the button row. Shared with the controller's setContentSize (R40).
+        // take either), leaving a title-bar-only window. 700 pt fits the four
+        // fields, the cleanup picker, the App Categories and Dictionary
+        // sections (~4 rows each before the grouped Form scrolls), section
+        // headers, hint rows, and the button row. Shared with the
+        // controller's setContentSize (R40).
         .frame(width: Self.contentSize.width, height: Self.contentSize.height)
     }
 
@@ -159,6 +175,41 @@ struct SettingsForm: View {
             },
             set: { draft.appCategoryOverrides[bundleID] = $0.rawValue }
         )
+    }
+
+    // MARK: 5C — Dictionary (D60)
+
+    /// One term row: term text + remove, same row vocabulary as the App
+    /// Categories rows above.
+    private func termRow(_ term: String) -> some View {
+        HStack {
+            Text(term)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer()
+            Button {
+                draft.dictionaryTerms.removeAll { $0 == term }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(term)")
+        }
+    }
+
+    /// D60 add guard (mirrors 4C's duplicate-add): trim; no-op on empty or
+    /// case-insensitive duplicate; append (end of list = lowest D59
+    /// priority) and clear the field.
+    private func addTerm() {
+        let term = newTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty,
+              !draft.dictionaryTerms.contains(where: {
+                  $0.caseInsensitiveCompare(term) == .orderedSame
+              })
+        else { return }
+        draft.dictionaryTerms.append(term)
+        newTerm = ""
     }
 
     @ViewBuilder

@@ -30,6 +30,7 @@ dictation-dependent human verifies recorded in when-vllm-is-back.md.
 |------|------|-------------|--------|------|--------|
 | 5A | 2026-07-05 | 8f063c5 | 170 tests / 18 suites, 0 failures | ×2 (170/170) | GREEN |
 | 5B | 2026-07-05 | 1992304+6a98dfb (staged TranscriptionService + tests) | 173 tests / 18 suites, 0 failures | ×2 (173/173) | GREEN |
+| 5C | 2026-07-05 | 084ffda + staged 5C diff (SettingsForm, SettingsWindowController, SettingsWindowControllerTests) | 177 tests / 18 suites, 0 failures | ×2 (177/177) | GREEN |
 
 5A per-suite delta vs 149/17 baseline: NEW DictionaryPromptTests=9;
 CleanupLevelTests=13, CleanupServiceTests=15, SettingsStoreTests=17
@@ -42,6 +43,22 @@ overBudgetDictionarySendsStrictPrefixOfTerms); all other 17 suites + 2
 top-level AppDelegate tests unchanged. Expected new log line during
 over-budget test: `[TranscriptionService] STT prompt truncated (D59
 cap)` — intentional 5B behavior, not noise.
+
+5C per-suite delta vs 5B gate: SettingsWindowControllerTests 19→23 (new:
+dictionaryTermsRoundTripThroughDraft, removingTermRemovesItOnSave,
+cancelDiscardsDictionaryEdits, dictionaryOnlySaveFiresNoWarmUp); all
+other 17 suites + 2 top-level AppDelegate tests unchanged. Full per-suite
+counts at 5C: AppCategory 10, AudioLevel 10, CleanupLevel 13,
+CleanupService 15, ConnectionProbe 12, DictationController 4,
+DictionaryPrompt 9, HotkeyStateMachine 22, KeychainStore 5, MultipartBody
+5, PillPanel 5, PillState 6, PillViewModel 2, SettingsStore 17,
+SettingsValidation 2, SettingsWindowController 23, TranscriptionService 9,
+WavEncoder 6, +2 top-level = 177.
+
+**5C warnings:** known-noise only (NSCGS/CA + `[API] cannot add handler`
+during SettingsWindowControllerTests, per registry; NSURLErrorDomain
+-1001/-1004 task logs from deliberate failure-path tests; D59 truncation
+log line — expected 5B behavior). No new flake entries.
 
 **5B warnings:** known-noise only (NSCGS/CA + `[API] cannot add handler`
 during GUI suites, CursorUI ViewBridge — all covered by phase-3 registry

@@ -29,6 +29,9 @@ final class SettingsDraft: ObservableObject {
     /// draft-buffered like every other field (4C). Garbage values ride
     /// along untouched — resolution ignores them (D53).
     @Published var appCategoryOverrides: [String: String] = [:]
+    /// D60 dictionary terms, draft-buffered like every other field (5C).
+    /// Array order is user-meaningful — D59 STT truncation priority.
+    @Published var dictionaryTerms: [String] = []
 
     private let store: SettingsStore
 
@@ -46,6 +49,7 @@ final class SettingsDraft: ObservableObject {
         llmModel = store.llmModel ?? ""
         cleanupLevel = CleanupLevel.resolve(store.cleanupLevel)  // D40
         appCategoryOverrides = store.appCategoryOverrides  // D53
+        dictionaryTerms = store.dictionaryTerms  // D56
     }
 
     /// Write the four D9 keys (empty → nil per D25 — unset keeps its
@@ -58,6 +62,7 @@ final class SettingsDraft: ObservableObject {
         store.llmModel = stored(llmModel)
         store.cleanupLevel = cleanupLevel.rawValue
         store.appCategoryOverrides = appCategoryOverrides
+        store.dictionaryTerms = dictionaryTerms  // D56 (empty ⇄ absent)
     }
 
     private func stored(_ value: String) -> String? {

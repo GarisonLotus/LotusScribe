@@ -58,9 +58,12 @@ injection (D58/D59), 4-way gated, 173/18 green ×2 on three runners.
 R48 pinned in architect log (truncation-log recovery ↔ strict-prefix
 contract).
 
-**5C BUILT in isolated worktree** (concurrent with 5B gate, user-
-directed): 174/18 green ×2 there; diff (+137/−5, SettingsForm +
-controller + tests) awaiting apply → gate → commit in main tree.
+**5C CLOSED 2026-07-05** (this commit): Dictionary settings UI (D60,
+amended: rejected add retains typed text), built in isolated worktree
+concurrent with 5B gate, applied + 4-way gated in main tree, 177/18
+green ×2 ×3 runners. R51–R53 filed (note-only). PHASE 5 MACHINE WORK
+COMPLETE — remaining items are at-screen/BLOCKED-BATCH, queued in
+when-vllm-is-back.md §D.
 
 **AUTONOMOUS RUN (user away, 2026-07-05):** user directed: continue
 through phases until they return ("I'm back"). Queue: land 5C → Phase 5
@@ -68,7 +71,8 @@ machine-complete → bootstrap Phase 6 (insertion hardening, PLAN.md §6)
 → Phase 7 (distribution) as far as machine-verifiable. All at-screen /
 vLLM items accumulate in when-vllm-is-back.md.
 
-**RESUME POINT (next):** apply 5C worktree diff, gate, commit.
+**RESUME POINT (next):** Phase 6 bootstrap (insertion hardening,
+PLAN.md §Phase 6) per the autonomous-run directive.
 
 **Cleanup endpoints:** vLLM (verified, down): chat/completions +
 Qwen/Qwen3.6-35B-A3B-FP8. STT: https://vllm.garison.com/v1/audio/transcriptions

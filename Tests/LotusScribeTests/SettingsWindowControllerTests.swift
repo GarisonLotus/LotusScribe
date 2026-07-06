@@ -382,6 +382,82 @@ final class SettingsWindowControllerTests {
         #expect(controller.window?.isVisible == false)
     }
 
+    // MARK: 5C — dictionary terms through the draft (D60/D26)
+    // R41: every test here stubs `warmUp:` — the default closure is real
+    // network.
+
+    // D60/D26: terms round-trip store → draft → store via save(), keeping
+    // list order (D59 truncation priority).
+    @Test func dictionaryTermsRoundTripThroughDraft() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.dictionaryTerms = ["Garison", "LotusScribe"]
+        let controller = SettingsWindowController(store: store, warmUp: {})
+        controller.show()
+
+        #expect(controller.draft.dictionaryTerms == ["Garison", "LotusScribe"])
+
+        controller.draft.dictionaryTerms.append("vLLM")
+        controller.save()  // both URLs empty → immediate save+close
+
+        #expect(store.dictionaryTerms == ["Garison", "LotusScribe", "vLLM"])
+        #expect(controller.window?.isVisible == false)
+    }
+
+    // D60: removing a row removes the term on save; the rest keep order.
+    @Test func removingTermRemovesItOnSave() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.dictionaryTerms = ["Garison", "Qwen", "vLLM"]
+        let controller = SettingsWindowController(store: store, warmUp: {})
+        controller.show()
+
+        controller.draft.dictionaryTerms.removeAll { $0 == "Qwen" }
+        controller.save()
+
+        #expect(store.dictionaryTerms == ["Garison", "vLLM"])
+    }
+
+    // D26: Cancel discards dictionary edits — the store keeps its list.
+    @Test func cancelDiscardsDictionaryEdits() throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.dictionaryTerms = ["Garison"]
+        let controller = SettingsWindowController(store: store, warmUp: {})
+        controller.show()
+
+        controller.draft.dictionaryTerms.append("abandoned")
+        controller.cancel()
+
+        #expect(store.dictionaryTerms == ["Garison"])
+    }
+
+    // D60/R45: a save carrying only a dictionary change fires NO warm-up —
+    // D42's trigger is the (llmEndpointURL, llmModel) tuple, which
+    // dictionary edits never touch.
+    @Test func dictionaryOnlySaveFiresNoWarmUp() async throws {
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        let store = SettingsStore(defaults: defaults)
+        store.llmEndpointURL = "https://llm.example.com/v1"
+        store.llmModel = "qwen3"
+        var warmUpCount = 0
+        let controller = SettingsWindowController(
+            store: store,
+            sttProbe: { _, _ in .success },
+            llmProbe: { _, _ in .success },
+            warmUp: { warmUpCount += 1 })
+        controller.show()  // reload seeds drafts with the stored LLM config
+
+        controller.draft.dictionaryTerms = ["Garison"]
+        controller.save()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .success)
+        #expect(warmUpCount == 0)
+        #expect(store.dictionaryTerms == ["Garison"])
+        controller.window?.close()
+    }
+
     // MARK: R36 — re-entrant Save cancels stale flash tasks
 
     // R36 regression: a Save clicked during the 2 s success flash must
