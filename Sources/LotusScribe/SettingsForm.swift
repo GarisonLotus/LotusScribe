@@ -186,7 +186,12 @@ struct SettingsForm: View {
                     .labelsHidden()
                     .fixedSize()
                     .tint(Color.lotusAccentText)
-                    .onChange(of: appearance) { _, mode in LotusAppearance.set(mode) }
+                    // Defer the NSApp.appearance swap one runloop tick: applying
+                    // it synchronously here, while the menu Picker is still
+                    // dismissing, blanks the control until the next re-layout.
+                    .onChange(of: appearance) { _, mode in
+                        DispatchQueue.main.async { LotusAppearance.set(mode) }
+                    }
                 }
             }
         }
