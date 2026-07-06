@@ -1,4 +1,52 @@
+import AppKit
 import SwiftUI
+
+/// Known collisions between pickable hotkeys and macOS system shortcuts
+/// (9E, D86). Pure lookup — headless-testable; the picker renders the warning
+/// inline with deep links to the pane(s) that own the colliding shortcut.
+/// There is NO API to reassign Apple's shortcuts from an app (D86), so the
+/// most we can do is put the user one click from the right toggle.
+enum HotkeyCollision {
+    struct SettingsLink: Equatable {
+        let label: String
+        let url: String
+    }
+
+    struct Warning: Equatable {
+        let message: String
+        let links: [SettingsLink]
+    }
+
+    private static let keyboardPane =
+        "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
+    private static let siriPane =
+        "x-apple.systempreferences:com.apple.Siri-Settings.extension"
+
+    /// The collision warning for `option`, or nil when the choice is clean.
+    /// Matches on the RESOLVED chord, not the spelling (R9E-2/3): a custom
+    /// "f5" is the same physical key as the F5 menu pick and must warn too.
+    /// F5 is claimed twice on stock macOS: the Keyboard → Dictation shortcut
+    /// AND Siri's "Hold Dictation key" (live-tested: holding F5 opened Siri).
+    static func warning(for option: HotkeyOption) -> Warning? {
+        switch option.chord {
+        case .combo(keyCode: 96, modifiers: []):
+            return Warning(
+                message: "F5 is claimed by macOS: the Dictation shortcut (Keyboard) and Siri's “Hold Dictation key”. Turn both off so F5 reaches LotusScribe.",
+                links: [
+                    SettingsLink(label: "Open Siri Settings…", url: siriPane),
+                    SettingsLink(label: "Open Keyboard Settings…", url: keyboardPane),
+                ])
+        case .fnHold:
+            return Warning(
+                message: "The fn/globe key is claimed by macOS (emoji, input sources, Siri). Set “Press 🌐 key to” → “Do Nothing”.",
+                links: [
+                    SettingsLink(label: "Open Keyboard Settings…", url: keyboardPane)
+                ])
+        default:
+            return nil
+        }
+    }
+}
 
 /// The Phase 9 hotkey picker (D85): a capsule menu of F1–F12 plus a custom
 /// modifier-combo field. Writes live through `HotkeySetting.set` (persist +
@@ -74,6 +122,27 @@ struct HotkeyPicker: View {
                     Text("Not a valid hotkey yet — e.g. ctrl+alt+cmd+9, shift+f5, or fn")
                         .font(.lotusCaption)
                         .foregroundStyle(.orange)
+                }
+            }
+
+            // 9E (D86): the selected key collides with a macOS shortcut —
+            // warn inline and deep-link the pane(s) that own it.
+            if let collision = HotkeyCollision.warning(for: option) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(collision.message)
+                        .font(.lotusCaption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        ForEach(collision.links, id: \.url) { link in
+                            Button(link.label) {
+                                if let url = URL(string: link.url) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            .buttonStyle(LotusButtonStyle(.ghost))
+                        }
+                    }
                 }
             }
         }

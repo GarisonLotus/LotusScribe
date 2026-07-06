@@ -18,8 +18,6 @@ struct OnboardingView: View {
         "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
     private static let inputMonitoringPane =
         "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
-    private static let keyboardPane =
-        "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
 
     @ObservedObject var state: OnboardingState
     let onSkip: () -> Void
@@ -136,21 +134,12 @@ struct OnboardingView: View {
                 .font(.lotusBody)
                 .foregroundStyle(Color.lotusTextSecondary)
                 .multilineTextAlignment(.center)
+            // 9E (D86): the picker warns inline (with Settings deep links)
+            // when the chosen key collides with a macOS shortcut — the static
+            // F5 footnote it replaces only ever described one collision.
             HotkeyPicker()
             hudPreview
             Spacer(minLength: 0)
-            // F5 = the mac Dictation key; the system shortcut must yield first.
-            // (D27: fn is dead on macOS 26 session taps — the older-macOS note
-            // stays for users who pick "fn" in the custom field.)
-            VStack(spacing: 8) {
-                Text("F5 is the mac dictation key — turn off the system Dictation shortcut (System Settings → Keyboard → Dictation) and keep standard function keys so it reaches LotusScribe.")
-                    .font(.lotusCaption)
-                    .foregroundStyle(Color.lotusTextTertiary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button("Open Keyboard Settings…") { open(Self.keyboardPane) }
-                    .buttonStyle(LotusButtonStyle(.ghost))
-            }
         }
     }
 

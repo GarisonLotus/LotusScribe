@@ -176,7 +176,7 @@ struct SettingsForm: View {
             cardRow(divider: false) {
                 VStack(alignment: .leading, spacing: 6) {
                     HotkeyPicker()
-                    Text("Hold to talk. F5 is the mac dictation key — turn off the system Dictation shortcut (System Settings → Keyboard → Dictation) so it reaches LotusScribe. Changes apply immediately.")
+                    Text("Hold to talk. Changes apply immediately.")
                         .font(.lotusCaption)
                         .foregroundStyle(Color.lotusTextTertiary)
                         .fixedSize(horizontal: false, vertical: true)

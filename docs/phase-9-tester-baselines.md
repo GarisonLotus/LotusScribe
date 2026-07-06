@@ -18,6 +18,9 @@ logic already covered by 9A/9C; verified HUMAN-AT-SCREEN). Empirical
 F5-reaches-the-tap acceptance is OUTSTANDING — blocked on Input Monitoring
 being granted on the test machine.
 
+**9E close:** 249 tests / 24 suites, 0 failures (+5: HotkeyCollision
+mapping incl. chord-based spelling variants per R9E-2/3).
+
 ## Flake registry
 
 - (none recorded this phase)

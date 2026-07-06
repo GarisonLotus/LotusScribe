@@ -33,9 +33,11 @@ reaches the session tap.
 
 ## §3. Current state
 
-**Where we are:** Phase 9 CODE-COMPLETE (9A–9D committed + reviewer-approved).
-**Baseline tests:** 244 tests / 23 suites green (9D close).
-**Active gate:** all sub-phases cleared (reviewer APPROVE R9A/9C/9D; 9B
+**Where we are:** Phase 9 CODE-COMPLETE (9A–9E committed + reviewer-approved).
+9E added collision-aware picker warnings (D86: F5 → Dictation + Siri links,
+fn → globe guidance; chord-based matching per R9E-2/3).
+**Baseline tests:** 249 tests / 24 suites green (9E close).
+**Active gate:** all sub-phases cleared (reviewer APPROVE R9A/9C/9D/9E; 9B
 lightweight orchestrator gate).
 
 **OUTSTANDING — empirical F5 acceptance (human-at-screen):** grant Input
