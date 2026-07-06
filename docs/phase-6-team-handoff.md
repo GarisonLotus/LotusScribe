@@ -56,8 +56,17 @@ orchestrator). Spec §6B verify-2 wording amended (AX *usage* grep, R57).
 User defers batch testing to TOMORROW MORNING — orchestrator continues
 autonomously; when-vllm-is-back.md keeps growing.
 
-**RESUME POINT (next):** 6C (clipboard save/restore), then Phase 7
-bootstrap (machine-verifiable slices only).
+**6C CLOSED 2026-07-05** (this commit): clipboard save/restore
+(D62/D62a), 4-way gated, 191/19 green (tester ×2, reviewer ×1 post-fix,
+orchestrator ×2). GATE-TRIP RECORD: reviewer BLOCKED first pass — restore
+was scheduled before CGEvent synthesis (CGEvent-failure path would
+clobber the D43 last-resort text); orchestrator applied the prescribed
+one-line reorder; architect pinned it as D62a. PHASE 6 MACHINE WORK
+COMPLETE — human items queued in when-vllm-is-back.md §E (user tests
+tomorrow morning).
+
+**RESUME POINT (next):** Phase 7 bootstrap (distribution, PLAN.md §7),
+machine-verifiable slices only.
 
 **Working tree:** untracked RESEARCH.md, claude.md, when-vllm-is-back.md
 (never commit).
