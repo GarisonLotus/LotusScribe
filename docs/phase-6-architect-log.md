@@ -102,3 +102,44 @@ also reports `.standard` under the flag, the D62 gate still
 SAVES/RESTORES — no alert was observed, so there is NO D43 violation;
 it is merely a different branch than D62's prose predicted. No code
 change; wording note only.
+
+2026-07-06: **PHASE 6 CLOSED** (architect close-out audit vs §6A–§6C
+verify lists).
+- MACHINE: full suite green ×2 at HEAD 13ddec6 (226/22) — §6A/6B/6C
+  `make test` gates satisfied, including InsertionPolicyTests (route truth
+  table + shouldSaveClipboard/shouldRestore gates), the PillState
+  `.blocked` flashDuration tests (§6A v1), the `IsSecureEventInputEnabled`
+  single-site / guard-precedes-`generation += 1` grep (§6A v2), the
+  AX-usage-confined-to-TextInserter grep (§6B v2), and the pasteboard-read
+  confinement grep (§6C v2).
+- HUMAN/LIVE (user on-device 2026-07-06): insertion matrix — TextEdit
+  route=ax, Slack/VS Code fallback, text lands everywhere (§6B v3);
+  mid-sentence caret insert without eating neighbors (§6B v4); PLAN
+  clipboard survival — copied string/image survives a dictation (§6C v3);
+  copy-during-processing — changeCount guard skips restore, second string
+  intact (§6C v4).
+- **Q6-1 RULING (pasteboard-privacy developer-preview flag, §6C v5):
+  DEFERRED, forward-looking — NOT gating for v1 close.** Grounds: (1) the
+  behavior lives behind `EnablePasteboardPrivacyDeveloperPreview`, an
+  opt-in developer flag that is NOT active in normal macOS use, so it
+  gates zero real-user behavior today; (2) the DECISION LOGIC
+  (`shouldSaveClipboard` over all five `PasteboardAccessGate` cases) is
+  fully machine-tested and green — only the live `accessBehavior` mapping
+  under the flag is unobserved in the signed app; (3) it was already
+  probed indicatively (Notes 2026-07-05: flag flips to `.standard`, which
+  SAVES/RESTORES cleanly, no alert observed → no D43 violation on either
+  branch). The signed-app §E.6 confirmation stays OWED as a forward-
+  looking verify for whenever the preview flag ships / is exercised, but
+  it does not block the phase. Q6-2 (silent-AX-success denylist) and Q6-3
+  (Terminal AX landing) were implicitly answered by the §6B matrix (text
+  landed everywhere, no denylist demanded); no escape hatch needed.
+- DEFERRAL (non-gating): the §6A secure-input blocked-pill AT-SCREEN flash
+  (Terminal Secure Keyboard Entry / password field → orange lock + "Can't
+  dictate here") was not separately reported in the batch. Ruled
+  non-gating: the PillState.blocked render + flash + the key-down guard
+  are machine-covered, and the only unobserved surface is the trivial
+  direct `IsSecureEventInputEnabled()` call + `pill.show(.blocked)` — the
+  exact D49/D63 "adapter branch unreachable headless, purity carries the
+  tests" posture already ruled acceptable. A quick at-screen spot-check is
+  RECOMMENDED but does not block close.
+CLOSED as of 2026-07-06.

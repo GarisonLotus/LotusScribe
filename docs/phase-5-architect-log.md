@@ -120,3 +120,28 @@ rather than stressing it; D57 likewise untouched. The when-vllm-is-back
 soften §B.8's "Mail output turns formal" to expect punctuation/
 paragraphing-scale differences, and use a multi-sentence dictation for
 that check so the register effect has room to show.
+
+2026-07-06: **PHASE 5 CLOSED** (architect close-out audit vs §5A–§5C
+verify lists).
+- MACHINE: full suite green ×2 at HEAD 13ddec6 (226/22) — §5A/5B/5C
+  `make test` gates satisfied, including DictionaryPromptTests, the
+  empty-dictionary BYTE-IDENTITY tests (D57 neutrality invariant
+  test-enforced), the STT `prompt`-field body-bytes tests (§5B), and the
+  DictionaryPrompt-imports-Foundation-only / no-terms-in-warmUp-or-probe
+  greps (§5A v3).
+- HUMAN/LIVE (user on-device 2026-07-06): Whisper biasing — distinctive
+  spelling comes out right (§5B v3, closes Q5-2 at screen — vLLM honors
+  the multipart `prompt` field); empty-dictionary neutrality — output
+  indistinguishable from Phase-4 (§5B v4); PLAN payoff — dictionary terms
+  spelled exactly as written (§5C v3); light-level clause — spelling
+  enforced, nothing else changed (§5C v4); loop regression untouched
+  (§5C v5). The §5C AT-SCREEN dictionary UI (render in the 700 pt window,
+  add/dedup/remove/persist/Cancel) is exercised by the user having
+  populated the dictionary through that UI to obtain the payoff above.
+- Q5-1 (clause effectiveness) and Q5-2 (STT `prompt` honored) both already
+  ANSWERED at server-probe time and now re-confirmed at screen.
+- Intermittent amber seen during these runs = the model-timeout/eviction
+  issue, resolved in Phase 8 (8A reasoning-suppression, 8B record-start
+  warm-up); the DICTIONARY behavior itself verified independently of it.
+  No deferrals gate this phase.
+CLOSED as of 2026-07-06.

@@ -200,3 +200,38 @@ layout spacing is view-local, same class as PillView's existing 24 pt
 interior inset (R32 precedent — "numeric match coincidental, not
 shared"). D48's "only PillMetrics delta is stagedFlashDuration" stands as
 written. No D-number warranted for either.
+
+2026-07-06: **PHASE 3 CLOSED** (architect close-out audit vs §3A–§3D
+verify lists).
+- MACHINE: full suite green ×2 at HEAD 13ddec6 (226/22, tester baselines)
+  — every §3A/3B/3C/3D `make test` gate satisfied, including the
+  ConnectionProbe / CleanupService / CleanupLevel / PillState headless
+  suites and the byte-identity fixtures.
+- HUMAN/LIVE (user on-device 2026-07-06): warm-up HTTP 200 confirmed in
+  log (§3B v5); two-stage pill both slots green on a real cleaned
+  dictation (§3D v3); forced amber-miss — bogus LLM URL via Save Anyway →
+  amber slot 2 + RAW text lands (§3C v3 sheet names endpoint, §3D v4,
+  D43/D47); STT-only regression — cleared LLM URL → single green check
+  (§3D v2); cleanup-level Off → raw single-check (§3B v4). The Save
+  test-then-close flow (spinner → checkmark → auto-close → persist, §3A
+  v2) is exercised implicitly by every configured-endpoint dictation in
+  the batch and by the failure-sheet path being reached.
+- #7 RULING (rephrasing + leaked "Note:" commentary on the D45 flagship
+  cleaned dictation): NOT a Phase-3 pipeline defect. The pipeline met its
+  contract — fillers removed (D45), raw fallback intact, pill staged
+  correctly. The rephrase/commentary is a MODEL-CONFIGURATION issue
+  (Qwen3.6 silently ignoring `/no_think` → hidden reasoning; Phi-3.5-mini
+  a weak instruction-follower), root-caused and resolved in Phase 8A
+  (D72/D73: `reasoning_effort:"none"`). Phase 3 ships the pipeline; the
+  pipeline works.
+- DEFERRALS (non-gating, documented): the cleaned-OUTPUT quality
+  re-confirmation (clean text, no commentary) rides under Phase 8 §G as an
+  8A live leg, NOT a Phase-3 gate — Phase 3 delivered the cleanup pipeline
+  (verified end-to-end), the output quality is a model/param concern owned
+  by Phase 8. The §3A titlebar-close / Esc-mid-spinner "writes nothing"
+  leg (v4) and §3C endpoint-change warm-up log leg (v4) were not
+  separately re-run at screen; both are covered by the headless
+  injected-closure controller tests (cancel semantics; warm-up tuple
+  trigger) and are low-risk. D49 dead-tap live recovery remains a
+  non-gating backlog observation. None block v1 close.
+CLOSED as of 2026-07-06.

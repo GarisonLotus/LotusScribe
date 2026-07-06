@@ -83,3 +83,24 @@ isEnabled at site. No new seams (hasUsableAudio precedent); suite stays
 construction+statics. LoC +19/+22 vs ~15/~20 — doc comments, waved.
 PHASE 8 MACHINE SCOPE COMPLETE once 8B commits (spec = 8A+8B only);
 phase NOT closed — LIVE-DICTATION legs (8A #3/#4, 8B #16) still open.
+
+2026-07-06: **PHASE 8 CLOSE BLOCKED ON** (architect close-out audit).
+Machine scope COMPLETE + committed (8A/8B, 226/22 ×2 ×N runners at HEAD
+13ddec6). The §G on-device retest has NOT yet been run — it is the sole
+gate. All legs below are AT-SCREEN with vLLM up (the user must run them);
+no BLOCKED-USER legs in Phase 8.
+
+Remaining feature-verification legs:
+- 8A #7 (§G, D72): with Qwen3.6 + reasoning-suppression ON (default),
+  dictate the flagship cleaned passage → clean output, NO rephrasing, NO
+  leaked commentary ("Note:", trailing "---"), fast (~sub-second, not the
+  12–20 s reasoning stall). This ALSO discharges the Phase-3 D45
+  cleaned-output quality re-confirmation deferred into this phase.
+- 8A #3/#4 (§G toggle, D72): flip the reasoning-suppression toggle OFF →
+  a reasoning model's thinking returns (behavior changes) → flip ON again
+  → clean/fast — proves the setting is honored, not hardcoded.
+- 8B #16 (§G, D74): over MANY consecutive dictations (including ones
+  spaced apart enough that vLLM would evict the model), amber is GONE —
+  the record-start warm-up loads the model while the user speaks, so no
+  cold-reload timeout → raw fallback. Confirm the amber that intermittently
+  appeared in the earlier batch no longer occurs.

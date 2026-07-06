@@ -125,3 +125,40 @@ fully excluded, though "path satisfied" argues against it. The public-
 host discriminator (point app at a non-LAN endpoint) was declined —
 auto-mode classifier blocked rerouting dictation traffic to a third
 party; correct call, left for the user if they want the last 10%.
+
+2026-07-06: **PHASE 7 CLOSE BLOCKED ON** (architect close-out audit).
+Machine scope COMPLETE (7A/7B/7C gated, 226/22 ×2 at HEAD 13ddec6).
+At-screen DONE: endpoint presets + connection-test button (7A). Two
+distinct blocked classes — separated deliberately:
+
+A. FEATURE-VERIFICATION legs (AT-SCREEN, the minimum the user must do —
+these gate the feature half of the close):
+- Onboarding walkthrough (§7B, R35/D67): NOT cleanly verified. The user's
+  earlier reset did NOT re-trigger onboarding because it is gated on the
+  `onboardingCompleted` UserDefaults flag, not TCC. Correct reset is TWO
+  commands: `tccutil reset All com.garisonlotus.LotusScribe` AND
+  `defaults delete com.garisonlotus.LotusScribe onboardingCompleted`,
+  then relaunch → checklist appears → walk grant flow (Mic real prompt;
+  AX/IM System-Settings deep links, D68) → Finish/Skip both set the flag;
+  "Rerun Onboarding…" reopens; titlebar close does NOT set the flag (D67,
+  R66 — verify this too).
+- Q7-4 (§7B v4): after granting AX + IM, does the event tap deliver
+  WITHOUT relaunching the app? Not run. Result adjusts the onboarding
+  done-step copy.
+- Q7-5 (Local Network, §"Notes"): dictation DID work on-device, so the
+  LAN grant is IN PLACE — but whether the APP ITSELF self-prompts the
+  Local Network permission on first dictation/warm-up is UNCONFIRMED. If
+  it never self-prompts, a code follow-up to surface it is owed (Phase 8
+  or a 7 hotfix) — do NOT rule the fix before this at-screen observation.
+
+B. BLOCKED-USER decisions (NOT feature verification — external
+credentials / owner choices; do not gate the engineering close, gate the
+DISTRIBUTION close):
+- Q7-2: Developer ID signing + notarization — needs paid Apple enrollment
+  ("Developer ID Application" cert + notarytool keychain profile).
+- Q7-1: Sparkle adopt-now vs defer-to-v1.1 (recommended defer, D66) —
+  user sign-off + EdDSA key custody + appcast host.
+- Q7-3: Homebrew cask — only actionable after Q7-2 and a stapled DMG
+  exist (artifact hosting decision).
+The DMG/notarize/staple Makefile recipes dry-run clean without creds
+(machine-verified); the live signed pipeline waits on Q7-2.

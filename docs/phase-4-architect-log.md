@@ -88,3 +88,25 @@ never trigger a probe or warm-up," not "overrides-only save fires no
 probe" (with configured endpoints Save probes on every click per
 D37/D44, driven by the drafted URLs alone). No objection — 4C clear
 to commit; on-screen checks remain HUMAN-AT-SCREEN per Q4-2 batch.
+
+2026-07-06: **PHASE 4 CLOSE BLOCKED ON** (architect close-out audit).
+Machine gates green ×2 at HEAD 13ddec6 (226/22). At-screen UI legs DONE
+(4C: Settings window fit, override add/remove/persist/Cancel — user
+2026-07-06). The tone-EFFECT live verify (§4B v3–4, §4C v3–4) was
+BLOCKED-BATCH the whole build and has NEVER been run live — it is the sole
+gate remaining.
+
+Remaining feature-verification legs (all AT-SCREEN, vLLM up — the user
+must run these):
+- Dictate the SAME multi-sentence passage in a personalMessaging app
+  (Messages) and in an email app (Mail); output register differs
+  (casual vs formal). NOTE per Phase-5 empirical probe: on SHORT
+  dictations the difference is subtle (punctuation/paragraphing-scale,
+  not "turns formal") — use a MULTI-SENTENCE passage so register has room
+  to show.
+- Add an app-category override (4C UI), dictate in that app → tone
+  changes to the overridden category's register.
+- Dictate in an UNMAPPED app (e.g. a browser, D55 → .other) → neutral
+  prompt, output byte-identical to Phase-3 behavior.
+No BLOCKED-USER legs in Phase 4. Q4-1 (built-in map tuning) is optional
+user input, non-gating.
