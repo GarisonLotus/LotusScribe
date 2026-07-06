@@ -15,16 +15,20 @@ enum CleanupLevel: String, CaseIterable {
     }
 
     /// System prompt for the cleanup chat completion; `.off` → nil for
-    /// every category. D51 composition:
-    /// `"/no_think " + levelBody + " " + (toneClause + " ")? + closer`,
-    /// tone term omitted entirely when nil, closer kept FINAL (strongest
-    /// position). D51 NEUTRALITY INVARIANT — `.other` composes
-    /// byte-identical to the D45 Phase-3 fixtures; guarded byte-for-byte
-    /// by CleanupLevelTests.
-    func systemPrompt(for category: AppCategory) -> String? {
+    /// every category and dictionary. D57 composition (amends D51's rule
+    /// shape): `"/no_think " + levelBody + " " + (toneClause + " ")? +
+    /// (dictionaryClause + " ")? + closer`, each optional term omitted
+    /// entirely when nil, closer kept FINAL (strongest position).
+    /// D51/D57 NEUTRALITY INVARIANT — `.other` with an empty dictionary
+    /// composes byte-identical to the D45 Phase-3 fixtures, and an empty
+    /// dictionary composes byte-identical to Phase-4 output for every
+    /// category × level; guarded byte-for-byte by CleanupLevelTests.
+    func systemPrompt(for category: AppCategory, dictionary: [String]) -> String? {
         guard let body = levelBody else { return nil }
         let toneTerm = category.toneClause.map { $0 + " " } ?? ""
-        return "/no_think " + body + " " + toneTerm
+        let dictionaryTerm =
+            DictionaryPrompt.cleanupClause(terms: dictionary).map { $0 + " " } ?? ""
+        return "/no_think " + body + " " + toneTerm + dictionaryTerm
             + "Output only the cleaned text, with no commentary."
     }
 

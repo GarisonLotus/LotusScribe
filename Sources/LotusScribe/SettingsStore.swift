@@ -58,6 +58,29 @@ final class SettingsStore {
         }
     }
 
+    /// D56: user dictionary — ordered term list (order is user-meaningful:
+    /// first terms survive the D59 STT cap). Get normalizes at READ time
+    /// (R39 posture — raw `defaults write` junk never reaches prompt
+    /// composition un-normalized): String values only, whitespace-trimmed,
+    /// empties dropped, case-insensitive dedup keeping first occurrence.
+    /// Set writes the whole array; empty ⇄ absent key (D53 idiom).
+    var dictionaryTerms: [String] {
+        get {
+            var seen = Set<String>()
+            return (defaults.array(forKey: "dictionaryTerms") ?? [])
+                .compactMap { $0 as? String }
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+        }
+        set {
+            if newValue.isEmpty {
+                defaults.removeObject(forKey: "dictionaryTerms")
+            } else {
+                defaults.set(newValue, forKey: "dictionaryTerms")
+            }
+        }
+    }
+
     /// D18: optional STT language; nil → omitted from requests. Not a D9
     /// settings-pane key — seeded via `defaults write` only in Phase 1.
     var sttLanguage: String? {

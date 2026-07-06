@@ -23,18 +23,27 @@ struct CleanupLevelTests {
 
     @Test func offHasNoSystemPromptForAnyCategory() {
         for category in AppCategory.allCases {
-            #expect(CleanupLevel.off.systemPrompt(for: category) == nil)
+            #expect(CleanupLevel.off.systemPrompt(for: category, dictionary: []) == nil)
         }
     }
 
-    // MARK: D51 neutrality invariant — BYTE-IDENTITY floor.
+    /// D57: `.off` → nil REGARDLESS — a populated dictionary never revives
+    /// the cleanup stage.
+    @Test func offHasNoSystemPromptEvenWithDictionaryTerms() {
+        for category in AppCategory.allCases {
+            #expect(
+                CleanupLevel.off.systemPrompt(for: category, dictionary: ["Garison"]) == nil)
+        }
+    }
+
+    // MARK: D51/D57 neutrality invariant — BYTE-IDENTITY floor.
     // These literals are the pre-4A D45 fixtures verbatim. If composition
     // ever fails to reproduce them, `.other`/nil-bundle dictation has
     // drifted from Phase-3 behavior — fix the composition, NOT the fixture.
 
     @Test func otherStandardPromptIsByteIdenticalToPhase3Fixture() {
         #expect(
-            CleanupLevel.standard.systemPrompt(for: .other)
+            CleanupLevel.standard.systemPrompt(for: .other, dictionary: [])
                 == "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like), fix "
                 + "punctuation and capitalization, and add paragraph breaks where "
@@ -45,7 +54,7 @@ struct CleanupLevelTests {
 
     @Test func otherLightPromptIsByteIdenticalToPhase3Fixture() {
         #expect(
-            CleanupLevel.light.systemPrompt(for: .other)
+            CleanupLevel.light.systemPrompt(for: .other, dictionary: [])
                 == "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like) and fix "
                 + "punctuation and capitalization only. Change nothing else. "
@@ -58,7 +67,7 @@ struct CleanupLevelTests {
     /// composition rule (spaces, ordering) end to end.
     @Test func emailStandardPromptMatchesComposedFixture() {
         #expect(
-            CleanupLevel.standard.systemPrompt(for: .email)
+            CleanupLevel.standard.systemPrompt(for: .email, dictionary: [])
                 == "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like), fix "
                 + "punctuation and capitalization, and add paragraph breaks where "
@@ -73,7 +82,7 @@ struct CleanupLevelTests {
     /// both levels (D51).
     @Test func personalMessagingLightPromptMatchesComposedFixture() {
         #expect(
-            CleanupLevel.light.systemPrompt(for: .personalMessaging)
+            CleanupLevel.light.systemPrompt(for: .personalMessaging, dictionary: [])
                 == "/no_think You clean up dictated speech-to-text transcripts. "
                 + "Remove filler and pause words (um, uh, you know, like) and fix "
                 + "punctuation and capitalization only. Change nothing else. "
@@ -85,18 +94,70 @@ struct CleanupLevelTests {
     /// Structural D51 rule for every toned category × level:
     /// `"/no_think " + otherPrompt-body… + toneClause + " " + closer` —
     /// i.e. the toned prompt is the `.other` prompt with the tone spliced
-    /// immediately before the (final) closer.
+    /// immediately before the (final) closer. With `dictionary: []` these
+    /// derived prompts ARE the Phase-4 compositions, so together with the
+    /// pinned `.other` fixtures above this test IS the D57 empty-dictionary
+    /// byte-identity floor for every level × category.
     @Test func tonedPromptsSpliceToneBeforeFinalCloser() throws {
         let closer = "Output only the cleaned text, with no commentary."
         let tonedCategories: [AppCategory] = [.email, .workMessaging, .personalMessaging, .code]
         for level in [CleanupLevel.light, .standard] {
-            let neutral = try #require(level.systemPrompt(for: .other))
+            let neutral = try #require(level.systemPrompt(for: .other, dictionary: []))
             for category in tonedCategories {
-                let toned = try #require(level.systemPrompt(for: category))
+                let toned = try #require(level.systemPrompt(for: category, dictionary: []))
                 let tone = try #require(category.toneClause)
                 let expected =
                     String(neutral.dropLast(closer.count)) + tone + " " + closer
                 #expect(toned == expected)
+            }
+        }
+    }
+
+    // MARK: D57 dictionary weave — clause after tone, before the closer.
+
+    /// Full verbatim fixture for one toned + dictionary combo, pinning the
+    /// complete D57 composition rule (spaces, ordering) end to end.
+    @Test func emailStandardPromptWithDictionaryMatchesComposedFixture() {
+        #expect(
+            CleanupLevel.standard.systemPrompt(
+                for: .email, dictionary: ["Garison", "LotusScribe"])
+                == "/no_think You clean up dictated speech-to-text transcripts. "
+                + "Remove filler and pause words (um, uh, you know, like), fix "
+                + "punctuation and capitalization, and add paragraph breaks where "
+                + "natural. Preserve the speaker's meaning, wording, and voice — "
+                + "never rephrase, summarize, shorten, or add content. "
+                + "This text will be sent as an email. Punctuate, capitalize, "
+                + "and paragraph it in a clear, professional email register. "
+                + "These terms are spelled exactly as written: Garison, LotusScribe. "
+                + "Output only the cleaned text, with no commentary.")
+    }
+
+    /// Full verbatim fixture for an untoned (.other) LIGHT + dictionary
+    /// combo — the clause weaves with no tone term present.
+    @Test func otherLightPromptWithDictionaryMatchesComposedFixture() {
+        #expect(
+            CleanupLevel.light.systemPrompt(for: .other, dictionary: ["vLLM"])
+                == "/no_think You clean up dictated speech-to-text transcripts. "
+                + "Remove filler and pause words (um, uh, you know, like) and fix "
+                + "punctuation and capitalization only. Change nothing else. "
+                + "These terms are spelled exactly as written: vLLM. "
+                + "Output only the cleaned text, with no commentary.")
+    }
+
+    /// Structural D57 rule for every level × category: the dictionary
+    /// prompt is the empty-dictionary prompt with the clause spliced
+    /// immediately before the (still-final) closer.
+    @Test func dictionaryClauseSplicesBeforeFinalCloserForEveryCombo() throws {
+        let closer = "Output only the cleaned text, with no commentary."
+        let terms = ["Garison", "LotusScribe"]
+        let clause = try #require(DictionaryPrompt.cleanupClause(terms: terms))
+        for level in [CleanupLevel.light, .standard] {
+            for category in AppCategory.allCases {
+                let base = try #require(level.systemPrompt(for: category, dictionary: []))
+                let woven = try #require(level.systemPrompt(for: category, dictionary: terms))
+                let expected =
+                    String(base.dropLast(closer.count)) + clause + " " + closer
+                #expect(woven == expected)
             }
         }
     }

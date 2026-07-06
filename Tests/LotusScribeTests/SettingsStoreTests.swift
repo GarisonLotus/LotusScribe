@@ -104,6 +104,58 @@ final class SettingsStoreTests {
         #expect(store.appCategoryOverrides == ["com.apple.mail": "email"])
     }
 
+    // MARK: dictionaryTerms (D56)
+
+    @Test func dictionaryTermsRoundTripPreservingOrder() {
+        let store = SettingsStore(defaults: defaults)
+        store.dictionaryTerms = ["Garison", "LotusScribe"]
+        #expect(
+            defaults.array(forKey: "dictionaryTerms") as? [String]
+                == ["Garison", "LotusScribe"])
+        #expect(store.dictionaryTerms == ["Garison", "LotusScribe"])
+    }
+
+    @Test func absentDictionaryKeyReadsAsEmptyArray() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.dictionaryTerms == [])
+    }
+
+    /// D56: empty array ⇄ absent key — writing empty removes the key.
+    @Test func emptyDictionaryWriteRemovesKey() {
+        let store = SettingsStore(defaults: defaults)
+        store.dictionaryTerms = ["Garison"]
+        store.dictionaryTerms = []
+        #expect(defaults.object(forKey: "dictionaryTerms") == nil)
+        #expect(store.dictionaryTerms == [])
+    }
+
+    /// D56/R39: non-string junk from a raw `defaults write` is dropped at
+    /// read time — it can never reach prompt composition.
+    @Test func nonStringDictionaryValuesAreFiltered() {
+        defaults.set(["Garison", 7, true], forKey: "dictionaryTerms")
+
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.dictionaryTerms == ["Garison"])
+    }
+
+    /// D56: read-time normalization trims whitespace and drops
+    /// trimmed-empty terms.
+    @Test func dictionaryTermsAreTrimmedAndEmptiesDropped() {
+        defaults.set(["  Garison ", "   ", "", "vLLM"], forKey: "dictionaryTerms")
+
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.dictionaryTerms == ["Garison", "vLLM"])
+    }
+
+    /// D56: case-insensitive dedup keeps the FIRST occurrence (order is
+    /// D59 truncation priority).
+    @Test func dictionaryDedupIsCaseInsensitiveKeepingFirst() {
+        defaults.set(["Garison", "garison", "GARISON", "vLLM"], forKey: "dictionaryTerms")
+
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.dictionaryTerms == ["Garison", "vLLM"])
+    }
+
     @Test func valuesPersistAcrossStoreInstances() {
         let writer = SettingsStore(defaults: defaults)
         writer.sttModel = "whisper-1"

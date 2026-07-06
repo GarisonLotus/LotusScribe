@@ -107,8 +107,11 @@ final class CleanupServiceTests {
         #expect(messages.count == 2)
         #expect(messages[0]["role"] == "system")
         // cleanupLevel unset → resolves to .standard (D40); nil bundle ID
-        // → .other (D50) → byte-identical Phase-3 prompt (D51).
-        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt(for: .other))
+        // → .other (D50); dictionary unset → empty (D56) → byte-identical
+        // Phase-3/4 prompt (D51/D57 neutrality floor at request level).
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.standard.systemPrompt(for: .other, dictionary: []))
         #expect(messages[1] == ["role": "user", "content": "um hello"])
     }
 
@@ -124,7 +127,9 @@ final class CleanupServiceTests {
 
         let json = try Self.json(try #require(captured))
         let messages = try #require(json["messages"] as? [[String: String]])
-        #expect(messages[0]["content"] == CleanupLevel.light.systemPrompt(for: .other))
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.light.systemPrompt(for: .other, dictionary: []))
     }
 
     /// D52: a mapped bundle ID resolves inside the service — the request
@@ -141,7 +146,9 @@ final class CleanupServiceTests {
 
         let json = try Self.json(try #require(captured))
         let messages = try #require(json["messages"] as? [[String: String]])
-        #expect(messages[0]["content"] == CleanupLevel.standard.systemPrompt(for: .email))
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.standard.systemPrompt(for: .email, dictionary: []))
     }
 
     /// D52/D53: overrides are read from the service's own store at request
@@ -164,7 +171,49 @@ final class CleanupServiceTests {
         let messages = try #require(json["messages"] as? [[String: String]])
         #expect(
             messages[0]["content"]
-                == CleanupLevel.standard.systemPrompt(for: .personalMessaging))
+                == CleanupLevel.standard.systemPrompt(for: .personalMessaging, dictionary: []))
+    }
+
+    /// D57: terms in the store weave the dictionary clause into the
+    /// request's system prompt.
+    @Test func dictionaryTermsInStoreWeaveClauseIntoSystemPrompt() async throws {
+        settings.dictionaryTerms = ["Garison", "LotusScribe"]
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await service().cleanup(transcript: "hi", frontmostBundleID: nil)
+
+        let json = try Self.json(try #require(captured))
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.standard.systemPrompt(
+                    for: .other, dictionary: ["Garison", "LotusScribe"]))
+    }
+
+    /// D56/D57: dictionary terms are read from the service's own store at
+    /// request time (live-read posture, like overrides/D53) — terms written
+    /// after the service exists still reach the prompt.
+    @Test func dictionaryTermsAreReadFromStoreAtRequestTime() async throws {
+        let cleanupService = service()
+        settings.dictionaryTerms = ["vLLM"]
+
+        nonisolated(unsafe) var captured: Data?
+        CleanupStubURLProtocol.handler = { request in
+            captured = StubURLProtocol.bodyData(of: request)
+            return .success((Self.response(for: request), Self.contentJSON("cleaned")))
+        }
+
+        _ = try await cleanupService.cleanup(transcript: "hi", frontmostBundleID: nil)
+
+        let json = try Self.json(try #require(captured))
+        let messages = try #require(json["messages"] as? [[String: String]])
+        #expect(
+            messages[0]["content"]
+                == CleanupLevel.standard.systemPrompt(for: .other, dictionary: ["vLLM"]))
     }
 
     @Test func successReturnsTrimmedContent() async throws {

@@ -77,12 +77,14 @@ struct CleanupService {
     func cleanup(transcript: String, frontmostBundleID: String?) async throws -> String {
         let category = AppCategory.category(
             forBundleID: frontmostBundleID, overrides: settings.appCategoryOverrides)
+        let dictionary = settings.dictionaryTerms  // D56/D57 — fresh read, D40 live-read posture
         Self.logger.info("cleanup category: \(category.rawValue, privacy: .public)")
         guard
             let endpoint = settings.llmEndpointURL,
             let url = URL(string: endpoint),
             let model = settings.llmModel,
-            let prompt = CleanupLevel.resolve(settings.cleanupLevel).systemPrompt(for: category)
+            let prompt = CleanupLevel.resolve(settings.cleanupLevel)
+                .systemPrompt(for: category, dictionary: dictionary)
         else { throw CleanupError.notConfigured }
 
         let body = ChatRequest(
