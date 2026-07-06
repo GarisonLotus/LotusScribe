@@ -51,6 +51,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         // settings window — size the window from the view's constant (R40).
         window.setContentSize(OnboardingView.contentSize)
         window.styleMask.remove(.resizable)
+        window.standardWindowButton(.zoomButton)?.isEnabled = false  // spec §4
         window.center()
         window.delegate = self  // windowWillClose stops the poll
         self.window = window
