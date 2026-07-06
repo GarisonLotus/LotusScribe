@@ -102,12 +102,17 @@ struct OnboardingView: View {
                 title: "Input Monitoring",
                 detail: "Lets LotusScribe see the dictation hotkey. Grant access when prompted, or enable LotusScribe in the list.",
                 buttonTitle: "Allow…") {
-                // Fire the real Input Monitoring prompt here, in context — its
-                // own dialog links to System Settings. Requesting it from
-                // onboarding (rather than at launch) is why the first-launch
-                // surprise is gone; the launch request now runs only once the
-                // mic is granted.
-                _ = Permissions.requestListenEventAccess()
+                // Undetermined → the OS prompt can still fire, in context (its
+                // own dialog links to System Settings). Denied → the prompt is
+                // dead and would silently no-op, so jump straight to the
+                // Input Monitoring pane, the only place left to grant it.
+                // Requesting from onboarding (not at launch) is why the
+                // first-launch surprise is gone.
+                if Permissions.listenEventAccessState() == .undetermined {
+                    _ = Permissions.requestListenEventAccess()
+                } else {
+                    open(Self.inputMonitoringPane)
+                }
             }
             Spacer(minLength: 0)
         }
