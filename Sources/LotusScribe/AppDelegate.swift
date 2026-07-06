@@ -14,6 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var dictationController: DictationController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Brand foundation first: register bundled fonts and force the stored
+        // appearance (dark by default) before any window is built.
+        LotusFonts.register()
+        LotusAppearance.apply()
         MainMenu.install()
         statusItemController = StatusItemController()
         Permissions.logStatusAtLaunch()
