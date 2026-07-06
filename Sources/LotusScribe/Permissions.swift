@@ -1,7 +1,6 @@
 import ApplicationServices
 import AVFoundation
 import CoreGraphics
-import IOKit.hid
 import os
 
 /// Thin wrappers around the TCC permission checks the event tap depends on
@@ -17,24 +16,14 @@ enum Permissions {
         CGPreflightListenEventAccess()
     }
 
-    /// Shows the Input Monitoring prompt if undetermined; returns current
-    /// access. Never call from hosted-test launches (TCC dialog mid-test).
+    /// Shows the Input Monitoring prompt if undetermined, and — load-bearing —
+    /// REGISTERS the app into the Input Monitoring pane's list (row appears,
+    /// toggled off) even when no dialog fires. Returns current access. Never
+    /// call from hosted-test launches (TCC dialog mid-test). Note: don't
+    /// branch on IOHIDCheckAccess before calling — it reports .denied for
+    /// never-asked apps, which skipped this call and left no row to toggle.
     static func requestListenEventAccess() -> Bool {
         CGRequestListenEventAccess()
-    }
-
-    /// Tri-state Input Monitoring access. Unlike `CGPreflightListenEventAccess`
-    /// (a bool), this distinguishes "never asked" from "denied" — the onboarding
-    /// row needs that split: undetermined → the system prompt can still fire;
-    /// denied → the prompt is dead, so the only recourse is System Settings.
-    enum ListenEventAccess { case granted, denied, undetermined }
-
-    static func listenEventAccessState() -> ListenEventAccess {
-        switch IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) {
-        case kIOHIDAccessTypeGranted: return .granted
-        case kIOHIDAccessTypeDenied: return .denied
-        default: return .undetermined  // kIOHIDAccessTypeUnknown
-        }
     }
 
     /// True if the app is trusted for Accessibility. Never prompts.
