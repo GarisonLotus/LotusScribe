@@ -1,6 +1,7 @@
 import ApplicationServices
 import AVFoundation
 import CoreGraphics
+import IOKit.hid
 import os
 
 /// Thin wrappers around the TCC permission checks the event tap depends on
@@ -19,11 +20,15 @@ enum Permissions {
     /// Shows the Input Monitoring prompt if undetermined, and — load-bearing —
     /// REGISTERS the app into the Input Monitoring pane's list (row appears,
     /// toggled off) even when no dialog fires. Returns current access. Never
-    /// call from hosted-test launches (TCC dialog mid-test). Note: don't
-    /// branch on IOHIDCheckAccess before calling — it reports .denied for
-    /// never-asked apps, which skipped this call and left no row to toggle.
+    /// call from hosted-test launches (TCC dialog mid-test).
+    ///
+    /// IOHIDRequestAccess, NOT CGRequestListenEventAccess: tccd-log-verified
+    /// on macOS 26 that the CG call returns false without ever sending an
+    /// AUTHREQ to the daemon — no prompt, no registration, no pane row (same
+    /// platform-rot family as D27's dead fn events). The IOKit request is
+    /// the path that actually reaches tccd.
     static func requestListenEventAccess() -> Bool {
-        CGRequestListenEventAccess()
+        IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
     }
 
     /// True if the app is trusted for Accessibility. Never prompts.

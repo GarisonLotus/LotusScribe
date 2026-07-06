@@ -16,6 +16,10 @@ targets:
       properties:
         LSUIElement: true  # menu-bar-only invariant — no Dock icon, no Cmd-Tab entry
         NSMicrophoneUsageDescription: LotusScribe records audio while the dictation hotkey is held, to transcribe your speech.  # 1B — mic TCC prompt text
+        # Phase 9: without this string tccd REFUSES to prompt for Input
+        # Monitoring (authReason=5 "service policy", tccd-log-verified) — the
+        # Allow… request silently no-ops and the app never appears in the pane.
+        NSInputMonitoringUsageDescription: LotusScribe watches for your dictation hotkey so hold-to-talk works in any app. It never logs or stores your keystrokes.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.garisonlotus.LotusScribe
