@@ -41,10 +41,13 @@ extension PillState {
 /// D31: the single definition site for every pill size/position literal —
 /// no second site anywhere (R21 lesson).
 enum PillMetrics {
-    static let contentSize = CGSize(width: 260, height: 52)
+    // Wider capsule (spec §5 HUD: mic dot + 12 bars + LISTENING + hotkey chip).
+    static let contentSize = CGSize(width: 300, height: 52)
     static let bottomMargin: CGFloat = 24
-    static let barCount = 24
-    static let flashDuration: TimeInterval = 0.8
+    // Spec §5: 12-bar gradient waveform.
+    static let barCount = 12
+    // Spec §5: Inserted auto-dismisses ~900ms.
+    static let flashDuration: TimeInterval = 0.9
     /// D48: staged terminals need more read time (two symbols + amber).
     static let stagedFlashDuration: TimeInterval = 1.2
     /// D64: a sentence ("Can't dictate here") needs more read time than
