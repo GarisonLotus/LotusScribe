@@ -102,6 +102,13 @@ Setup advances with no server info entered; Back reverses each step.
   Ollama for LLM. `navBar` `case 2` Continue calls `onSetupCommit()` then
   advances.
 
+> **Reconciliation (D95):** "reusing Settings idioms" means the field-row
+> builders (`labeledField`/`monoField`/`endpointField`) are mirrored as LOCAL
+> `private` helpers in `OnboardingView.swift` — NOT the `private` SettingsForm
+> symbols (accepted duplication; SettingsForm untouched). Preset fields ship as
+> `var …: String? = nil` (not `let`) so the synthesized memberwise init stays
+> source-compatible — a mechanical necessity, not a shape change.
+
 **Pure/headless (D14):** the featured-prefill mapping (preset → draft field
 values) is assertable; `EndpointPreset` field wiring.
 **Files:** `EndpointPreset.swift`, `EndpointPresetTests.swift` (add suggested-

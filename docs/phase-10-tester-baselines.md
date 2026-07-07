@@ -18,6 +18,15 @@ tests). Orchestrator re-ran `make test` (no tester dispatch — no automated
 signal beyond regression). Build green. Visual flow (4 dots, nav, kickers)
 verified HUMAN-AT-SCREEN.
 
+## 10C close
+
+**258 tests / 24 suites, 0 failures** (+4 over 254: 3 suggested-model
+assertions + `applyRecommendedFillsAllFourDraftFields` prefill test).
+Reviewer + architect + orchestrator all independently re-ran green. Build
+green. HUMAN persistence check (Use recommended fills 4 fields; Continue →
+Settings shows saved values) folded into the next onboarding relaunch
+(10E rebuild).
+
 ## Flake registry
 
 - (none recorded this phase)

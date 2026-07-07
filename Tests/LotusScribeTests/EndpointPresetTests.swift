@@ -48,6 +48,38 @@ final class EndpointPresetTests {
         #expect(vllm.llmEndpointURL == "http://localhost:8000/v1/chat/completions")
     }
 
+    // MARK: suggested models (D91)
+
+    @Test func speachesCarriesSuggestedSTTModelOnly() {
+        #expect(EndpointPreset.speaches.suggestedSTTModel == "whisper-large-v3")
+        #expect(EndpointPreset.speaches.suggestedLLMModel == nil)
+    }
+
+    @Test func ollamaCarriesSuggestedLLMModelOnly() {
+        #expect(EndpointPreset.ollama.suggestedLLMModel == "llama3.2:3b")
+        #expect(EndpointPreset.ollama.suggestedSTTModel == nil)
+    }
+
+    @Test func vllmCarriesNoSuggestedModels() {
+        #expect(EndpointPreset.vllm.suggestedSTTModel == nil)
+        #expect(EndpointPreset.vllm.suggestedLLMModel == nil)
+    }
+
+    // MARK: featured prefill (D90/D91) — the pure preset → draft mapping
+
+    // "Use recommended" fills all four fields: Speaches STT endpoint +
+    // whisper-large-v3, Ollama LLM endpoint + llama3.2:3b.
+    @Test func applyRecommendedFillsAllFourDraftFields() throws {
+        let draft = try makeDraft()
+
+        OnboardingView.applyRecommended(to: draft)
+
+        #expect(draft.sttEndpointURL == "http://localhost:8000/v1/audio/transcriptions")
+        #expect(draft.sttModel == "whisper-large-v3")
+        #expect(draft.llmEndpointURL == "http://localhost:11434/v1/chat/completions")
+        #expect(draft.llmModel == "llama3.2:3b")
+    }
+
     // MARK: apply semantics (D69)
 
     // A nil URL field means "no opinion" — the draft's existing value

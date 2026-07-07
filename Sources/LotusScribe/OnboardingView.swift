@@ -20,7 +20,11 @@ struct OnboardingView: View {
         "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
 
     @ObservedObject var state: OnboardingState
+    /// D90: buffered Setup-step draft, owned by the controller. Continue
+    /// commits it via `onSetupCommit`; the fields edit it locally until then.
+    @ObservedObject var draft: SettingsDraft
     let onSkip: () -> Void
+    let onSetupCommit: () -> Void
     let onFinish: () -> Void
 
     /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try).
@@ -129,15 +133,38 @@ struct OnboardingView: View {
                 Text("Set up your servers")
                     .font(.lotusDisplay(26))
                     .foregroundStyle(Color.lotusTextPrimary)
-                // Placeholder — 10C/10D fill this card with preset/model fields.
+                // D90: one-tap prefill of the featured stack (Speaches + Ollama)
+                // into the buffered draft — endpoints AND suggested models.
+                Button("Use recommended (Speaches + Ollama)") {
+                    Self.applyRecommended(to: draft)
+                }
+                .buttonStyle(LotusButtonStyle(.primary))
+                // Same field idioms as the Settings pane (D90 reuse), bound to
+                // the onboarding draft. Install cards + Test are 10D.
                 LotusCard {
-                    Text("Configure your STT and cleanup servers.")
-                        .font(.lotusBody)
-                        .foregroundStyle(Color.lotusTextSecondary)
-                        .padding(14)
+                    VStack(alignment: .leading, spacing: 12) {
+                        endpointField("Speech to Text endpoint", text: $draft.sttEndpointURL)
+                        labeledField("Model") { monoField("model name", text: $draft.sttModel) }
+                        endpointField("Cleanup LLM endpoint", text: $draft.llmEndpointURL)
+                        labeledField("Model") { monoField("model name", text: $draft.llmModel) }
+                    }
+                    .padding(14)
                 }
             }
         }
+    }
+
+    /// D90/D91 featured prefill: seed the draft's four endpoint/model fields
+    /// from the featured presets. Pure mapping (single source for the button
+    /// and its unit test) — Speaches for STT, Ollama for LLM. `apply(to:)`
+    /// fills the endpoints; the suggested models fall back to whatever the
+    /// user already typed if a preset carries none.
+    @MainActor
+    static func applyRecommended(to draft: SettingsDraft) {
+        EndpointPreset.speaches.apply(to: draft)
+        draft.sttModel = EndpointPreset.speaches.suggestedSTTModel ?? draft.sttModel
+        EndpointPreset.ollama.apply(to: draft)
+        draft.llmModel = EndpointPreset.ollama.suggestedLLMModel ?? draft.llmModel
     }
 
     private var tryItStep: some View {
@@ -193,10 +220,13 @@ struct OnboardingView: View {
                 Button("Back") { stepIndex = 1 }
                     .buttonStyle(LotusButtonStyle(.ghost))
                 Spacer()
-                // Setup is a skippable gate — Continue always advances (10C/10D
-                // add the fields; nothing to validate yet).
-                Button("Continue") { stepIndex = 3 }
-                    .buttonStyle(LotusButtonStyle(.primary))
+                // Setup is a skippable gate — Continue always advances. It
+                // commits the drafted endpoints/models first (D90, ungated).
+                Button("Continue") {
+                    onSetupCommit()
+                    stepIndex = 3
+                }
+                .buttonStyle(LotusButtonStyle(.primary))
             default:
                 Button("Back") { stepIndex = 2 }
                     .buttonStyle(LotusButtonStyle(.ghost))
@@ -262,6 +292,45 @@ struct OnboardingView: View {
     private func open(_ deepLink: String) {
         guard let url = URL(string: deepLink) else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    // MARK: - Field builders (mirror SettingsForm's private idioms, D90)
+
+    /// Label above a control.
+    private func labeledField<V: View>(_ label: String, @ViewBuilder _ field: () -> V) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label)
+                .font(.lotusBody)
+                .foregroundStyle(Color.lotusTextSecondary)
+            field()
+        }
+    }
+
+    /// A mono text field (endpoint URLs, model names — spec §3).
+    private func monoField(_ placeholder: String, text: Binding<String>) -> some View {
+        TextField(placeholder, text: text)
+            .textFieldStyle(.plain)
+            .font(.lotusMono(12))
+            .foregroundStyle(Color.lotusTextPrimary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.lotusControlFill, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
+    }
+
+    /// Endpoint field + the advisory invalid-URL hint (spec §1E — saved anyway).
+    @ViewBuilder
+    private func endpointField(_ label: String, text: Binding<String>) -> some View {
+        labeledField(label) {
+            monoField("https://…", text: text)
+            if !text.wrappedValue.isEmpty,
+               !SettingsValidation.isValidEndpointURL(text.wrappedValue) {
+                Text("Not a valid http(s) URL — saved anyway")
+                    .font(.lotusCaption)
+                    .foregroundStyle(.orange)
+            }
+        }
     }
 }
 

@@ -24,6 +24,11 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         subsystem: "com.garisonlotus.LotusScribe", category: "OnboardingWindowController")
 
     let state: OnboardingState
+    /// D90: the Setup step edits this buffered draft; `commitSetup()` is the
+    /// only path that writes it to the store. Owned here like
+    /// SettingsWindowController owns its draft — onboarding is a separate
+    /// window/draft, so D26 (Settings-window Save invariant) is untouched.
+    let draft: SettingsDraft
 
     private let settings: SettingsStore
     /// Injected TCC read (D14) so hosted tests poll a stub — production
@@ -40,11 +45,14 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         self.settings = settings
         self.snapshotProvider = snapshotProvider
         state = OnboardingState(snapshot: snapshotProvider())
+        draft = SettingsDraft(store: settings)
         super.init(window: nil)
         let window = NSWindow(contentViewController: NSHostingController(
             rootView: OnboardingView(
                 state: state,
+                draft: draft,
                 onSkip: { [weak self] in self?.skip() },
+                onSetupCommit: { [weak self] in self?.commitSetup() },
                 onFinish: { [weak self] in self?.finish() })))
         window.title = "Welcome to LotusScribe"
         // Fixed-size checklist: same macOS 26 fitting-size collapse as the
@@ -67,6 +75,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     /// (same reason as SettingsWindowController.show()).
     func show() {
         state.snapshot = snapshotProvider()  // fresh read before first tick
+        draft.reload()  // D90: re-seed Setup fields from the store on each show
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -85,6 +94,13 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     /// window (D67).
     func skip() {
         complete()
+    }
+
+    /// D90: Setup's Continue commits the drafted endpoints/models to the
+    /// store. Explicit and UNGATED — the Setup step is skippable, so there is
+    /// no probe gate and no D42 warm-up (first run, no live cleanup to warm).
+    func commitSetup() {
+        draft.save()
     }
 
     private func complete() {

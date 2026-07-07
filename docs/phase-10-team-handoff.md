@@ -44,13 +44,25 @@ user requests:
 
 ## §4. Current state
 
-**Where we are:** 10A + 10B CLOSED. 10B = 4th step scaffold ("Set up your
-servers" placeholder) + renumber to 4 steps (reviewer APPROVE, build green,
-human-verified visual flow). Next: 10C (real STT/LLM fields + "Use
-recommended" prefill + persistence). Slice/decisions in
-`phase-10-architect-log.md` (D89–D94); spec in `phase-10-spec.md`.
-**Baseline tests:** 254 tests / 24 suites green (10B added no tests).
-**Active gate:** 10A + 10B cleared; 10C not started.
+**Where we are:** 10A + 10B + 10C CLOSED. 10C = real STT/LLM endpoint+model
+fields on the Setup step, "Use recommended (Speaches+Ollama)" prefill,
+persistence via a buffered `SettingsDraft` committed on Continue (D90/D91;
+D95 accepted local field-builder duplication). Reviewer APPROVE + architect
+non-objection, 258/24. Next: **10E** (see below), then 10D.
+**Baseline tests:** 258 tests / 24 suites green.
+**Active gate:** 10A–10C cleared; 10D + 10E not started.
+
+**NEW — 10E "Try it" live test box (user-surfaced 2026-07-06):** the current
+Try-it step has NO editable target, so dictated text (which `TextInserter`
+lands in the system-wide FOCUSED element) has nowhere to go — step 4 appears
+dead. Fix = a focused TextField on Try-it receiving REAL insertion
+(user-chosen: authentic end-to-end, not a preview sink) + an inline "no text?
+→ Setup" hint on empty/failed dictation. Needs: (1) a `DictationController`
+outcome signal (mirror `onListeningChanged`) so onboarding knows a dictation
+happened + its result; (2) EARLY empirical de-risk that the app can insert
+into its OWN focused field (AX set-selected-text or Cmd-V self-paste). Also
+note: a real test needs a REACHABLE STT endpoint — localhost recommended
+won't return text unless the user runs those servers.
 **Open forward items:** R10A-1 — the Settings hotkey picker DROPDOWN still
 prints literal "Custom" for a custom chord, so the ⌘F5 default reads "Custom"
 there (not "Command + F5"). Onboarding copy/HUD are correct; this is a
