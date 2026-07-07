@@ -59,6 +59,11 @@ extension Notification.Name {
     /// Posted after the persisted hotkey changes so the live tap re-binds (D84).
     static let lotusHotkeyChanged =
         Notification.Name("com.garisonlotus.LotusScribe.hotkeyChanged")
+
+    /// Posted after each dictation terminates so observers (the onboarding
+    /// try-it view) can react — userInfo["outcome"] = DictationOutcome.rawValue (D97).
+    static let lotusDictationOutcome =
+        Notification.Name("com.garisonlotus.LotusScribe.dictationOutcome")
 }
 
 /// The single write path for the hotkey setting, used by both UI surfaces

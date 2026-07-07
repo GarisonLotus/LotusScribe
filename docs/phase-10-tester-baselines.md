@@ -27,6 +27,13 @@ green. HUMAN persistence check (Use recommended fills 4 fields; Continue →
 Settings shows saved values) folded into the next onboarding relaunch
 (10E rebuild).
 
+## 10E1 close
+
+**263 tests / 24 suites, 0 failures** (+5 over 258: 5 predicate/seam tests —
+`shouldShowSetupHint` cases for empty/failed/inserted/tooShort/nil plus the
+`onOutcome == nil` default-seam assertion). Run TWICE, both green, no flakes.
+Predicate cases confirmed live `#expect` assertions (not skipped/commented).
+
 ## Flake registry
 
 - (none recorded this phase)

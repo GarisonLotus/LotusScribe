@@ -152,6 +152,84 @@ Continue still works while a test is idle or failed.
 
 ---
 
+## 10E — "Try it" live test box (Request 3) — ship BEFORE 10D
+
+The Try-it step (step 4) has no editable target, so real insertion — which
+`TextInserter` lands in the system-wide FOCUSED element — has nowhere to go and
+the step looks dead. Fix: a focused editable box that receives the ACTUAL
+pipeline output (authentic end-to-end, NOT a preview sink) + an inline "no
+text? → Setup" hint on empty/failed dictation. Sequenced BEFORE 10D so the step
+is provably live before install content lands. Two sub-phases (risk split).
+Rails: the dictation pipeline is UNCHANGED — the seam is purely observational
+and additive (behavior identical when the callback is nil). Reskin: LotusTheme
+only, no raw hex, ≥11pt, honor Reduce Motion.
+
+### 10E1 — DictationController outcome seam + observation wiring (headless)
+
+**Deliverable**
+- `DictationController.swift`: add `enum DictationOutcome: String { case
+  inserted, empty, failed, tooShort }` and `var onOutcome: ((DictationOutcome)
+  -> Void)?` — mirrors `onListeningChanged` (nil in headless tests, main-actor,
+  additive). Fire at the EXISTING branch points in `stopRecording()`, current
+  generation only, NEVER for stale-dropped Tasks:
+  - `.tooShort` — the `guard hasUsableAudio` else branch (after "capture too
+    short", by `pill.hide()`), synchronous, pre-Task → always current.
+  - `.empty` — the `guard !text.isEmpty` else branch ("empty transcript"), past
+    the D23 stale guard → current.
+  - `.inserted` — after `inserter.insert(text)` + `pill.update(terminal)` (past
+    the D43 post-cleanup re-check) → current.
+  - `.failed` — the transcription `catch`, INSIDE the existing
+    `capturedGeneration == generation` guard (never fire on stale failure).
+  - The two stale-drop returns fire NOTHING.
+- `DictationController.shouldShowSetupHint(for: DictationOutcome?) -> Bool` —
+  PURE (D14): `true` iff `.empty` or `.failed`. Single source for the hint.
+- `AppDelegate.swift`: wire `dictation.onOutcome` beside `onListeningChanged`
+  to `NotificationCenter.default.post(name: .lotusDictationOutcome, …,
+  userInfo: ["outcome": outcome.rawValue])`. Add `Notification.Name
+  .lotusDictationOutcome` (idiom of `.lotusHotkeyChanged`). Loosest coupling:
+  no window reference; DictationController stays NotificationCenter-free.
+
+**Pure/headless (D14):** `shouldShowSetupHint`; the outcome→rawValue transport.
+**Files:** `DictationController.swift`, `AppDelegate.swift`, `DictationControllerTests.swift`.
+**Verify:** unit — predicate maps empty/failed→true, inserted/tooShort→false;
+`onOutcome` nil → loop behavior unchanged. Build green.
+
+### 10E2 — Try-it focused box + inline hint (human-verified)
+
+> **DE-RISK FIRST (engineer step 1, before the hint):** build the focused box
+> and manually confirm a REAL dictation lands text in it — against a REACHABLE
+> STT endpoint (localhost recommended returns nothing unless running; the
+> user's reachable vLLM is the practical target). If self-insertion fails (AX
+> `kAXSelectedText` not settable on the SwiftUI field AND Cmd-V does not
+> self-paste), STOP and surface. Contingency = preview-sink fallback — a
+> fallback ONLY, not the plan.
+
+**Deliverable (`OnboardingView.swift`)**
+- `tryItStep`: KEEP `HotkeyPicker()`. Replace the decorative `HUDPreview` with
+  a focused, editable multi-line box (LotusTheme-styled, mono, like `monoField`
+  but taller). Prompt: "Hold \(hotkeyLabel) and speak — your words appear
+  here." The real `PillController` panel already gives live listening feedback,
+  so `HUDPreview` becomes orphaned → remove it (own-change cleanup, CLAUDE.md §3).
+- Focus: `@FocusState private var tryItFocused`, set `true` when the step
+  reaches `stepIndex == 3` (on appear / on change) so the box is first
+  responder and a synthesized Cmd-V lands. Window is already key/active
+  (`makeKeyAndOrderFront` + `NSApp.activate`); LSUIElement is no obstacle — the
+  picker's custom field already accepts key input today.
+- Inline hint: `@State lastOutcome`, updated via
+  `.onReceive(publisher(for: .lotusDictationOutcome))` (SwiftUI auto-tears-down
+  on window close → a closed window never reacts; no manual clear). Show the
+  hint iff `stepIndex == 3 && DictationController.shouldShowSetupHint(for:
+  lastOutcome)`: a note "No text? Check your servers." + a "Back to setup"
+  button → `stepIndex = 2`. `.inserted` clears it.
+
+**Pure/headless (D14):** none new (predicate lives in 10E1). **UI:** all.
+**Files:** `OnboardingView.swift`.
+**Verify:** HUMAN-AT-SCREEN — with a reachable STT: hold hotkey on step 4, real
+transcript appears in the box; empty/failed (servers down) shows the hint and
+"Back to setup" jumps to step 3; box is focused on entering step 4.
+
+---
+
 ## Sub-phase summary
 
 | ID | Deliverable | Headless (D14) | Files |
@@ -159,4 +237,5 @@ Continue still works while a test is idle or failed.
 | 10A | "Command + F5" spelled label | `HotkeyChord.spelledLabel` | HotkeyStateMachine, HotkeyPicker, OnboardingView |
 | 10B | 4th step scaffold + renumber | — | OnboardingView |
 | 10C | Persistence + featured prefill + fields | prefill map, preset fields | EndpointPreset(+Tests), OnboardingWindowController, OnboardingView |
+| 10E | Try-it live test box (before 10D): E1 outcome seam+wiring, E2 focused box+hint | `shouldShowSetupHint`, seam | DictationController(+Tests), AppDelegate, OnboardingView |
 | 10D | Install cards + connection test | probe orchestration | OnboardingWindowController, OnboardingView |

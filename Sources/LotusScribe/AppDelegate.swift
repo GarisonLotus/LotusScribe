@@ -50,6 +50,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dictation.onListeningChanged = { [weak self] listening in
             self?.statusItemController?.setListening(listening)
         }
+        // D97: relay each dictation outcome as a notification so the onboarding
+        // try-it view can observe it (spec §10E1) — keeps DictationController
+        // NotificationCenter-free and window-agnostic; harmless bare ping when
+        // no view is alive (mirrors onListeningChanged staying wired for life).
+        dictation.onOutcome = { outcome in
+            NotificationCenter.default.post(
+                name: .lotusDictationOutcome, object: nil,
+                userInfo: ["outcome": outcome.rawValue])
+        }
         dictationController = dictation
         // D84: HotkeyController owns the tap and re-binds it live when the
         // hotkey setting changes; it resolves the chord from the store (F5

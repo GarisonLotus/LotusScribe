@@ -49,8 +49,12 @@ fields on the Setup step, "Use recommended (Speaches+Ollama)" prefill,
 persistence via a buffered `SettingsDraft` committed on Continue (D90/D91;
 D95 accepted local field-builder duplication). Reviewer APPROVE + architect
 non-objection, 258/24. Next: **10E** (see below), then 10D.
-**Baseline tests:** 258 tests / 24 suites green.
-**Active gate:** 10A–10C cleared; 10D + 10E not started.
+**Baseline tests:** 263 tests / 24 suites green (10E1 added +5).
+**Active gate:** 10A–10C + 10E1 cleared. Next: 10E2 (Try-it focused box +
+inline hint — self-insertion spike FIRST, against a reachable STT). Then 10D.
+10E1 = DictationController outcome seam (`onOutcome`/`DictationOutcome`) +
+`.lotusDictationOutcome` notification + pure `shouldShowSetupHint`; stale-drop
+invariant confirmed (reviewer). Decisions D96–D100.
 
 **NEW — 10E "Try it" live test box (user-surfaced 2026-07-06):** the current
 Try-it step has NO editable target, so dictated text (which `TextInserter`

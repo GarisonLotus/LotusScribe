@@ -46,5 +46,29 @@ struct DictationControllerTests {
     @Test @MainActor func constructionDoesNotRaise() {
         let controller: DictationController? = DictationController()
         #expect(controller != nil)
+        // Additive/opt-in seam (D96): unwired observers default nil, so the
+        // dictation loop behaves identically in headless tests.
+        #expect(controller?.onOutcome == nil)
+    }
+
+    /// D14: the setup hint fires only on servers-side misses.
+    @Test func setupHintShownForEmpty() {
+        #expect(DictationController.shouldShowSetupHint(for: .empty))
+    }
+
+    @Test func setupHintShownForFailed() {
+        #expect(DictationController.shouldShowSetupHint(for: .failed))
+    }
+
+    @Test func setupHintHiddenForInserted() {
+        #expect(!DictationController.shouldShowSetupHint(for: .inserted))
+    }
+
+    @Test func setupHintHiddenForTooShort() {
+        #expect(!DictationController.shouldShowSetupHint(for: .tooShort))
+    }
+
+    @Test func setupHintHiddenForNil() {
+        #expect(!DictationController.shouldShowSetupHint(for: nil))
     }
 }

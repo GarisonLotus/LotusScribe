@@ -24,6 +24,17 @@ final class DictationController {
     /// by AppDelegate; nil in headless tests. Not part of the dictation logic.
     var onListeningChanged: ((Bool) -> Void)?
 
+    /// Terminal result of a single dictation, for observers (spec §10E1).
+    enum DictationOutcome: String {
+        case inserted, empty, failed, tooShort
+    }
+
+    /// D96: purely observational seam mirroring `onListeningChanged` (optional,
+    /// nil in headless tests, main-actor, additive — the loop behaves
+    /// identically when nil). Fires ONLY at the current-generation branch
+    /// points below; stale-dropped Tasks signal nothing. Not dictation logic.
+    var onOutcome: ((DictationOutcome) -> Void)?
+
     /// False until the current capture's first level arrives (D29b —
     /// warming → recording only when the engine is demonstrably live).
     private var engineLive = false
@@ -60,6 +71,13 @@ final class DictationController {
     /// 16000 Hz × 2 bytes/sample × 0.1 s = 3200 bytes.
     nonisolated static func hasUsableAudio(wavByteCount: Int) -> Bool {
         wavByteCount - 44 >= 3200
+    }
+
+    /// D14: pure single source for the try-it setup hint (spec §10E1) —
+    /// true iff the outcome signals a servers-side miss (`.empty`/`.failed`).
+    /// `.inserted`/`.tooShort`/nil never hint.
+    nonisolated static func shouldShowSetupHint(for outcome: DictationOutcome?) -> Bool {
+        outcome == .empty || outcome == .failed
     }
 
     /// D74: last record-start warm-up fired (nil = never this launch).
@@ -139,6 +157,7 @@ final class DictationController {
             Self.logger.info(
                 "capture too short (\(wav.count) bytes) — skipping transcription")
             pill.hide()  // spec §2C: tap-length press — no error flash
+            onOutcome?(.tooShort)  // D96: synchronous/pre-Task → always current.
             return
         }
         pill.update(.processing)
@@ -162,6 +181,7 @@ final class DictationController {
                     // Failure policy (spec §cross-cutting): empty → no paste.
                     Self.logger.info("empty transcript — nothing inserted")
                     pill.hide()
+                    onOutcome?(.empty)  // D96: past the D23 stale guard → current.
                     return
                 }
                 Self.logger.info("transcript: \(text, privacy: .public)")
@@ -193,6 +213,7 @@ final class DictationController {
                 }
                 inserter.insert(text)
                 pill.update(terminal)
+                onOutcome?(.inserted)  // D96: past the D43 post-cleanup re-check → current.
             } catch {
                 // Failure policy (spec §cross-cutting): log + error flash —
                 // but stale failures never touch the pill (D23/spec §2C).
@@ -200,6 +221,7 @@ final class DictationController {
                     "transcription failed: \(String(describing: error), privacy: .public)")
                 if capturedGeneration == generation {
                     pill.update(.error)
+                    onOutcome?(.failed)  // D96: inside the generation guard → stale failures fire nothing.
                 }
             }
         }
