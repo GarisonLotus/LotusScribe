@@ -64,6 +64,20 @@ live `#expect`. No stale "default resolves to ⌘F5" assertion remains — grep
 collision/label cases. `parse("f5")` → `.combo(96, [])` and functionKey(5)
 round-trips present + unchanged.
 
+## 10D close
+
+**271 tests / 24 suites, 0 failures** (+5 over 266: Setup "Test connection"
+probe orchestration, D96). Run TWICE, both green (~5.1s), no flakes. New tests
+(`OnboardingWindowControllerTests`) use STUB probes (closures injected via
+`sttProbe`/`llmProbe`) and assert the orchestration: both-URLs-empty → no-op
+(no probe runs, phase stays `.idle`), empty LLM URL skips the LLM probe,
+stop-at-first-failure (STT fail → LLM probe never runs), endpoint-named failure
+reasons ("Speech to Text: …" / "Cleanup LLM: …"). Read-only confirmed: the
+probe path never persists — `store.sttEndpointURL`/`llmEndpointURL` asserted
+`nil` after LLM-failure and both-green runs (Continue's commitSetup is the only
+write path). Unexpected probes guarded with `Issue.record`. All live `#expect`
+(not skipped/commented). **Phase 10 code-complete** (last sub-phase).
+
 ## Flake registry
 
 - (none recorded this phase)

@@ -114,4 +114,107 @@ final class OnboardingWindowControllerTests {
 
         #expect(controller.pollTimer == nil)
     }
+
+    // MARK: 10D — Setup "Test connection" probe orchestration (D96)
+
+    // D96: both drafted URLs empty → no probe, no phase change (read-only test
+    // never blocked by a guaranteed fail — mirrors SettingsWindowController).
+    @Test func testConnectionWithBothURLsEmptyIsNoOp() throws {
+        let failProbe: (String, String) async -> ProbeResult = { _, _ in
+            Issue.record("no probe may run when both drafted URLs are empty")
+            return .failure(reason: "unexpected probe")
+        }
+        let controller = OnboardingWindowController(
+            settings: try makeStore(), snapshotProvider: { Self.allDenied },
+            sttProbe: failProbe, llmProbe: failProbe)
+        controller.show()
+        defer { controller.window?.close() }
+
+        controller.testSetupConnection()
+
+        #expect(controller.probeTask == nil)
+        #expect(controller.probeState.phase == .idle)
+    }
+
+    // D96: an empty drafted LLM URL skips the LLM probe; STT green → success.
+    @Test func testConnectionSkipsEmptyLLMURL() async throws {
+        let controller = OnboardingWindowController(
+            settings: try makeStore(), snapshotProvider: { Self.allDenied },
+            sttProbe: { _, _ in .success },
+            llmProbe: { _, _ in
+                Issue.record("LLM probe must not run for an empty drafted LLM URL")
+                return .failure(reason: "unexpected probe")
+            })
+        controller.show()
+        defer { controller.window?.close() }
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.testSetupConnection()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .success)
+    }
+
+    // D96: probes run STT first and stop at its failure — the LLM probe never
+    // runs, and the reason names the failing endpoint.
+    @Test func testConnectionStopsAtSTTFailure() async throws {
+        let controller = OnboardingWindowController(
+            settings: try makeStore(), snapshotProvider: { Self.allDenied },
+            sttProbe: { _, _ in .failure(reason: "HTTP 503") },
+            llmProbe: { _, _ in
+                Issue.record("LLM probe must not run after an STT failure")
+                return .success
+            })
+        controller.show()
+        defer { controller.window?.close() }
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.draft.llmEndpointURL = "https://llm.example.com/v1"
+        controller.testSetupConnection()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .failure("Speech to Text: HTTP 503"))
+    }
+
+    // D96: an LLM failure names its endpoint too; the test never persists —
+    // the store stays untouched (read-only probe of the draft).
+    @Test func testConnectionLLMFailureNamesEndpointAndWritesNothing() async throws {
+        let store = try makeStore()
+        let controller = OnboardingWindowController(
+            settings: store, snapshotProvider: { Self.allDenied },
+            sttProbe: { _, _ in .success },
+            llmProbe: { _, _ in .failure(reason: "HTTP 404") })
+        controller.show()
+        defer { controller.window?.close() }
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.draft.llmEndpointURL = "https://llm.example.com/v1"
+        controller.testSetupConnection()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .failure("Cleanup LLM: HTTP 404"))
+        #expect(store.sttEndpointURL == nil)  // read-only: nothing persisted
+        #expect(store.llmEndpointURL == nil)
+    }
+
+    // D96: both drafted and green → success, and the test never writes the
+    // store (Continue's commitSetup is the only write path — D90).
+    @Test func testConnectionBothGreenSucceedsWithoutPersisting() async throws {
+        let store = try makeStore()
+        let controller = OnboardingWindowController(
+            settings: store, snapshotProvider: { Self.allDenied },
+            sttProbe: { _, _ in .success },
+            llmProbe: { _, _ in .success })
+        controller.show()
+        defer { controller.window?.close() }
+
+        controller.draft.sttEndpointURL = "https://stt.example.com/v1"
+        controller.draft.llmEndpointURL = "https://llm.example.com/v1"
+        controller.testSetupConnection()
+        await controller.probeTask?.value
+
+        #expect(controller.probeState.phase == .success)
+        #expect(store.sttEndpointURL == nil)
+        #expect(store.llmEndpointURL == nil)
+    }
 }

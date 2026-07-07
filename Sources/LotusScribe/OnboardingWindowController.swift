@@ -29,21 +29,39 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     /// SettingsWindowController owns its draft — onboarding is a separate
     /// window/draft, so D26 (Settings-window Save invariant) is untouched.
     let draft: SettingsDraft
+    /// D96 (§10D): the Setup step's read-only "Test connection" probe state.
+    /// Reuses SettingsWindowController's ProbeState type — the Setup test is
+    /// the same orchestration, published inline (never gates Continue).
+    let probeState = ProbeState()
 
     private let settings: SettingsStore
     /// Injected TCC read (D14) so hosted tests poll a stub — production
     /// uses the real Permissions checks. Preflight-only: no request call
     /// ever fires from construction or the poll.
     private let snapshotProvider: () -> PermissionSnapshot
+    /// Injected probe seams (D14) so the Setup test's sequential orchestration
+    /// tests headlessly — identical to SettingsWindowController's Save seams.
+    private let runSTTProbe: (String, String) async -> ProbeResult
+    private let runLLMProbe: (String, String) async -> ProbeResult
     /// Exposed read-only so tests can fire a tick instead of waiting 1 s.
     private(set) var pollTimer: Timer?
+    /// Exposed read-only so tests can await the Setup test's async probe leg.
+    private(set) var probeTask: Task<Void, Never>?
 
     init(
         settings: SettingsStore = SettingsStore(),
-        snapshotProvider: @escaping () -> PermissionSnapshot = Permissions.snapshot
+        snapshotProvider: @escaping () -> PermissionSnapshot = Permissions.snapshot,
+        sttProbe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
+            await ConnectionProbe().testSTT(endpoint: endpoint, model: model)
+        },
+        llmProbe: @escaping (String, String) async -> ProbeResult = { endpoint, model in
+            await ConnectionProbe().testLLM(endpoint: endpoint, model: model)
+        }
     ) {
         self.settings = settings
         self.snapshotProvider = snapshotProvider
+        runSTTProbe = sttProbe
+        runLLMProbe = llmProbe
         state = OnboardingState(snapshot: snapshotProvider())
         draft = SettingsDraft(store: settings)
         super.init(window: nil)
@@ -51,8 +69,10 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
             rootView: OnboardingView(
                 state: state,
                 draft: draft,
+                probeState: probeState,
                 onSkip: { [weak self] in self?.skip() },
                 onSetupCommit: { [weak self] in self?.commitSetup() },
+                onSetupTest: { [weak self] in self?.testSetupConnection() },
                 onFinish: { [weak self] in self?.finish() })))
         window.title = "Welcome to LotusScribe"
         // Fixed-size checklist: same macOS 26 fitting-size collapse as the
@@ -76,6 +96,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     func show() {
         state.snapshot = snapshotProvider()  // fresh read before first tick
         draft.reload()  // D90: re-seed Setup fields from the store on each show
+        probeState.phase = .idle  // D96: reopen resets the Setup test indicator
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -103,6 +124,56 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         draft.save()
     }
 
+    /// D96 (§10D): "Test connection" — probe the DRAFTED endpoints (STT then
+    /// LLM) sequentially and publish the outcome inline, mirroring
+    /// SettingsWindowController.test(). Read-only: never persists, never
+    /// closes, never gates Continue (the Setup step is skippable). Both URLs
+    /// empty → no-op.
+    func testSetupConnection() {
+        probeTask?.cancel()
+        probeTask = nil
+
+        let sttEndpoint = draft.sttEndpointURL
+        let llmEndpoint = draft.llmEndpointURL
+        guard !sttEndpoint.isEmpty || !llmEndpoint.isEmpty else { return }
+
+        probeState.phase = .testing
+        let sttModel = draft.sttModel
+        let llmModel = draft.llmModel
+        probeTask = Task { [weak self] in
+            guard let self else { return }
+            let result = await self.probeEndpoints(
+                sttEndpoint: sttEndpoint, sttModel: sttModel,
+                llmEndpoint: llmEndpoint, llmModel: llmModel)
+            // A mid-test close cancelled us — this leg owns nothing anymore.
+            guard !Task.isCancelled else { return }
+            switch result {
+            case .success:
+                self.probeState.phase = .success
+            case .failure(let reason):
+                self.probeState.phase = .failure(reason)
+            }
+        }
+    }
+
+    /// D44/D96 sequential probes: skip empty URLs, stop at the first failure,
+    /// prefix the reason with the endpoint's name (same shape as
+    /// SettingsWindowController.probeEndpoints).
+    private func probeEndpoints(
+        sttEndpoint: String, sttModel: String,
+        llmEndpoint: String, llmModel: String
+    ) async -> ProbeResult {
+        if !sttEndpoint.isEmpty,
+           case .failure(let reason) = await runSTTProbe(sttEndpoint, sttModel) {
+            return .failure(reason: "Speech to Text: \(reason)")
+        }
+        if !llmEndpoint.isEmpty,
+           case .failure(let reason) = await runLLMProbe(llmEndpoint, llmModel) {
+            return .failure(reason: "Cleanup LLM: \(reason)")
+        }
+        return .success
+    }
+
     private func complete() {
         settings.onboardingCompleted = true
         window?.close()
@@ -125,5 +196,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         pollTimer?.invalidate()
         pollTimer = nil
+        probeTask?.cancel()  // D96: nothing published after the window is gone
+        probeTask = nil
     }
 }

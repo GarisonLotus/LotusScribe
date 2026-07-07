@@ -23,8 +23,13 @@ struct OnboardingView: View {
     /// D90: buffered Setup-step draft, owned by the controller. Continue
     /// commits it via `onSetupCommit`; the fields edit it locally until then.
     @ObservedObject var draft: SettingsDraft
+    /// D96 (§10D): the Setup step's read-only "Test connection" probe state,
+    /// owned by the controller. `onSetupTest` runs the probe; it never gates
+    /// Continue and never persists.
+    @ObservedObject var probeState: ProbeState
     let onSkip: () -> Void
     let onSetupCommit: () -> Void
+    let onSetupTest: () -> Void
     let onFinish: () -> Void
 
     /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try).
@@ -170,7 +175,7 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(LotusButtonStyle(.primary))
                 // Same field idioms as the Settings pane (D90 reuse), bound to
-                // the onboarding draft. Install cards + Test are 10D.
+                // the onboarding draft.
                 LotusCard {
                     VStack(alignment: .leading, spacing: 12) {
                         endpointField("Speech to Text endpoint", text: $draft.sttEndpointURL)
@@ -180,7 +185,100 @@ struct OnboardingView: View {
                     }
                     .padding(14)
                 }
+                // D96 (§10D): install guides for the featured servers ONLY
+                // (Speaches + Ollama; vLLM stays a Settings preset). Each =
+                // concise numbered steps + ONE copyable command + a docs link.
+                installCard(
+                    title: "Speaches (Speech to Text)",
+                    steps: "1. Install Docker\n2. Run Speaches\n3. Serves at localhost:8000",
+                    command: "docker run -p 8000:8000 ghcr.io/speaches-ai/speaches:latest",
+                    docs: "https://speaches.ai")
+                installCard(
+                    title: "Ollama (Cleanup LLM)",
+                    steps: "1. Install Ollama\n2. Pull the model\n3. Serves at localhost:11434",
+                    command: "ollama pull llama3.2:3b",
+                    docs: "https://ollama.com")
+                // D96 (§10D): read-only "Test connection" — probes the drafted
+                // endpoints and reflects the outcome inline. NEVER blocks
+                // Continue (skippable) and NEVER persists.
+                HStack(spacing: 10) {
+                    Button("Test connection", action: onSetupTest)
+                        .buttonStyle(LotusButtonStyle(.ghost))
+                        .disabled(probeState.phase == .testing)
+                    setupProbeIndicator
+                }
             }
+        }
+    }
+
+    /// D96 (§10D): one compact install card for a featured server — a short
+    /// numbered step list, ONE copyable mono command (ghost "Copy" →
+    /// pasteboard), and a "Full docs" link. Commands are best-effort; the
+    /// docs link covers upstream drift.
+    private func installCard(
+        title: String, steps: String, command: String, docs: String
+    ) -> some View {
+        LotusCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.lotusBody)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.lotusTextPrimary)
+                Text(steps)
+                    .font(.lotusCaption)
+                    .foregroundStyle(Color.lotusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Text(command)
+                        .font(.lotusMono(11))
+                        .foregroundStyle(Color.lotusTextPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color.lotusControlFill, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
+                    Button("Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(command, forType: .string)
+                    }
+                    .buttonStyle(LotusButtonStyle(.ghost))
+                }
+                Button("Full docs") { open(docs) }
+                    .buttonStyle(LotusButtonStyle(.ghost))
+            }
+            .padding(14)
+        }
+    }
+
+    /// D96 (§10D): inline reflection of the Setup test — spinner while
+    /// testing, check on success, failure reason otherwise (mirrors
+    /// SettingsForm.probeIndicator; the spinner is fine under Reduce Motion).
+    @ViewBuilder
+    private var setupProbeIndicator: some View {
+        switch probeState.phase {
+        case .testing:
+            ProgressView().controlSize(.small)
+            Text("Testing connection…")
+                .font(.lotusCaption)
+                .foregroundStyle(Color.lotusTextSecondary)
+        case .success:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.lotusAccentText)
+            Text("Connected")
+                .font(.lotusCaption)
+                .foregroundStyle(Color.lotusTextSecondary)
+        case .failure(let reason):
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(reason)
+                .font(.lotusCaption)
+                .foregroundStyle(Color.lotusTextSecondary)
+                .lineLimit(2)
+        case .idle:
+            EmptyView()
         }
     }
 
