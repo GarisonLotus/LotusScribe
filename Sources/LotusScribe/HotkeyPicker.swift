@@ -25,13 +25,15 @@ enum HotkeyCollision {
     /// The collision warning for `option`, or nil when the choice is clean.
     /// Matches on the RESOLVED chord, not the spelling (R9E-2/3): a custom
     /// "f5" is the same physical key as the F5 menu pick and must warn too.
-    /// F5 is claimed twice on stock macOS: the Keyboard → Dictation shortcut
-    /// AND Siri's "Hold Dictation key" (live-tested: holding F5 opened Siri).
+    /// D103: the ⌘F5 DEFAULT (`.combo(96, .maskCommand)`) is the working path
+    /// — it falls to `default:` → nil, NO warning. Only BARE F5 warns, and its
+    /// copy now LEADS with holding Command; bare F5 is double-claimed (Keyboard
+    /// → Dictation AND Siri's "Hold Dictation key"), so both links stay.
     static func warning(for option: HotkeyOption) -> Warning? {
         switch option.chord {
         case .combo(keyCode: 96, modifiers: []):
             return Warning(
-                message: "F5 is claimed by macOS: the Dictation shortcut (Keyboard) and Siri's “Hold Dictation key”. Turn both off so F5 reaches LotusScribe.",
+                message: "Hold Command + F5 — F5 alone is macOS's mic key. To use bare F5 instead, turn off macOS's Dictation and Siri hold-key shortcuts.",
                 links: [
                     SettingsLink(label: "Open Siri Settings…", url: siriPane),
                     SettingsLink(label: "Open Keyboard Settings…", url: keyboardPane),
@@ -87,7 +89,7 @@ struct HotkeyPicker: View {
                 Button("Custom…") { option = .custom(customText) }
             } label: {
                 HStack(spacing: 6) {
-                    Text(isCustom ? "Custom" : option.displayLabel)
+                    Text(option.displayLabel.isEmpty ? "Custom…" : option.displayLabel)
                         .font(.lotusMono(12))
                         .foregroundStyle(Color.lotusTextPrimary)
                     Image(systemName: "chevron.up.chevron.down")

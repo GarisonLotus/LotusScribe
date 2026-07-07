@@ -35,6 +35,12 @@ struct OnboardingView: View {
     @State private var hotkeyLabel =
         HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
 
+    /// D103: whether the resolved chord's key is F5 (the mic key) — gates the
+    /// F5-specific why-line under the Try-it instruction. Tracked beside
+    /// `hotkeyLabel` so picking a key on this step keeps the line in sync.
+    @State private var hotkeyUsesMicKey =
+        HotkeyOption.from(persisted: SettingsStore().hotkeyChord).chord?.usesMicKey ?? false
+
     /// D99: the real insertion target on the Try-it step — a focused, editable
     /// box a live dictation self-inserts into (replaces the decorative HUD).
     @State private var tryItText = ""
@@ -65,7 +71,9 @@ struct OnboardingView: View {
         .frame(width: Self.contentSize.width, height: Self.contentSize.height)
         .lotusWindowBackground()
         .onReceive(NotificationCenter.default.publisher(for: .lotusHotkeyChanged)) { _ in
-            hotkeyLabel = HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
+            let option = HotkeyOption.from(persisted: SettingsStore().hotkeyChord)
+            hotkeyLabel = option.displayLabel
+            hotkeyUsesMicKey = option.chord?.usesMicKey ?? false
         }
         // D97: relay each dictation outcome into the inline hint. userInfo
         // carries the DictationOutcome rawValue (D97) — decode it back to the
@@ -206,6 +214,14 @@ struct OnboardingView: View {
                 .font(.lotusBody)
                 .foregroundStyle(Color.lotusTextSecondary)
                 .multilineTextAlignment(.center)
+            // D103: F5-specific why-line — shown only when the resolved chord
+            // uses the mic key; a generic line on arbitrary combos is noise.
+            if hotkeyUsesMicKey {
+                Text("F5 is macOS's mic key — holding Command lets LotusScribe catch it.")
+                    .font(.lotusCaption)
+                    .foregroundStyle(Color.lotusTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
             tryItBox
             // D97/D99: inline setup hint on a servers-side miss (.empty/.failed);
             // .inserted/.tooShort/nil never show it (pure predicate, D14).

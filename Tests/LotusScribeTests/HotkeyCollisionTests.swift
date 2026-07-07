@@ -5,16 +5,24 @@ import Testing
 /// for hotkeys macOS already claims. The UI rendering is thin (HUMAN-AT-SCREEN);
 /// the mapping itself is what must not drift.
 struct HotkeyCollisionTests {
-    @Test func f5WarnsAboutDictationAndSiriWithBothPanes() {
+    @Test func bareF5LeadsWithHoldingCommandAndKeepsBothPanes() {
         let warning = HotkeyCollision.warning(for: .functionKey(5))
         #expect(warning != nil)
-        // Live-tested collision pair: Keyboard→Dictation AND Siri's
-        // "Hold Dictation key" — the user must be linked to BOTH panes.
+        // D103: bare F5 now LEADS with the working ⌘F5 path — the copy says
+        // to hold Command, demoting the disable-Dictation path to optional.
+        #expect(warning?.message.contains("Command") == true)
+        // Bare F5 is still double-claimed (Keyboard→Dictation AND Siri's
+        // "Hold Dictation key") — the user must be linked to BOTH panes.
         #expect(warning?.links.count == 2)
         #expect(warning?.links.contains {
             $0.url.contains("Siri-Settings") } == true)
         #expect(warning?.links.contains {
             $0.url.contains("Keyboard-Settings") } == true)
+    }
+
+    @Test func commandF5DefaultIsClean() {
+        // D103: the ⌘F5 default is the working path — NO alarm on it.
+        #expect(HotkeyCollision.warning(for: .custom("cmd+f5")) == nil)
     }
 
     @Test func customFnWarnsWithKeyboardPane() {

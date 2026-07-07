@@ -275,6 +275,19 @@ struct HotkeyStateMachineTests {
             == "Option + Shift + Command + Z")
     }
 
+    // MARK: - Phase 10: usesMicKey (D103)
+
+    @Test func usesMicKeyTrueForBothF5Chords() {
+        // Both the ⌘F5 default and bare F5 are keycode 96 — the mic key.
+        #expect(HotkeyChord.combo(keyCode: 96, modifiers: []).usesMicKey)
+        #expect(HotkeyChord.combo(keyCode: 96, modifiers: .maskCommand).usesMicKey)
+    }
+
+    @Test func usesMicKeyFalseForNonF5ChordsAndFnHold() {
+        #expect(HotkeyChord.combo(keyCode: 25, modifiers: [.maskControl]).usesMicKey == false)
+        #expect(HotkeyChord.fnHold.usesMicKey == false)
+    }
+
     // MARK: - Phase 9: bare-key D30 pair-balance (rides handleCombo unchanged)
 
     @Test func bareFunctionKeyChordSwallowsAndPairBalances() {

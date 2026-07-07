@@ -43,6 +43,15 @@ transcript ("Hello, hello.") in the focused box — authentic insertion into
 the app's own window confirmed. Also confirms 10C persistence (endpoints
 entered on Setup step reached the pipeline) and the ⌘F5 hotkey end-to-end.
 
+## 10F close
+
+**266 tests / 24 suites, 0 failures** (+3 over 263, 1 retargeted). Run TWICE,
+both green (5.0s / 5.0s), no flakes. New: `usesMicKeyTrueForBothF5Chords`,
+`usesMicKeyFalseForNonF5ChordsAndFnHold` (D103), plus the ⌘F5-clean assertion.
+Retargeted: bare-F5 collision test now asserts message CONTAINS "Command"
+(old "Turn both off" wording GONE — grep 0 hits across Sources/ + Tests/, not
+duplicated). All confirmed live `#expect` (not skipped/commented).
+
 ## Flake registry
 
 - (none recorded this phase)

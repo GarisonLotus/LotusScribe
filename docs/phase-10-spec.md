@@ -239,3 +239,62 @@ transcript appears in the box; empty/failed (servers down) shows the hint and
 | 10C | Persistence + featured prefill + fields | prefill map, preset fields | EndpointPreset(+Tests), OnboardingWindowController, OnboardingView |
 | 10E | Try-it live test box (before 10D): E1 outcome seam+wiring, E2 focused box+hint | `shouldShowSetupHint`, seam | DictationController(+Tests), AppDelegate, OnboardingView |
 | 10D | Install cards + connection test | probe orchestration | OnboardingWindowController, OnboardingView |
+| 10F | "Hold Command + F5" clarity: picker label fix + Try-it why-line + collision-copy redesign | `HotkeyChord.usesMicKey`, `HotkeyCollision.warning` map | HotkeyStateMachine, HotkeyPicker, OnboardingView, HotkeyCollisionTests |
+
+---
+
+## §10F — "Hold Command + F5" clarity (copy + labels only; D101–D104)
+
+Reconciles the stale F5 collision guidance with the ⌘F5 default (D87) and makes
+onboarding say the hotkey is HELD as **Command + F5**. COPY/LABEL/lookup-TABLE
+only — no binding/parse/swallow change (D80–D88 intact). Reskin: LotusTheme,
+≥11pt, no raw hex. Superset matching (`handleCombo`, `flags.isSuperset(of:)`)
+already makes "Hold Command + F5" fire BOTH the ⌘F5 default AND a bare-F5 pick,
+so this is pure reconciliation, not logic. Resolves reviewer item **R10A-1**.
+
+**1. Picker collapsed-label fix (R10A-1).** `HotkeyPicker.swift` line 90
+`Text(isCustom ? "Custom" : option.displayLabel)` collapses the custom ⌘F5
+default to the literal "Custom". Change to
+`Text(option.displayLabel.isEmpty ? "Custom…" : option.displayLabel)` — a custom
+chord now shows its spelled label (default `.custom("cmd+f5")` →
+`displayLabel` → `"Command + F5"`). The `Button("Custom…")` MENU ITEM (line 87)
+that reveals the text field is UNTOUCHED; the "Custom…" placeholder shows only
+while the field is empty. `isCustom` stays (gates the field, lines 105/130).
+
+**2. Try-it why-line (`OnboardingView.swift`).** The instruction (line 205)
+already leads with the resolved chord: "Hold \(hotkeyLabel) and speak…"
+(default → "Hold Command + F5…"). ADD one why-line UNDER it, shown ONLY when the
+resolved chord's key is F5 (keycode 96): "F5 is macOS's mic key — holding
+Command lets LotusScribe catch it." For non-F5 chords the why-line is HIDDEN (the
+"why" is F5-specific; a generic line is noise). Condition derives from a new
+PURE `HotkeyChord.usesMicKey` (D14): `if case .combo(96, _) = self { true }`.
+Mirror `hotkeyLabel`: add `@State hotkeyUsesMicKey =
+HotkeyOption.from(persisted: SettingsStore().hotkeyChord).chord?.usesMicKey ??
+false`, refreshed beside `hotkeyLabel` (line 68). Style `.lotusCaption` (11pt) /
+`.lotusTextSecondary`.
+
+**3. Collision-copy redesign** (`HotkeyCollision.warning(for:)`, supersedes D86
+copy; chord-based per R9E-2/3). Cases:
+- ⌘F5 `.combo(96, .maskCommand)` — the WORKING default: NO warning (already the
+  `default:` → nil arm; keep nil, add NO tip — an orange tip on the default is
+  the alarm we remove; the label + why-line carry the calm explanation).
+- bare F5 `.combo(96, [])`: LEAD with the working path — message "Hold Command +
+  F5 — F5 alone is macOS's mic key. To use bare F5 instead, turn off macOS's
+  Dictation and Siri hold-key shortcuts." KEEP BOTH links (Siri, Keyboard — bare
+  F5 is double-claimed). No longer reads as an error for a chord that works.
+- `.fnHold`: UNCHANGED (globe message + Keyboard link).
+
+**4. No migration for legacy persisted `"f5"`.** The improved bare-F5 warning +
+"hold Command" copy make bare-f5 usable; adding migration code is out of scope.
+Tester note: `defaults delete com.garisonlotus.LotusScribe hotkeyChord` to see
+the true nil→⌘F5 default.
+
+**Slice:** ONE sub-phase (10F). **Headless (D14):** `HotkeyChord.usesMicKey`
+predicate; the new `warning(for:)` mapping. **Files:** `HotkeyStateMachine.swift`
+(add `usesMicKey`), `HotkeyPicker.swift` (label + warning map), `OnboardingView.swift`
+(why-line), `HotkeyCollisionTests.swift` (retarget: bare-F5 message leads with
+"Command", still 2 panes; add ⌘F5-is-clean + `usesMicKey` cases).
+**Verify:** unit — `warning(.custom("cmd+f5")) == nil`; bare-F5 message contains
+"Command"; `usesMicKey` true for `.combo(96,_)`, false otherwise. HUMAN — picker
+shows "Command + F5" (not "Custom") on the default; Try-it why-line visible on
+F5, hidden on e.g. ctrl+alt+9; no alarm on the ⌘F5 default.

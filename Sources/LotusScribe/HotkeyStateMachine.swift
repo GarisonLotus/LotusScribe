@@ -64,6 +64,15 @@ enum HotkeyChord: Equatable {
         }
     }
 
+    /// True when the chord's key is F5 (keycode 96) — macOS's mic/dictation
+    /// key, held via Command in the default (D103). Drives the F5-specific
+    /// Try-it why-line; modifiers are irrelevant (both ⌘F5 and bare F5 qualify).
+    /// Pure (D14).
+    var usesMicKey: Bool {
+        if case .combo(96, _) = self { return true }
+        return false
+    }
+
     /// Reverse of `functionKeyCodes`/`keyCodes` — the display name for a
     /// keycode ("f5" → "F5", "z" → "Z"); unknown → "key<code>".
     private static func keyName(for code: Int64) -> String {

@@ -49,9 +49,27 @@ fields on the Setup step, "Use recommended (Speaches+Ollama)" prefill,
 persistence via a buffered `SettingsDraft` committed on Continue (D90/D91;
 D95 accepted local field-builder duplication). Reviewer APPROVE + architect
 non-objection, 258/24. Next: **10E** (see below), then 10D.
-**Baseline tests:** 263 tests / 24 suites green.
-**Active gate:** 10A–10C + 10E1 + 10E2 cleared. Next: **10F** (Command+F5
-guidance — see below), then 10D.
+**Baseline tests:** 266 tests / 24 suites green.
+**Active gate:** 10A–10C + 10E + 10F cleared. Next: **10G** (default hotkey
+OFF F5 — see below), then 10D.
+10F = "Hold Command + F5" clarity: picker label fix (R10A-1), F5-only why-line
+(`usesMicKey`), collision-copy redesign (⌘F5 clean, bare-F5 leads with
+"Command"). Reviewer APPROVE + tester PASS (266/24). NOTE: 10F's code is
+correct for any chord; its F5-specific copy only appears when a user PICKS
+F5 — moot for the new ⌃⌥D default but retained for F5 pickers.
+
+**NEW — 10G default hotkey OFF F5 (user-decided 2026-07-06):** ⌘F5 is a bad
+default — F5 is Apple's accessibility key and EVERY combo is a system
+accessibility shortcut handled ABOVE our session tap (can't be swallowed):
+F5→Dictation, ⌘F5→VoiceOver, ⌥⌘F5→Accessibility panel. Live-confirmed ⌘F5
+triggers the VoiceOver enable-prompt even with Input Monitoring granted.
+Decision: default hotkey → **⌃⌥D (Ctrl+Option+D, `.combo(2, [.maskControl,
+.maskAlternate])`)**, LIVE-VERIFIED working (dictation fires, no collision, no
+stray "d"). Supersedes D87. 10G = flip the two default sites
+(`HotkeyChord.resolved`, `HotkeyOption.from(nil)`) + retarget the ⌘F5-default
+tests + docs. Picker still offers F-keys (10F warns on F5). Forward item:
+ALL top-row F-keys are media/accessibility traps on MacBooks — the F1–F12
+picker menu is a latent trap beyond F5; revisit if desired.
 10E2 = Try-it focused `TextEditor` box + inline "no text? → Setup" hint;
 `HUDPreview` removed. SPIKE PASSED: real transcript inserts into the app's
 own focused box (⌘F5 end-to-end + 10C persistence confirmed).
