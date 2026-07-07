@@ -116,7 +116,9 @@ final class CleanupServiceTests {
         #expect(
             messages[0]["content"]
                 == CleanupLevel.standard.systemPrompt(for: .other, dictionary: []))
-        #expect(messages[1] == ["role": "user", "content": "um hello"])
+        // D107: the transcript is wrapped in <transcript> tags (prompt-
+        // injection boundary — see CleanupService / CleanupLevel closer).
+        #expect(messages[1] == ["role": "user", "content": "<transcript>\num hello\n</transcript>"])
     }
 
     /// D72: suppress OFF → the field is omitted entirely — the key set

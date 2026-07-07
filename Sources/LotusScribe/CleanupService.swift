@@ -93,7 +93,11 @@ struct CleanupService {
             model: model,
             messages: [
                 Message(role: "system", content: prompt),
-                Message(role: "user", content: transcript),
+                // Wrap the transcript in delimiters so the model has a hard
+                // data boundary — spoken words that sound like commands (or an
+                // empty turn) are cleaned as text, not obeyed. The system
+                // prompt's closer names these <transcript> tags.
+                Message(role: "user", content: "<transcript>\n" + transcript + "\n</transcript>"),
             ],
             temperature: 0,
             // D72: read at request time (D40 live-read posture); nil → omitted.

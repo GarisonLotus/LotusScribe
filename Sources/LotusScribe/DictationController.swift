@@ -183,8 +183,11 @@ final class DictationController {
                         "stale transcript dropped (generation \(capturedGeneration))")
                     return
                 }
-                guard !text.isEmpty else {
+                guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                     // Failure policy (spec §cross-cutting): empty → no paste.
+                    // Trimmed so a whitespace-only transcript is dropped here
+                    // rather than reaching the cleanup LLM, which would answer
+                    // the empty turn with "please provide the transcript…".
                     Self.logger.info("empty transcript — nothing inserted")
                     pill.hide()
                     onOutcome?(.empty)  // D96: past the D23 stale guard → current.
