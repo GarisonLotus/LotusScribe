@@ -298,3 +298,34 @@ predicate; the new `warning(for:)` mapping. **Files:** `HotkeyStateMachine.swift
 "Command"; `usesMicKey` true for `.combo(96,_)`, false otherwise. HUMAN — picker
 shows "Command + F5" (not "Custom") on the default; Try-it why-line visible on
 F5, hidden on e.g. ctrl+alt+9; no alarm on the ⌘F5 default.
+
+---
+
+## §10G — default hotkey OFF F5 → ⌃⌥D (D105, supersedes D87)
+
+F5 is Apple's accessibility key — EVERY combo (F5→Dictation, ⌘F5→VoiceOver,
+⌥⌘F5→Accessibility panel) is a system accessibility shortcut handled ABOVE the
+session tap, so our swallow can't win. Live-verified. New default = **⌃⌥D**
+(`.combo(keyCode: 2, modifiers: [.maskControl, .maskAlternate])`), live-verified
+collision-free. Mechanical default-value flip only — no parse/binding/swallow
+change; copy/labels already adapt (10A/10F).
+
+**Deliverable**
+- `HotkeyStateMachine.swift`: `HotkeyChord.resolved(from:)` fallback
+  `.combo(96, .maskCommand)` → `.combo(keyCode: 2, modifiers: [.maskControl,
+  .maskAlternate])`. `HotkeyOption.from(persisted: nil/empty)` `.custom("cmd+f5")`
+  → `.custom("ctrl+option+d")`. Update the D87/D80 doc comments to D105.
+- `SettingsStore.swift`: update the `hotkeyChord` doc comment (⌘F5 → ⌃⌥D default).
+- Retarget tests to the new default: `HotkeyStateMachineTests`
+  (`resolvedDefaultsToCmdF5` → ⌃⌥D; `hotkeyOptionRoundTrips` nil/empty →
+  `.custom("ctrl+option+d")`), `SettingsStoreTests` (absent/empty resolve → the
+  ⌃⌥D combo). Keep all OTHER assertions (bare "f5" parse, functionKey round-trips)
+  unchanged — only the DEFAULT expectations move.
+
+**Pure/headless (D14):** the two default sites + their tests. **UI:** none (copy
+derives from the chord). **Files:** `HotkeyStateMachine.swift`, `SettingsStore.swift`,
+`HotkeyStateMachineTests.swift`, `SettingsStoreTests.swift`.
+**Verify:** unit — `resolved(from: nil/""/garbage) == .combo(2,[.maskControl,
+.maskAlternate])`; `from(persisted: nil) == .custom("ctrl+option+d")`; existing
+`parse("f5")`/functionKey round-trips UNCHANGED. Build+test green. HUMAN (already
+done): fresh default ⌃⌥D holds → dictation, no collision.

@@ -50,8 +50,10 @@ persistence via a buffered `SettingsDraft` committed on Continue (D90/D91;
 D95 accepted local field-builder duplication). Reviewer APPROVE + architect
 non-objection, 258/24. Next: **10E** (see below), then 10D.
 **Baseline tests:** 266 tests / 24 suites green.
-**Active gate:** 10A–10C + 10E + 10F cleared. Next: **10G** (default hotkey
-OFF F5 — see below), then 10D.
+**Active gate:** 10A–10C + 10E + 10F + 10G cleared. Next: **10D** (install
+cards + Test-connection on the Setup step) — the LAST Phase 10 sub-phase.
+10G = default hotkey flipped ⌘F5 → ⌃⌥D (D105 supersedes D87); ⌃⌥D
+live-verified collision-free. Reviewer APPROVE + tester PASS.
 10F = "Hold Command + F5" clarity: picker label fix (R10A-1), F5-only why-line
 (`usesMicKey`), collision-copy redesign (⌘F5 clean, bare-F5 leads with
 "Command"). Reviewer APPROVE + tester PASS (266/24). NOTE: 10F's code is

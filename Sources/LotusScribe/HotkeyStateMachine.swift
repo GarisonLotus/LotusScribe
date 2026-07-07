@@ -35,15 +35,14 @@ enum HotkeyChord: Equatable {
         return .combo(keyCode: keyCode, modifiers: modifiers)
     }
 
-    /// The persisted `hotkeyChord` string, or the ⌘F5 default (D80) when it is
+    /// The persisted `hotkeyChord` string, or the ⌃⌥D default (D105) when it is
     /// absent or unparseable. Pure — the single fallback site (replaces
     /// AppDelegate's inline `?? .fnHold`; D15/D27: fn is dead on macOS 26).
-    /// D87: default is ⌘F5, not bare F5 — on laptops where F5 is the hardware
-    /// mic/dictation key, bare F5 never emits keycode 96 (the system consumes
-    /// it), but holding Command releases keycode 96 to the session tap. Cmd is
-    /// the only modifier that frees it (Ctrl/Option don't; live-verified).
+    /// D105 (supersedes D87): default is ⌃⌥D — F5 (even ⌘F5) is fully claimed
+    /// by macOS accessibility shortcuts, so keycode 96 never reaches the tap.
+    /// ⌃⌥D is unclaimed and reaches the session tap reliably.
     static func resolved(from string: String?) -> HotkeyChord {
-        string.flatMap(parse) ?? .combo(keyCode: 96, modifiers: .maskCommand)
+        string.flatMap(parse) ?? .combo(keyCode: 2, modifiers: [.maskControl, .maskAlternate])
     }
 
     /// Human-readable spelling for UI labels (D89): words joined by " + ",
@@ -131,11 +130,11 @@ enum HotkeyOption: Equatable {
     var chord: HotkeyChord? { HotkeyChord.parse(persisted) }
 
     /// Reconstruct the option from a persisted string. "f1"…"f12" → function
-    /// key; absent/empty → the ⌘F5 default (D80/D87); everything else (combos,
+    /// key; absent/empty → the ⌃⌥D default (D105); everything else (combos,
     /// "fn") → custom, original casing preserved for display.
     static func from(persisted: String?) -> HotkeyOption {
         guard let lowered = persisted?.lowercased(), !lowered.isEmpty else {
-            return .custom("cmd+f5")
+            return .custom("ctrl+option+d")
         }
         if lowered.first == "f", let n = Int(lowered.dropFirst()), (1...12).contains(n) {
             return .functionKey(n)

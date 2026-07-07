@@ -52,6 +52,18 @@ Retargeted: bare-F5 collision test now asserts message CONTAINS "Command"
 (old "Turn both off" wording GONE — grep 0 hits across Sources/ + Tests/, not
 duplicated). All confirmed live `#expect` (not skipped/commented).
 
+## 10G close
+
+**266 tests / 24 suites, 0 failures** (net 0 — retargets existing assertions,
+adds none). Run TWICE, both green (4.9s / 4.9s), no flakes. Default hotkey
+retargeted ⌘F5 → ⌃⌥D: nil/empty `hotkeyChord` now resolves to
+`.combo(keyCode: 2, [.maskControl, .maskAlternate])` and
+`HotkeyOption.from(persisted:)` nil/"" → `.custom("ctrl+option+d")`. Confirmed
+live `#expect`. No stale "default resolves to ⌘F5" assertion remains — grep
+`cmd+f5`/`maskCommand`/`f5` hits are all explicit non-default parse/round-trip/
+collision/label cases. `parse("f5")` → `.combo(96, [])` and functionKey(5)
+round-trips present + unchanged.
+
 ## Flake registry
 
 - (none recorded this phase)

@@ -212,19 +212,19 @@ final class SettingsStoreTests {
         #expect(store.hotkeyChord == "ctrl+alt+cmd+9")
     }
 
-    @Test func emptyHotkeyChordReadsAsNilAndResolvesToCmdF5() {
+    @Test func emptyHotkeyChordReadsAsNilAndResolvesToCtrlOptionD() {
         let store = SettingsStore(defaults: defaults)
         defaults.set("", forKey: "hotkeyChord")  // raw junk write bypasses UI
         #expect(store.hotkeyChord == nil)
-        // D87: absent/empty resolves to the ⌘F5 default.
+        // D105: absent/empty resolves to the ⌃⌥D default.
         #expect(HotkeyChord.resolved(from: store.hotkeyChord)
-            == .combo(keyCode: 96, modifiers: .maskCommand))
+            == .combo(keyCode: 2, modifiers: [.maskControl, .maskAlternate]))
     }
 
-    @Test func absentHotkeyChordResolvesToCmdF5() {
+    @Test func absentHotkeyChordResolvesToCtrlOptionD() {
         let store = SettingsStore(defaults: defaults)
         #expect(store.hotkeyChord == nil)
         #expect(HotkeyChord.resolved(from: store.hotkeyChord)
-            == .combo(keyCode: 96, modifiers: .maskCommand))
+            == .combo(keyCode: 2, modifiers: [.maskControl, .maskAlternate]))
     }
 }
