@@ -46,9 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let dictation = DictationController()
-        // Spec §5: tint the status-item lotus magenta while the mic is capturing.
-        dictation.onListeningChanged = { [weak self] listening in
-            self?.statusItemController?.setListening(listening)
+        // Spec §5 / icons Task 2: drive the full-color status icon's three
+        // states (idle / listening glow+dot / processing pulse).
+        dictation.onCaptureStateChanged = { [weak self] state in
+            self?.statusItemController?.setState(state)
         }
         // D97: relay each dictation outcome as a notification so the onboarding
         // try-it view can observe it (spec §10E1) — keeps DictationController

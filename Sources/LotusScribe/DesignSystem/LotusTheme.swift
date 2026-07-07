@@ -26,12 +26,6 @@ private extension NSColor {
     }
 }
 
-extension NSColor {
-    /// AppKit accent for the status-item tint (spec §5 — magenta while
-    /// listening). Same magenta as `Color.lotusAccentPink`.
-    static let lotusAccentPink = NSColor(rgb: 0xFF5CA8)
-}
-
 /// A `Color` that resolves to `dark` under a dark appearance and `light`
 /// otherwise. This is how every token carries both spec variants in one value.
 private func dynamicColor(dark: NSColor, light: NSColor) -> Color {

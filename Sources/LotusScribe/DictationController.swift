@@ -19,17 +19,20 @@ final class DictationController {
     private let pill = PillController()
     private var isRecording = false
 
-    /// Fired true while the mic is actively capturing (warming/recording),
-    /// false otherwise — drives the status-item magenta tint (spec §5). Wired
-    /// by AppDelegate; nil in headless tests. Not part of the dictation logic.
-    var onListeningChanged: ((Bool) -> Void)?
+    /// The status-item's capture phase: `.idle` (nothing happening),
+    /// `.listening` (mic open), `.processing` (mic closed, transcribing/
+    /// cleaning). Drives the full-color status icon's three states (idle /
+    /// glow+dot / pulsing dot). Wired by AppDelegate; nil in headless tests.
+    /// Purely observational — the dictation loop behaves identically when nil.
+    enum CaptureState { case idle, listening, processing }
+    var onCaptureStateChanged: ((CaptureState) -> Void)?
 
     /// Terminal result of a single dictation, for observers (spec §10E1).
     enum DictationOutcome: String {
         case inserted, empty, failed, tooShort
     }
 
-    /// D96: purely observational seam mirroring `onListeningChanged` (optional,
+    /// D96: purely observational seam like `onCaptureStateChanged` (optional,
     /// nil in headless tests, main-actor, additive — the loop behaves
     /// identically when nil). Fires ONLY at the current-generation branch
     /// points below; stale-dropped Tasks signal nothing. Not dictation logic.
@@ -126,7 +129,7 @@ final class DictationController {
             try recorder.start()
             isRecording = true
             pill.show(.warming)
-            onListeningChanged?(true)  // spec §5: mic open → magenta status icon
+            onCaptureStateChanged?(.listening)  // spec §5: mic open
             // D74 (amends D42's trigger set): warm the model while the user
             // speaks — after a SUCCESSFUL start only, so blocked/failed
             // presses fire nothing. Fire-and-forget; warmUp() is log-only
@@ -140,7 +143,7 @@ final class DictationController {
             Self.logger.error(
                 "recorder start failed: \(String(describing: error), privacy: .public)")
             pill.show(.error)
-            onListeningChanged?(false)
+            onCaptureStateChanged?(.idle)
         }
     }
 
@@ -148,7 +151,8 @@ final class DictationController {
         // Start may have failed (mic denied) — no stop without a start.
         guard isRecording else { return }
         isRecording = false
-        onListeningChanged?(false)  // spec §5: mic closed → status icon reverts
+        // Mic closed — the icon transitions to .processing or .idle below,
+        // depending on whether there's usable audio to transcribe.
         let wav = recorder.stop()
 
         guard Self.hasUsableAudio(wavByteCount: wav.count) else {
@@ -158,9 +162,11 @@ final class DictationController {
                 "capture too short (\(wav.count) bytes) — skipping transcription")
             pill.hide()  // spec §2C: tap-length press — no error flash
             onOutcome?(.tooShort)  // D96: synchronous/pre-Task → always current.
+            onCaptureStateChanged?(.idle)
             return
         }
         pill.update(.processing)
+        onCaptureStateChanged?(.processing)
 
         let capturedGeneration = generation
         // D52/D23: snapshot so this Task carries its own dictation's app —
@@ -182,6 +188,7 @@ final class DictationController {
                     Self.logger.info("empty transcript — nothing inserted")
                     pill.hide()
                     onOutcome?(.empty)  // D96: past the D23 stale guard → current.
+                    onCaptureStateChanged?(.idle)
                     return
                 }
                 Self.logger.info("transcript: \(text, privacy: .public)")
@@ -214,6 +221,7 @@ final class DictationController {
                 inserter.insert(text)
                 pill.update(terminal)
                 onOutcome?(.inserted)  // D96: past the D43 post-cleanup re-check → current.
+                onCaptureStateChanged?(.idle)
             } catch {
                 // Failure policy (spec §cross-cutting): log + error flash —
                 // but stale failures never touch the pill (D23/spec §2C).
@@ -222,6 +230,7 @@ final class DictationController {
                 if capturedGeneration == generation {
                     pill.update(.error)
                     onOutcome?(.failed)  // D96: inside the generation guard → stale failures fire nothing.
+                    onCaptureStateChanged?(.idle)
                 }
             }
         }
