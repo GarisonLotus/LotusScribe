@@ -35,14 +35,14 @@ enum HotkeyChord: Equatable {
         return .combo(keyCode: keyCode, modifiers: modifiers)
     }
 
-    /// The persisted `hotkeyChord` string, or the ⌃⌥D default (D105) when it is
+    /// The persisted `hotkeyChord` string, or the ⌘⌥D default (D106) when it is
     /// absent or unparseable. Pure — the single fallback site (replaces
     /// AppDelegate's inline `?? .fnHold`; D15/D27: fn is dead on macOS 26).
-    /// D105 (supersedes D87): default is ⌃⌥D — F5 (even ⌘F5) is fully claimed
-    /// by macOS accessibility shortcuts, so keycode 96 never reaches the tap.
-    /// ⌃⌥D is unclaimed and reaches the session tap reliably.
+    /// D106 (supersedes D105): default is ⌘⌥D — F5 (even ⌘F5) is fully claimed
+    /// by macOS accessibility shortcuts, so keycode 96 never reaches the tap;
+    /// ⌘⌥D is unclaimed and reaches the session tap reliably.
     static func resolved(from string: String?) -> HotkeyChord {
-        string.flatMap(parse) ?? .combo(keyCode: 2, modifiers: [.maskControl, .maskAlternate])
+        string.flatMap(parse) ?? .combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate])
     }
 
     /// Human-readable spelling for UI labels (D89): words joined by " + ",
@@ -134,7 +134,7 @@ enum HotkeyOption: Equatable {
     /// "fn") → custom, original casing preserved for display.
     static func from(persisted: String?) -> HotkeyOption {
         guard let lowered = persisted?.lowercased(), !lowered.isEmpty else {
-            return .custom("ctrl+option+d")
+            return .custom("command+option+d")
         }
         if lowered.first == "f", let n = Int(lowered.dropFirst()), (1...12).contains(n) {
             return .functionKey(n)
