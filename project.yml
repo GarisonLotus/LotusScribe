@@ -26,6 +26,11 @@ targets:
         # D12/Q1: real Apple Development signing so TCC grants persist.
         DEVELOPMENT_TEAM: 5RC66Q82V9
         CODE_SIGN_STYLE: Automatic
+        # Icons Task 3: compile the AppIcon asset set (Sources/LotusScribe/
+        # Assets.xcassets, auto-included by the recursive source) into the
+        # bundle so Finder / System Settings show the Lotus mark. LSUIElement
+        # still suppresses the Dock icon — that invariant is unaffected.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   LotusScribeTests:
     type: bundle.unit-test

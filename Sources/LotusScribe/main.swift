@@ -2,6 +2,13 @@
 import AppKit
 import Foundation
 
+// Build tool (icons Task 3): `--render-app-icon <dir>` writes the AppIcon asset
+// set and exits BEFORE any normal launch — no permission prompts, no status
+// item. Run via `make appicon`.
+if MainActor.assumeIsolated({ AppIconRenderer.handleCommandLineIfNeeded() }) {
+    exit(0)
+}
+
 // Input Monitoring MUST be requested here, before ANYTHING calls
 // AXIsProcessTrusted(). rdar://7381305: IOHIDRequestAccess(ListenEvent)
 // silently no-ops — no prompt, no pane registration — if the accessibility

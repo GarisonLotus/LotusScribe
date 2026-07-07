@@ -1,5 +1,12 @@
 # Build recipes — see docs/phase-0-spec.md §"Makefile recipe".
-.PHONY: generate build test
+.PHONY: generate build test appicon
+
+# Regenerate the AppIcon asset set from LotusAppIcon (icons Task 3). Reuses the
+# built app's OWN renderer (--render-app-icon) so the mark is never duplicated;
+# re-run after any LotusMark/LotusAppIcon change, then `make build` to bundle it.
+appicon: build
+	build/Build/Products/Debug/LotusScribe.app/Contents/MacOS/LotusScribe \
+		--render-app-icon Sources/LotusScribe/Assets.xcassets/AppIcon.appiconset
 
 generate:
 	xcodegen generate

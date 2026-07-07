@@ -19,6 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LotusFonts.register()
         LotusAppearance.apply()
         MainMenu.install()
+        // Icons Task 3: dev fallback so the Dock/app icon is the Lotus mark even
+        // when the AppIcon asset catalog isn't compiled into the dev bundle.
+        if let icon = AppIconRenderer.applicationIcon() {
+            NSApplication.shared.applicationIconImage = icon
+        }
         statusItemController = StatusItemController()
         Permissions.logStatusAtLaunch()
 
