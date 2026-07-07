@@ -229,53 +229,6 @@ enum LotusAppearance {
     }
 }
 
-// MARK: - Shape: the lotus mark (spec §1)
-
-/// One petal: a tall rounded shape with a wide round top and a narrow base
-/// (70/30 vertical corner asymmetry).
-private struct Petal: Shape {
-    func path(in rect: CGRect) -> Path {
-        let topRadius = rect.width * 0.5
-        let baseRadius = rect.width * 0.18
-        return Path(
-            UnevenRoundedRectangle(
-                topLeadingRadius: topRadius,
-                bottomLeadingRadius: baseRadius,
-                bottomTrailingRadius: baseRadius,
-                topTrailingRadius: topRadius)
-            .path(in: rect).cgPath)
-    }
-}
-
-/// Three-petal lotus mark: a vertical center petal flanked by two petals
-/// rotated ±40° about the shared base, gradient-filled. Side petals ride at
-/// 50% opacity, center at 95% (spec §1).
-struct LotusMark: View {
-    let size: CGFloat
-
-    init(size: CGFloat) { self.size = size }
-
-    private var petalWidth: CGFloat { size * 0.34 }
-
-    var body: some View {
-        ZStack {
-            petal.opacity(0.5).rotationEffect(.degrees(-40), anchor: .bottom)
-            petal.opacity(0.5).rotationEffect(.degrees(40), anchor: .bottom)
-            petal.opacity(0.95)
-        }
-        .frame(width: size, height: size)
-    }
-
-    private var petal: some View {
-        // Petal pinned to the bottom-center of the size×size frame, so the
-        // ±40° `anchor: .bottom` rotations all fan out from the shared base.
-        Petal()
-            .fill(LinearGradient.lotusAccent)
-            .frame(width: petalWidth, height: size * 0.92)
-            .frame(width: size, height: size, alignment: .bottom)
-    }
-}
-
 // MARK: - Section header (spec §3)
 
 /// Uppercase, tracked Chakra Petch Medium — replaces native section headers.
