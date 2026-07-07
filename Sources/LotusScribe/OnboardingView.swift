@@ -125,7 +125,7 @@ struct OnboardingView: View {
             Text("Try it")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
-            Text("Choose your hotkey, then hold it and talk:")
+            Text("Choose your hotkey, then hold \(hotkeyLabel) and talk:")
                 .font(.lotusBody)
                 .foregroundStyle(Color.lotusTextSecondary)
                 .multilineTextAlignment(.center)

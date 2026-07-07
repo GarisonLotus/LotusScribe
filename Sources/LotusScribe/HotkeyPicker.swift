@@ -156,11 +156,13 @@ struct HotkeyPicker: View {
 }
 
 extension HotkeyOption {
-    /// Short label for menus and the HUD chip: "F5" or the raw custom string.
+    /// Short label for menus and the HUD chip (D89): "F5" for a function key,
+    /// or the resolved chord spelled out ("Command + F5") — falling back to the
+    /// raw custom string when it doesn't parse yet.
     var displayLabel: String {
         switch self {
         case .functionKey(let n): return "F\(n)"
-        case .custom(let string): return string
+        case .custom(let string): return chord?.spelledLabel ?? string
         }
     }
 }

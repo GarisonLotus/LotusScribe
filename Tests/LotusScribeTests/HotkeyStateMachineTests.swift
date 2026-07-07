@@ -247,6 +247,34 @@ struct HotkeyStateMachineTests {
         #expect(HotkeyOption.custom("banana").chord == nil)
     }
 
+    // MARK: - Phase 10: spelledLabel (D89)
+
+    @Test func spelledLabelSpellsCommandF5() {
+        #expect(HotkeyChord.combo(keyCode: 96, modifiers: .maskCommand).spelledLabel
+            == "Command + F5")
+    }
+
+    @Test func spelledLabelBareFunctionKeyIsJustTheKey() {
+        #expect(HotkeyChord.combo(keyCode: 96, modifiers: []).spelledLabel == "F5")
+    }
+
+    @Test func spelledLabelSpellsMultiModifierCombo() {
+        #expect(HotkeyChord.combo(
+            keyCode: 25, modifiers: [.maskControl, .maskAlternate, .maskCommand]).spelledLabel
+            == "Control + Option + Command + 9")
+    }
+
+    @Test func spelledLabelFnHold() {
+        #expect(HotkeyChord.fnHold.spelledLabel == "fn")
+    }
+
+    @Test func spelledLabelKeepsCanonicalOrderWithShift() {
+        // Shift sits between Option and Command regardless of insertion order.
+        #expect(HotkeyChord.combo(
+            keyCode: 6, modifiers: [.maskCommand, .maskShift, .maskAlternate]).spelledLabel
+            == "Option + Shift + Command + Z")
+    }
+
     // MARK: - Phase 9: bare-key D30 pair-balance (rides handleCombo unchanged)
 
     @Test func bareFunctionKeyChordSwallowsAndPairBalances() {

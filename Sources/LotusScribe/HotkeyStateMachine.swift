@@ -46,6 +46,36 @@ enum HotkeyChord: Equatable {
         string.flatMap(parse) ?? .combo(keyCode: 96, modifiers: .maskCommand)
     }
 
+    /// Human-readable spelling for UI labels (D89): words joined by " + ",
+    /// e.g. "Command + F5" — not glyphs. Modifiers in canonical order
+    /// Control, Option, Shift, Command, then the key. Pure (D14).
+    var spelledLabel: String {
+        switch self {
+        case .fnHold:
+            return "fn"
+        case .combo(let keyCode, let modifiers):
+            let ordered: [(CGEventFlags, String)] = [
+                (.maskControl, "Control"), (.maskAlternate, "Option"),
+                (.maskShift, "Shift"), (.maskCommand, "Command"),
+            ]
+            let parts = ordered.filter { modifiers.contains($0.0) }.map(\.1)
+                + [Self.keyName(for: keyCode)]
+            return parts.joined(separator: " + ")
+        }
+    }
+
+    /// Reverse of `functionKeyCodes`/`keyCodes` — the display name for a
+    /// keycode ("f5" → "F5", "z" → "Z"); unknown → "key<code>".
+    private static func keyName(for code: Int64) -> String {
+        if let name = functionKeyCodes.first(where: { $0.value == code })?.key {
+            return name.uppercased()
+        }
+        if let name = keyCodes.first(where: { $0.value == code })?.key {
+            return name.uppercased()
+        }
+        return "key\(code)"
+    }
+
     private static let modifierFlags: [String: CGEventFlags] = [
         "ctrl": .maskControl, "control": .maskControl,
         "alt": .maskAlternate, "option": .maskAlternate, "opt": .maskAlternate,
