@@ -44,11 +44,13 @@ user requests:
 
 ## §4. Current state
 
-**Where we are:** 10A CLOSED (label clarity — reviewer APPROVE + tester PASS).
-Next: 10B (setup-step scaffold + renumber). Slice/decisions in
+**Where we are:** 10A + 10B CLOSED. 10B = 4th step scaffold ("Set up your
+servers" placeholder) + renumber to 4 steps (reviewer APPROVE, build green,
+human-verified visual flow). Next: 10C (real STT/LLM fields + "Use
+recommended" prefill + persistence). Slice/decisions in
 `phase-10-architect-log.md` (D89–D94); spec in `phase-10-spec.md`.
-**Baseline tests:** 254 tests / 24 suites green (+5 label tests over 03f4ebe).
-**Active gate:** 10A cleared; 10B not started.
+**Baseline tests:** 254 tests / 24 suites green (10B added no tests).
+**Active gate:** 10A + 10B cleared; 10C not started.
 **Open forward items:** R10A-1 — the Settings hotkey picker DROPDOWN still
 prints literal "Custom" for a custom chord, so the ⌘F5 default reads "Custom"
 there (not "Command + F5"). Onboarding copy/HUD are correct; this is a

@@ -2,8 +2,8 @@ import AppKit
 import AVFoundation
 import SwiftUI
 
-/// First-run onboarding, reskinned to "Lotus Bloom" as a 3-step flow
-/// (DESIGN_SPEC.md §5): Welcome → Permissions → Try it. The permission logic
+/// First-run onboarding, reskinned to "Lotus Bloom" as a 4-step flow
+/// (DESIGN_SPEC.md §5): Welcome → Permissions → Setup → Try it. The permission logic
 /// is unchanged from the original single-checklist version — same live
 /// `state.snapshot`, same `OnboardingStep.resolve` highlighting, same real mic
 /// prompt and System-Settings deep links (D68), same Finish gate on all-green
@@ -23,7 +23,7 @@ struct OnboardingView: View {
     let onSkip: () -> Void
     let onFinish: () -> Void
 
-    /// Which of the three steps is on screen (0 Welcome, 1 Permissions, 2 Try).
+    /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try).
     @State private var stepIndex = 0
 
     /// Live label for the HUD-preview hotkey chip, tracking the persisted
@@ -58,6 +58,9 @@ struct OnboardingView: View {
         switch stepIndex {
         case 0: welcomeStep
         case 1: permissionsStep
+        // D93: Setup inserted before "Try it" so servers can be configured
+        // before the user tries dictating (skippable — see navBar case 2).
+        case 2: setupStep
         default: tryItStep
         }
     }
@@ -66,7 +69,7 @@ struct OnboardingView: View {
         VStack(spacing: 14) {
             Spacer()
             LotusMark(size: 52)
-            kicker("STEP 1 OF 3")
+            kicker("STEP 1 OF 4")
             Text("Talk. It types.")
                 .font(.lotusDisplay(38))
                 .lineSpacing(3)  // ~1.08 line-height
@@ -83,7 +86,7 @@ struct OnboardingView: View {
 
     private var permissionsStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            kicker("STEP 2 OF 3")
+            kicker("STEP 2 OF 4")
             Text("Grant permissions")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
@@ -119,9 +122,27 @@ struct OnboardingView: View {
         }
     }
 
+    private var setupStep: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                kicker("STEP 3 OF 4")
+                Text("Set up your servers")
+                    .font(.lotusDisplay(26))
+                    .foregroundStyle(Color.lotusTextPrimary)
+                // Placeholder — 10C/10D fill this card with preset/model fields.
+                LotusCard {
+                    Text("Configure your STT and cleanup servers.")
+                        .font(.lotusBody)
+                        .foregroundStyle(Color.lotusTextSecondary)
+                        .padding(14)
+                }
+            }
+        }
+    }
+
     private var tryItStep: some View {
         VStack(spacing: 14) {
-            kicker("STEP 3 OF 3")
+            kicker("STEP 4 OF 4")
             Text("Try it")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
@@ -142,7 +163,7 @@ struct OnboardingView: View {
 
     private var progressDots: some View {
         HStack(spacing: 8) {
-            ForEach(0..<3, id: \.self) { i in
+            ForEach(0..<4, id: \.self) { i in
                 Circle()
                     .fill(i == stepIndex
                         ? AnyShapeStyle(Color.lotusAccentText)
@@ -168,8 +189,16 @@ struct OnboardingView: View {
                 Spacer()
                 Button("Continue") { stepIndex = 2 }
                     .buttonStyle(LotusButtonStyle(.primary))
-            default:
+            case 2:
                 Button("Back") { stepIndex = 1 }
+                    .buttonStyle(LotusButtonStyle(.ghost))
+                Spacer()
+                // Setup is a skippable gate — Continue always advances (10C/10D
+                // add the fields; nothing to validate yet).
+                Button("Continue") { stepIndex = 3 }
+                    .buttonStyle(LotusButtonStyle(.primary))
+            default:
+                Button("Back") { stepIndex = 2 }
                     .buttonStyle(LotusButtonStyle(.ghost))
                 Spacer()
                 Button("Finish", action: onFinish)
