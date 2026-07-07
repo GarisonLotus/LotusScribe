@@ -9,16 +9,27 @@ if MainActor.assumeIsolated({ AppIconRenderer.handleCommandLineIfNeeded() }) {
     exit(0)
 }
 
-// Input Monitoring MUST be requested here, before ANYTHING calls
-// AXIsProcessTrusted(). rdar://7381305: IOHIDRequestAccess(ListenEvent)
-// silently no-ops — no prompt, no pane registration — if the accessibility
-// status was ever checked earlier in the process. logStatusAtLaunch() and the
-// onboarding 1 s poll both call AXIsProcessTrusted(), so any later request is
-// dead-on-arrival. Firing first (a) shows the system prompt on true first run
-// and (b) registers the app in the Input Monitoring list. Guarded out of
-// hosted-test launches so `make test` never blocks on a TCC dialog.
+// Input Monitoring is requested here — before ANYTHING calls
+// AXIsProcessTrusted() — but ONLY when Microphone is already granted: a
+// returning, onboarded user (mic is the first real TCC prompt, D68). For that
+// user we want the hotkey live immediately, so the IM request fires up front
+// where the rdar ordering below still holds.
+//
+// A fresh / mid-onboarding user (mic not yet granted) gets NO launch prompt:
+// the IM request fires only when they click "Allow…" in onboarding. That is
+// the point — no unsolicited Input Monitoring prompt before the user has
+// engaged at all.
+//
+// rdar://7381305: IOHIDRequestAccess(ListenEvent) silently no-ops — no
+// prompt, no pane registration — if AXIsProcessTrusted() ran earlier in the
+// process. logStatusAtLaunch() and the onboarding 1 s poll both call it, so
+// the request must precede AppKit. (isMicrophoneGranted() reads
+// AVCaptureDevice status, not AX, so the gate does not disturb this ordering.)
+// Guarded out of hosted-test launches so `make test` never blocks on a dialog.
 if ProcessInfo.processInfo.environment["XCTestSessionIdentifier"] == nil {
-    _ = Permissions.requestListenEventAccess()
+    if Permissions.isMicrophoneGranted() {
+        _ = Permissions.requestListenEventAccess()
+    }
 }
 
 let delegate = AppDelegate()

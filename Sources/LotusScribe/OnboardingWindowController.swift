@@ -176,6 +176,11 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
 
     private func complete() {
         settings.onboardingCompleted = true
+        // The user may have just granted Input Monitoring — tell AppDelegate to
+        // bring the hotkey tap up live (it is not started at launch for an
+        // ungranted user, to keep the AX subsystem clean for the IM request;
+        // see AppDelegate / rdar://7381305).
+        NotificationCenter.default.post(name: .lotusPermissionsChanged, object: nil)
         window?.close()
     }
 

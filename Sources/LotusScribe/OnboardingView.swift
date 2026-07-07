@@ -138,13 +138,10 @@ struct OnboardingView: View {
                 // D68: the one real TCC prompt — fires only from this tap.
                 AVCaptureDevice.requestAccess(for: .audio) { _ in }
             }
-            permissionRow(
-                granted: state.snapshot.accessibilityTrusted, current: permissionStep == .accessibility,
-                title: "Accessibility",
-                detail: "Lets the hotkey listener and text insertion work. Enable LotusScribe in the list.",
-                buttonTitle: "Open Settings…") {
-                open(Self.accessibilityPane)
-            }
+            // Input Monitoring comes BEFORE Accessibility (rdar://7381305): its
+            // request must be the process's first TCC call that touches the AX
+            // subsystem, so the Accessibility row (whose live state is withheld
+            // until then) is surfaced second. See OnboardingStep.resolve.
             permissionRow(
                 granted: state.snapshot.listenEventGranted, current: permissionStep == .inputMonitoring,
                 title: "Input Monitoring",
@@ -156,6 +153,13 @@ struct OnboardingView: View {
                 // follow-up open() slammed Settings over the prompt and killed
                 // it every time. The onboarding poll picks up the grant.
                 _ = Permissions.requestListenEventAccess()
+            }
+            permissionRow(
+                granted: state.snapshot.accessibilityTrusted, current: permissionStep == .accessibility,
+                title: "Accessibility",
+                detail: "Lets the hotkey listener and text insertion work. Enable LotusScribe in the list.",
+                buttonTitle: "Open Settings…") {
+                open(Self.accessibilityPane)
             }
             Spacer(minLength: 0)
         }

@@ -2,9 +2,10 @@ import Testing
 @testable import LotusScribe
 
 /// Headless truth table for `OnboardingStep.resolve` (spec §7B, D67/D68):
-/// first ungranted in order mic → accessibility → inputMonitoring, else
+/// first ungranted in order mic → inputMonitoring → accessibility, else
 /// `.done`. All 8 snapshot combinations — Input Monitoring is
-/// UNCONDITIONAL (D68), so no combination ever skips its row.
+/// UNCONDITIONAL (D68), so no combination ever skips its row. IM precedes
+/// Accessibility by design (rdar://7381305 — see OnboardingStep).
 struct OnboardingStateMachineTests {
     private func resolve(mic: Bool, ax: Bool, listen: Bool) -> OnboardingStep {
         OnboardingStep.resolve(PermissionSnapshot(
@@ -29,20 +30,21 @@ struct OnboardingStateMachineTests {
         #expect(resolve(mic: false, ax: true, listen: true) == .mic)
     }
 
-    // Mic granted → accessibility is next, ahead of input monitoring.
+    // Mic granted → input monitoring is next, ahead of accessibility
+    // (rdar://7381305 ordering).
 
-    @Test func micOnlyResolvesToAccessibility() {
-        #expect(resolve(mic: true, ax: false, listen: false) == .accessibility)
+    @Test func micOnlyResolvesToInputMonitoring() {
+        #expect(resolve(mic: true, ax: false, listen: false) == .inputMonitoring)
     }
+
+    @Test func micAndAccessibilityWithoutListenResolvesToInputMonitoring() {
+        #expect(resolve(mic: true, ax: true, listen: false) == .inputMonitoring)
+    }
+
+    // Input monitoring granted → accessibility is the last gate.
 
     @Test func micAndListenResolvesToAccessibility() {
         #expect(resolve(mic: true, ax: false, listen: true) == .accessibility)
-    }
-
-    // D68: input monitoring is a real, unconditional step.
-
-    @Test func micAndAccessibilityResolvesToInputMonitoring() {
-        #expect(resolve(mic: true, ax: true, listen: false) == .inputMonitoring)
     }
 
     @Test func allGrantedResolvesToDone() {

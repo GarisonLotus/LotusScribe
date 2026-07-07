@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItemController: StatusItemController?
     private var hotkeyController: HotkeyController?
+    private var permissionsObserver: NSObjectProtocol?
     // Internal (not private) so the hosted smoke test can assert real
     // post-launch composition (R3).
     private(set) var dictationController: DictationController?
@@ -32,9 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (Marker verified empirically: xcodebuild test sets XCTestSessionIdentifier.)
         if ProcessInfo.processInfo.environment["XCTestSessionIdentifier"] == nil {
             // Input Monitoring is requested in main.swift BEFORE any AX check
-            // (rdar://7381305 — requesting after AXIsProcessTrusted() no-ops).
-            // Do NOT request it here: logStatusAtLaunch() above already called
-            // AXIsProcessTrusted(), so a request at this point is dead.
+            // (rdar://7381305 — requesting after AXIsProcessTrusted() no-ops),
+            // and only when mic is already granted (returning user). Fresh /
+            // mid-onboarding users get it solely from the onboarding "Allow…"
+            // tap. Either way, do NOT request it here: logStatusAtLaunch()
+            // above already called AXIsProcessTrusted(), so a request now is dead.
 
             // D42: launch warm-up — fire-and-forget, log-only; skipped
             // internally when cleanup is not effective-enabled.
@@ -71,6 +74,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // default, D80). Dictation wiring unchanged.
         let hotkey = HotkeyController { action in dictation.handle(action) }
         hotkeyController = hotkey
-        hotkey.start()
+        // Start the tap ONLY when Input Monitoring is already granted. Creating
+        // the .defaultTap without it prompts for Accessibility at launch AND
+        // touches the AX/TCC subsystem — which (rdar://7381305) would make the
+        // first Input Monitoring request no-op, breaking a fresh user's
+        // onboarding "Allow…". A fresh user's tap comes up via
+        // .lotusPermissionsChanged the moment onboarding grants IM. Preflight
+        // only — hasListenEventAccess() reads no AX, so the latch is untouched.
+        if Permissions.hasListenEventAccess() {
+            hotkey.start()
+        }
+        // When onboarding grants Input Monitoring, bring the tap up live so the
+        // hotkey works without a relaunch. Guarded on the grant so a Skip that
+        // left IM ungranted never re-triggers the launch-time prompt path.
+        permissionsObserver = NotificationCenter.default.addObserver(
+            forName: .lotusPermissionsChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard Permissions.hasListenEventAccess() else { return }
+                self?.hotkeyController?.start()
+            }
+        }
     }
 }

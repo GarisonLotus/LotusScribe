@@ -57,7 +57,9 @@ final class OnboardingWindowControllerTests {
             micGranted: true, accessibilityTrusted: false, listenEventGranted: false)
         timer.fire()
 
-        #expect(OnboardingStep.resolve(controller.state.snapshot) == .accessibility)
+        // New order (rdar://7381305): mic granted → Input Monitoring is next,
+        // ahead of Accessibility.
+        #expect(OnboardingStep.resolve(controller.state.snapshot) == .inputMonitoring)
     }
 
     // D67: Finish is gated all-green — short of .done it's a no-op (flag

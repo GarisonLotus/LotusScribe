@@ -64,6 +64,14 @@ extension Notification.Name {
     /// try-it view) can react — userInfo["outcome"] = DictationOutcome.rawValue (D97).
     static let lotusDictationOutcome =
         Notification.Name("com.garisonlotus.LotusScribe.dictationOutcome")
+
+    /// Posted when onboarding closes, i.e. after the user may have granted
+    /// Input Monitoring. AppDelegate uses it to start the hotkey tap live once
+    /// the grant lands, so a fresh user need not relaunch. The tap is NOT
+    /// created at launch for an ungranted user — that would prompt for
+    /// Accessibility and dirty the AX subsystem (rdar://7381305).
+    static let lotusPermissionsChanged =
+        Notification.Name("com.garisonlotus.LotusScribe.permissionsChanged")
 }
 
 /// The single write path for the hotkey setting, used by both UI surfaces
