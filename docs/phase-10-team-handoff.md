@@ -49,12 +49,23 @@ fields on the Setup step, "Use recommended (Speaches+Ollama)" prefill,
 persistence via a buffered `SettingsDraft` committed on Continue (D90/D91;
 D95 accepted local field-builder duplication). Reviewer APPROVE + architect
 non-objection, 258/24. Next: **10E** (see below), then 10D.
-**Baseline tests:** 263 tests / 24 suites green (10E1 added +5).
-**Active gate:** 10A–10C + 10E1 cleared. Next: 10E2 (Try-it focused box +
-inline hint — self-insertion spike FIRST, against a reachable STT). Then 10D.
-10E1 = DictationController outcome seam (`onOutcome`/`DictationOutcome`) +
-`.lotusDictationOutcome` notification + pure `shouldShowSetupHint`; stale-drop
-invariant confirmed (reviewer). Decisions D96–D100.
+**Baseline tests:** 263 tests / 24 suites green.
+**Active gate:** 10A–10C + 10E1 + 10E2 cleared. Next: **10F** (Command+F5
+guidance — see below), then 10D.
+10E2 = Try-it focused `TextEditor` box + inline "no text? → Setup" hint;
+`HUDPreview` removed. SPIKE PASSED: real transcript inserts into the app's
+own focused box (⌘F5 end-to-end + 10C persistence confirmed).
+
+**NEW — 10F Command+F5 guidance (user-surfaced 2026-07-06):** onboarding does
+NOT explain that the working hotkey is HELD as **Command + F5**. On mic-key
+laptops F5 alone is macOS's mic key (never emits keycode 96); Command frees it
+(D87). But: (a) the picker DROPDOWN shows "Custom" / a bare "F5" label, not
+"Command + F5" (R10A-1); (b) the F5 collision warning (D86) still says "turn
+off Dictation" — outdated guidance; the real fix is HOLD COMMAND. (c) Picking
+bare "F5" from the F1–F12 menu yields a non-working hotkey on these laptops.
+Also the test machine has a stale persisted `hotkeyChord="f5"` (bare) — real
+default is nil→⌘F5. 10F must make onboarding clearly say "Hold Command + F5"
+and why, and reconcile the collision copy with D87.
 
 **NEW — 10E "Try it" live test box (user-surfaced 2026-07-06):** the current
 Try-it step has NO editable target, so dictated text (which `TextInserter`

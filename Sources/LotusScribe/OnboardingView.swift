@@ -30,10 +30,24 @@ struct OnboardingView: View {
     /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try).
     @State private var stepIndex = 0
 
-    /// Live label for the HUD-preview hotkey chip, tracking the persisted
-    /// choice so picking a key on this step updates the preview (Phase 9).
+    /// Live label for the try-it prompt/hotkey chip, tracking the persisted
+    /// choice so picking a key on this step updates the copy (Phase 9).
     @State private var hotkeyLabel =
         HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
+
+    /// D99: the real insertion target on the Try-it step — a focused, editable
+    /// box a live dictation self-inserts into (replaces the decorative HUD).
+    @State private var tryItText = ""
+
+    /// D98: first-responder flag for the try-it box. Only true while the
+    /// Try-it step is on screen so it never fights the picker's own field for
+    /// focus; a synthesized Cmd-V needs the box to be first responder to land.
+    @FocusState private var tryItFocused: Bool
+
+    /// D97: last observed dictation outcome, decoded from
+    /// `.lotusDictationOutcome`. Drives the inline setup hint via the pure
+    /// `shouldShowSetupHint` predicate; `.inserted` clears it.
+    @State private var lastOutcome: DictationController.DictationOutcome?
 
     /// Live permission resolution (unchanged) — gates Finish and highlights
     /// the current permission row.
@@ -52,6 +66,14 @@ struct OnboardingView: View {
         .lotusWindowBackground()
         .onReceive(NotificationCenter.default.publisher(for: .lotusHotkeyChanged)) { _ in
             hotkeyLabel = HotkeyOption.from(persisted: SettingsStore().hotkeyChord).displayLabel
+        }
+        // D97: relay each dictation outcome into the inline hint. userInfo
+        // carries the DictationOutcome rawValue (D97) — decode it back to the
+        // enum. SwiftUI tears this down when the window closes, so a closed
+        // window never reacts (no manual clear needed).
+        .onReceive(NotificationCenter.default.publisher(for: .lotusDictationOutcome)) { note in
+            lastOutcome = (note.userInfo?["outcome"] as? String)
+                .flatMap(DictationController.DictationOutcome.init(rawValue:))
         }
     }
 
@@ -173,17 +195,52 @@ struct OnboardingView: View {
             Text("Try it")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
-            Text("Choose your hotkey, then hold \(hotkeyLabel) and talk:")
-                .font(.lotusBody)
-                .foregroundStyle(Color.lotusTextSecondary)
-                .multilineTextAlignment(.center)
             // 9E (D86): the picker warns inline (with Settings deep links)
             // when the chosen key collides with a macOS shortcut — the static
             // F5 footnote it replaces only ever described one collision.
             HotkeyPicker()
-            hudPreview
+            // D99: prompt + the real focused insertion target (replaces the
+            // decorative HUDPreview — the live PillController panel now gives
+            // listening feedback, so this box just proves insertion lands).
+            Text("Hold \(hotkeyLabel) and speak — your words appear here.")
+                .font(.lotusBody)
+                .foregroundStyle(Color.lotusTextSecondary)
+                .multilineTextAlignment(.center)
+            tryItBox
+            // D97/D99: inline setup hint on a servers-side miss (.empty/.failed);
+            // .inserted/.tooShort/nil never show it (pure predicate, D14).
+            if DictationController.shouldShowSetupHint(for: lastOutcome) {
+                VStack(spacing: 8) {
+                    Text("No text? Check your servers.")
+                        .font(.lotusCaption)
+                        .foregroundStyle(Color.lotusTextSecondary)
+                    Button("Back to setup") { stepIndex = 2 }
+                        .buttonStyle(LotusButtonStyle(.ghost))
+                }
+            }
             Spacer(minLength: 0)
         }
+        // D98: focus the box as the step appears so it is first responder and
+        // a synthesized Cmd-V lands. Scoped to this step's view, so it never
+        // competes with the picker's own field on other steps.
+        .onAppear { tryItFocused = true }
+    }
+
+    /// D98/D99: the focused, editable insertion box — a taller mono field (the
+    /// `monoField` idiom as a multi-line `TextEditor`) that a live dictation
+    /// self-inserts into. Focus is driven by `tryItFocused`.
+    private var tryItBox: some View {
+        TextEditor(text: $tryItText)
+            .focused($tryItFocused)
+            .font(.lotusMono(12))
+            .foregroundStyle(Color.lotusTextPrimary)
+            .scrollContentBackground(.hidden)
+            .frame(height: 88)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.lotusControlFill, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
     }
 
     // MARK: - Progress + navigation
@@ -282,13 +339,6 @@ struct OnboardingView: View {
         }
     }
 
-    /// A non-interactive preview of the Listening HUD (spec §5): mic dot +
-    /// gradient waveform + LISTENING + the selected-hotkey chip. Animated
-    /// unless Reduce Motion is on.
-    private var hudPreview: some View {
-        HUDPreview(hotkeyLabel: hotkeyLabel)
-    }
-
     private func open(_ deepLink: String) {
         guard let url = URL(string: deepLink) else { return }
         NSWorkspace.shared.open(url)
@@ -331,55 +381,5 @@ struct OnboardingView: View {
                     .foregroundStyle(.orange)
             }
         }
-    }
-}
-
-/// Static/animated mini-HUD shown on the onboarding "Try it" step. Purely
-/// decorative — no audio, no panel; it just shows the user what Listening
-/// looks like.
-private struct HUDPreview: View {
-    let hotkeyLabel: String
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let barCount = 12
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(Color.lotusAccentPink)
-                .frame(width: 7, height: 7)
-            if reduceMotion {
-                bars { i in 0.3 + 0.5 * abs(sin(Double(i))) }
-            } else {
-                TimelineView(.animation) { context in
-                    let t = context.date.timeIntervalSinceReferenceDate
-                    bars { i in 0.25 + 0.65 * abs(sin(t * 6 + Double(i) * 0.7)) }
-                }
-            }
-            Text("LISTENING")
-                .font(.lotusMono(11))
-                .tracking(1.2)
-                .foregroundStyle(Color.lotusTextPrimary)
-            Text(hotkeyLabel)
-                .font(.lotusMono(11))
-                .foregroundStyle(Color.lotusTextSecondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Color.lotusControlFill, in: Capsule())
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .background(Color.lotusHUDFill, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
-    }
-
-    private func bars(_ height: @escaping (Int) -> Double) -> some View {
-        HStack(alignment: .center, spacing: 3) {
-            ForEach(0..<barCount, id: \.self) { i in
-                Capsule()
-                    .fill(LinearGradient.lotusAccent)
-                    .frame(width: 3, height: 4 + CGFloat(height(i)) * 18)
-            }
-        }
-        .frame(height: 22)
     }
 }

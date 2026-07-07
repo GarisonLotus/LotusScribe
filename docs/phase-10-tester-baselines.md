@@ -34,6 +34,15 @@ Settings shows saved values) folded into the next onboarding relaunch
 `onOutcome == nil` default-seam assertion). Run TWICE, both green, no flakes.
 Predicate cases confirmed live `#expect` assertions (not skipped/commented).
 
+## 10E2 close
+
+**263 tests / 24 suites, 0 failures** (no new tests — UI + human-verified).
+Reviewer APPROVE (code). SELF-INSERTION SPIKE PASSED human-at-screen: with
+STT pointed at reachable vLLM, holding ⌘F5 on the Try-it step landed the real
+transcript ("Hello, hello.") in the focused box — authentic insertion into
+the app's own window confirmed. Also confirms 10C persistence (endpoints
+entered on Setup step reached the pipeline) and the ⌘F5 hotkey end-to-end.
+
 ## Flake registry
 
 - (none recorded this phase)
