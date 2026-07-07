@@ -216,11 +216,12 @@ struct HotkeyStateMachineTests {
         #expect(HotkeyChord.parse(input) == nil)
     }
 
-    @Test func resolvedDefaultsToF5() {
-        // D80: absent or unparseable → F5 bare hold.
-        #expect(HotkeyChord.resolved(from: nil) == .combo(keyCode: 96, modifiers: []))
-        #expect(HotkeyChord.resolved(from: "") == .combo(keyCode: 96, modifiers: []))
-        #expect(HotkeyChord.resolved(from: "garbage") == .combo(keyCode: 96, modifiers: []))
+    @Test func resolvedDefaultsToCmdF5() {
+        // D87: absent or unparseable → ⌘F5 (Command frees the mic key so
+        // keycode 96 reaches the tap; bare F5 is swallowed by the system).
+        #expect(HotkeyChord.resolved(from: nil) == .combo(keyCode: 96, modifiers: .maskCommand))
+        #expect(HotkeyChord.resolved(from: "") == .combo(keyCode: 96, modifiers: .maskCommand))
+        #expect(HotkeyChord.resolved(from: "garbage") == .combo(keyCode: 96, modifiers: .maskCommand))
     }
 
     @Test func resolvedParsesValidStrings() {
@@ -235,8 +236,9 @@ struct HotkeyStateMachineTests {
         #expect(HotkeyOption.custom("ctrl+alt+z").chord == Self.ctrlAltZ)
         #expect(HotkeyOption.from(persisted: "f5") == .functionKey(5))
         #expect(HotkeyOption.from(persisted: "F5") == .functionKey(5))
-        #expect(HotkeyOption.from(persisted: nil) == .functionKey(5))
-        #expect(HotkeyOption.from(persisted: "") == .functionKey(5))
+        // D87: absent/empty → ⌘F5 default (a custom chord, not a bare F-key).
+        #expect(HotkeyOption.from(persisted: nil) == .custom("cmd+f5"))
+        #expect(HotkeyOption.from(persisted: "") == .custom("cmd+f5"))
         #expect(HotkeyOption.from(persisted: "ctrl+alt+z") == .custom("ctrl+alt+z"))
         #expect(HotkeyOption.from(persisted: "fn") == .custom("fn"))
     }

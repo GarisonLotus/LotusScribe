@@ -35,11 +35,15 @@ enum HotkeyChord: Equatable {
         return .combo(keyCode: keyCode, modifiers: modifiers)
     }
 
-    /// The persisted `hotkeyChord` string, or the F5 default (D80) when it is
+    /// The persisted `hotkeyChord` string, or the ⌘F5 default (D80) when it is
     /// absent or unparseable. Pure — the single fallback site (replaces
     /// AppDelegate's inline `?? .fnHold`; D15/D27: fn is dead on macOS 26).
+    /// D87: default is ⌘F5, not bare F5 — on laptops where F5 is the hardware
+    /// mic/dictation key, bare F5 never emits keycode 96 (the system consumes
+    /// it), but holding Command releases keycode 96 to the session tap. Cmd is
+    /// the only modifier that frees it (Ctrl/Option don't; live-verified).
     static func resolved(from string: String?) -> HotkeyChord {
-        string.flatMap(parse) ?? .combo(keyCode: 96, modifiers: [])
+        string.flatMap(parse) ?? .combo(keyCode: 96, modifiers: .maskCommand)
     }
 
     private static let modifierFlags: [String: CGEventFlags] = [
@@ -50,7 +54,8 @@ enum HotkeyChord: Equatable {
     ]
 
     /// HIToolbox kVK_F1…F12. Positional like `keyCodes` (R7 caveat): "f5" is
-    /// the physical F5 key — the mac dictation/mic key and the Phase 9 default.
+    /// the physical F5 key — the mac dictation/mic key; the Phase 9 default
+    /// pairs it with Command (D87) since bare F5 is consumed by the system.
     private static let functionKeyCodes: [String: Int64] = [
         "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97,
         "f7": 98, "f8": 100, "f9": 101, "f10": 109, "f11": 103, "f12": 111,
@@ -87,11 +92,11 @@ enum HotkeyOption: Equatable {
     var chord: HotkeyChord? { HotkeyChord.parse(persisted) }
 
     /// Reconstruct the option from a persisted string. "f1"…"f12" → function
-    /// key; absent/empty → the F5 default (D80); everything else (combos, "fn")
-    /// → custom, original casing preserved for display.
+    /// key; absent/empty → the ⌘F5 default (D80/D87); everything else (combos,
+    /// "fn") → custom, original casing preserved for display.
     static func from(persisted: String?) -> HotkeyOption {
         guard let lowered = persisted?.lowercased(), !lowered.isEmpty else {
-            return .functionKey(5)
+            return .custom("cmd+f5")
         }
         if lowered.first == "f", let n = Int(lowered.dropFirst()), (1...12).contains(n) {
             return .functionKey(n)

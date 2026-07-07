@@ -21,6 +21,14 @@ being granted on the test machine.
 **9E close:** 249 tests / 24 suites, 0 failures (+5: HotkeyCollision
 mapping incl. chord-based spelling variants per R9E-2/3).
 
+**post-9E (D87/D88 default→⌘F5 + Input Monitoring ordering):** 249 tests /
+24 suites, 0 failures. Count unchanged — 6 default-assertion expectations
+retargeted from `combo(96, [])` to `combo(96, .maskCommand)` and
+`from(persisted: nil/"")` from `.functionKey(5)` to `.custom("cmd+f5")`
+across HotkeyStateMachineTests + SettingsStoreTests. No new tests (change is
+a default value, existing coverage exercises the path). Hotkey verified
+HUMAN-AT-SCREEN: hold ⌘F5 → pill appears.
+
 ## Flake registry
 
 - (none recorded this phase)

@@ -12,11 +12,9 @@ Locked decisions (compact; git log carries provenance). Newest at bottom.
 | D85 | 2026-07-06 | Picker = shared `HotkeyPicker` (F1–F12 menu + custom combo field w/ parse-validity hint), LotusTheme-only; Settings `hotkeyCard` + Onboarding `tryItStep` replace the static `fnKeycap`, copy → "hold your hotkey", HUD chip → selected label, add F5 macOS guidance | Locked decisions #2/#3/#5; reskin rules (no raw hex, LotusTheme components); reuse `endpointField` hint + `monoField` idioms | 9D |
 
 | D86 | 2026-07-06 | 9E: collision-aware picker. Pure `HotkeyCollision.warning(for: HotkeyOption)` lookup (F5 → Dictation + Siri "Hold Dictation key"; custom `fn` → globe-key behaviors) returning message + Settings deep-link(s); picker renders it inline with ghost link buttons. NO silent rewriting of Apple shortcut prefs — no public API; `symbolichotkeys` hack is unsupported/brittle and a consent problem. Static F5 footnotes in onboarding/Settings replaced by the dynamic warning | Live-test: user's F5 hold triggered Siri; guidance must be contextual, one click from the right pane | 9E |
+| D87 | 2026-07-06 | Default hotkey changed F5 → **⌘F5** (`.combo(96, .maskCommand)`), superseding D80. Both default sites: `HotkeyChord.resolved(from:)` and `HotkeyOption.from(persisted:)` (absent → `.custom("cmd+f5")`). No new UI/label machinery — ⌘F5 is a custom chord, shown like any combo | LIVE-VERIFIED root cause: on laptops where F5 is the hardware mic/dictation key, bare F5 never emits keycode 96 (system consumes it → beep + "enable Dictation?"). Holding **Command** releases keycode 96 to the session tap; Ctrl/Option do NOT. Resolves the D80/R7/D27 open question — F5 was dead like fn, ⌘F5 is the working default | post-9E |
+| D88 | 2026-07-06 | Input Monitoring request (`IOHIDRequestAccess(ListenEvent)`) MUST fire in `main.swift` before AppKit/any `AXIsProcessTrusted()`; removed the mic-gated request in AppDelegate | rdar://7381305: the request silently no-ops (no prompt, no pane registration) if AX was checked earlier in the process. `logStatusAtLaunch()` + onboarding poll both call AX, so the old onboarding-button request was always dead-on-arrival. NOT a signing/hardened-runtime issue (that detour broke Microphone, reverted) | post-9E |
 
 ## Open questions
 
-- **F5 delivery on macOS 26 is UNVERIFIED (empirical, R7/D27).** Input Monitoring
-  not yet granted on the test machine; D27 proved this platform silently drops fn.
-  9D acceptance must confirm `hotkey action: startCapture` fires on an F5 hold once
-  IM is granted. If F5 is dead like fn, escalate — default stays F5 (user decision)
-  but the custom combo (`ctrl+alt+cmd+9`, proven) is the working fallback.
+- (none — F5-delivery question resolved by D87: ⌘F5 is the working default.)

@@ -27,6 +27,12 @@ enum Permissions {
     /// AUTHREQ to the daemon — no prompt, no registration, no pane row (same
     /// platform-rot family as D27's dead fn events). The IOKit request is
     /// the path that actually reaches tccd.
+    ///
+    /// ORDERING IS LOAD-BEARING (rdar://7381305): this MUST run before any
+    /// `AXIsProcessTrusted()` call in the process, or it silently no-ops — no
+    /// prompt, no registration. That is why main.swift fires it first, before
+    /// AppKit and before `logStatusAtLaunch()`/the onboarding poll ever touch
+    /// AX. Do not move this after an accessibility check.
     static func requestListenEventAccess() -> Bool {
         IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
     }

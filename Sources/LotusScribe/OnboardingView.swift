@@ -108,17 +108,12 @@ struct OnboardingView: View {
                 title: "Input Monitoring",
                 detail: "Lets LotusScribe see the dictation hotkey. Grant access when prompted, or enable LotusScribe in the list.",
                 buttonTitle: "Allow…") {
-                // ALWAYS fire the request first: the request call is what
-                // REGISTERS LotusScribe into the Input Monitoring list (row
-                // appears, toggled off) and pops the system dialog when the
-                // state is undetermined. (IOHIDCheckAccess reports .denied
-                // for never-asked apps on this macOS, so branching on the
-                // tri-state skipped the request → no row → nothing to
-                // toggle.) If it doesn't come back granted, open the pane —
-                // the row now exists there to flip on.
-                if !Permissions.requestListenEventAccess() {
-                    open(Self.inputMonitoringPane)
-                }
+                // Fire the system request and GET OUT OF ITS WAY. Do NOT open
+                // System Settings here: requestListenEventAccess() returns
+                // false the instant the async prompt starts showing, so a
+                // follow-up open() slammed Settings over the prompt and killed
+                // it every time. The onboarding poll picks up the grant.
+                _ = Permissions.requestListenEventAccess()
             }
             Spacer(minLength: 0)
         }

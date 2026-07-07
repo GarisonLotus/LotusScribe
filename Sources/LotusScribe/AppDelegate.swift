@@ -26,14 +26,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // listen access there would block `make test` behind a TCC dialog.
         // (Marker verified empirically: xcodebuild test sets XCTestSessionIdentifier.)
         if ProcessInfo.processInfo.environment["XCTestSessionIdentifier"] == nil {
-            // Only fire the Input Monitoring ("Keystroke Receiving") prompt at
-            // launch for established users — mic-granted is the proxy for
-            // "already onboarded". First-run users (mic not yet granted) get
-            // this prompt in context from onboarding's Input Monitoring button
-            // instead, so it's never a surprise on the very first launch.
-            if Permissions.isMicrophoneGranted() {
-                _ = Permissions.requestListenEventAccess()
-            }
+            // Input Monitoring is requested in main.swift BEFORE any AX check
+            // (rdar://7381305 — requesting after AXIsProcessTrusted() no-ops).
+            // Do NOT request it here: logStatusAtLaunch() above already called
+            // AXIsProcessTrusted(), so a request at this point is dead.
 
             // D42: launch warm-up — fire-and-forget, log-only; skipped
             // internally when cleanup is not effective-enabled.

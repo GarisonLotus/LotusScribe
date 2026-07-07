@@ -33,19 +33,20 @@ reaches the session tap.
 
 ## §3. Current state
 
-**Where we are:** Phase 9 CODE-COMPLETE (9A–9E committed + reviewer-approved).
-9E added collision-aware picker warnings (D86: F5 → Dictation + Siri links,
-fn → globe guidance; chord-based matching per R9E-2/3).
-**Baseline tests:** 249 tests / 24 suites green (9E close).
-**Active gate:** all sub-phases cleared (reviewer APPROVE R9A/9C/9D/9E; 9B
-lightweight orchestrator gate).
+**Where we are:** Phase 9 CODE-COMPLETE + LIVE-VERIFIED. 9A–9E committed;
+post-9E landed two live-debug fixes (D87 ⌘F5 default, D88 Input Monitoring
+ordering) in one commit.
+**Baseline tests:** 249 tests / 24 suites green (unchanged count; 6 default
+assertions retargeted F5→⌘F5).
+**Active gate:** all sub-phases cleared.
 
-**OUTSTANDING — empirical F5 acceptance (human-at-screen):** grant Input
-Monitoring, launch, hold F5, confirm the log emits `hotkey action:
-startCapture` and the HUD appears. If F5 is silently dropped like fn (D27),
-the picker's custom combo (`ctrl+alt+cmd+9`, proven) is the working
-fallback — surface to the user. This is the only thing between Phase 9 and
-done.
+**RESOLVED — empirical hotkey acceptance (human-at-screen, 2026-07-06):**
+- Input Monitoring now grants (D88: request moved to main.swift before any
+  AX check; rdar://7381305).
+- F5 was DEAD like fn: on this laptop F5 is the hardware mic key, bare F5
+  never emits keycode 96 (system eats it → beep + "enable Dictation?").
+  **Command** frees keycode 96 (Ctrl/Option don't). New default = **⌘F5**
+  (D87), live-confirmed: hold ⌘F5 → pill appears. Phase 9 done.
 
 ## §4. Load-bearing constraints (do not break)
 
