@@ -4,9 +4,11 @@
 # Regenerate the AppIcon asset set from LotusAppIcon (icons Task 3). Reuses the
 # built app's OWN renderer (--render-app-icon) so the mark is never duplicated;
 # re-run after any LotusMark/LotusAppIcon change, then `make build` to bundle it.
+# Also assembles the PNGs into a tracked AppIcon.icns (all sizes) for the bundle.
 appicon: build
 	build/Build/Products/Debug/LotusScribe.app/Contents/MacOS/LotusScribe \
 		--render-app-icon Sources/LotusScribe/Assets.xcassets/AppIcon.appiconset
+	./scripts/make-icns.sh
 
 generate:
 	xcodegen generate
