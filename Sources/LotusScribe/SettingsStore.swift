@@ -117,6 +117,16 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: "hotkeyChord") }
     }
 
+    /// Phase 11 (D110): the pinned audio input device by its Core Audio UID
+    /// (stable across reboot/replug, handoff §3). Absent/empty → follow the
+    /// system default. A live write-through setting — `InputDeviceSetting.set`
+    /// writes here and posts `.lotusInputDeviceChanged`, NOT a buffered draft
+    /// field (mirrors `hotkeyChord`). The recorder re-reads this at `start()`.
+    var inputDeviceUID: String? {
+        get { normalizedString(forKey: "inputDeviceUID") }
+        set { defaults.set(newValue, forKey: "inputDeviceUID") }
+    }
+
     /// D25 empty→nil applied at read time (R39): a raw `defaults write` of ""
     /// bypasses draft.save's normalization, and an empty string must never
     /// count as "set" for effective-enabled checks (D40).

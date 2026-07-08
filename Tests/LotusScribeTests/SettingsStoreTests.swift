@@ -227,4 +227,22 @@ final class SettingsStoreTests {
         #expect(HotkeyChord.resolved(from: store.hotkeyChord)
             == .combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate]))
     }
+
+    // MARK: - Phase 11: inputDeviceUID (D110)
+
+    @Test func inputDeviceUIDRoundTrips() {
+        let store = SettingsStore(defaults: defaults)
+        store.inputDeviceUID = "BuiltInMicrophoneDevice"
+        #expect(defaults.string(forKey: "inputDeviceUID") == "BuiltInMicrophoneDevice")
+        #expect(store.inputDeviceUID == "BuiltInMicrophoneDevice")
+    }
+
+    /// D110/R39: absent key follows system (nil), and a raw `defaults write` of
+    /// "" reads nil so an empty UID can never count as a pin.
+    @Test func inputDeviceUIDEmptyOrAbsentReadsAsNil() {
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.inputDeviceUID == nil)
+        defaults.set("", forKey: "inputDeviceUID")
+        #expect(store.inputDeviceUID == nil)
+    }
 }

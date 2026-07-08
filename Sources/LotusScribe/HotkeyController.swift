@@ -60,6 +60,13 @@ extension Notification.Name {
     static let lotusHotkeyChanged =
         Notification.Name("com.garisonlotus.LotusScribe.hotkeyChanged")
 
+    /// Posted after the persisted input-device UID changes (Phase 11, D110) so
+    /// both UI surfaces (status-bar submenu + Settings picker) re-sync their
+    /// checkmarks. The recorder does NOT observe it — it reads the UID fresh at
+    /// `start()`; this is a bare "changed" ping for the two checkmark surfaces.
+    static let lotusInputDeviceChanged =
+        Notification.Name("com.garisonlotus.LotusScribe.inputDeviceChanged")
+
     /// Posted after each dictation terminates so observers (the onboarding
     /// try-it view) can react — userInfo["outcome"] = DictationOutcome.rawValue (D97).
     static let lotusDictationOutcome =
