@@ -108,7 +108,8 @@ final class CleanupServiceTests {
         #expect(json["reasoning_effort"] as? String == "none")
 
         let messages = try #require(json["messages"] as? [[String: String]])
-        #expect(messages.count == 2)
+        // D107: system + two few-shot pairs (user/assistant) + the transcript.
+        #expect(messages.count == 6)
         #expect(messages[0]["role"] == "system")
         // cleanupLevel unset → resolves to .standard (D40); nil bundle ID
         // → .other (D50); dictionary unset → empty (D56) → byte-identical
@@ -116,9 +117,15 @@ final class CleanupServiceTests {
         #expect(
             messages[0]["content"]
                 == CleanupLevel.standard.systemPrompt(for: .other, dictionary: []))
-        // D107: the transcript is wrapped in <transcript> tags (prompt-
-        // injection boundary — see CleanupService / CleanupLevel closer).
-        #expect(messages[1] == ["role": "user", "content": "<transcript>\num hello\n</transcript>"])
+        // The few-shot demos alternate user→assistant; each demo's user turn is
+        // an instruction, its assistant turn the cleaned (not obeyed) text.
+        #expect(messages[1]["role"] == "user")
+        #expect(messages[2]["role"] == "assistant")
+        #expect(messages[3]["role"] == "user")
+        #expect(messages[4]["role"] == "assistant")
+        // D107: the REAL transcript is the final turn, wrapped in <transcript>
+        // tags (prompt-injection data boundary — see CleanupService).
+        #expect(messages.last == ["role": "user", "content": "<transcript>\num hello\n</transcript>"])
     }
 
     /// D72: suppress OFF → the field is omitted entirely — the key set

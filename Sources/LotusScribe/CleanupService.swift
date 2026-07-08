@@ -35,6 +35,38 @@ struct CleanupService {
 
     private struct Message: Encodable { let role: String; let content: String }
 
+    /// Wraps transcript text in the `<transcript>` data boundary the system
+    /// prompt's closer names (D107).
+    private static func wrap(_ text: String) -> String {
+        "<transcript>\n" + text + "\n</transcript>"
+    }
+
+    /// D107 few-shot: each input IS an instruction/question; each output is
+    /// that same text merely CLEANED (filler removed, punctuation/caps fixed),
+    /// never acted on. Demonstrating the mapping is what actually stops a small
+    /// local model from obeying a dictated command — prose framing alone did
+    /// not. Kept to transformations both `.light` and `.standard` agree on
+    /// (no paragraph breaks, no rephrasing), so the examples never mis-teach a
+    /// level.
+    private static let fewShot: [(input: String, output: String)] = [
+        ("um so like can you give me a quick summary of the meeting you know",
+         "Can you give me a quick summary of the meeting?"),
+        ("ask me questions until you understand what i want and uh keep going till you're sure",
+         "Ask me questions until you understand what I want, and keep going till you're sure."),
+    ]
+
+    /// Assemble the chat turns: system prompt, the few-shot demonstrations,
+    /// then the real transcript — all transcript turns wrapped identically.
+    private static func messages(systemPrompt: String, transcript: String) -> [Message] {
+        var messages = [Message(role: "system", content: systemPrompt)]
+        for example in fewShot {
+            messages.append(Message(role: "user", content: wrap(example.input)))
+            messages.append(Message(role: "assistant", content: example.output))
+        }
+        messages.append(Message(role: "user", content: wrap(transcript)))
+        return messages
+    }
+
     /// Chat-completion body. Nil optionals are omitted from the JSON —
     /// that omission is what keeps the hot path strictly standard (D42).
     private struct ChatRequest: Encodable {
@@ -91,14 +123,7 @@ struct CleanupService {
 
         let body = ChatRequest(
             model: model,
-            messages: [
-                Message(role: "system", content: prompt),
-                // Wrap the transcript in delimiters so the model has a hard
-                // data boundary — spoken words that sound like commands (or an
-                // empty turn) are cleaned as text, not obeyed. The system
-                // prompt's closer names these <transcript> tags.
-                Message(role: "user", content: "<transcript>\n" + transcript + "\n</transcript>"),
-            ],
+            messages: Self.messages(systemPrompt: prompt, transcript: transcript),
             temperature: 0,
             // D72: read at request time (D40 live-read posture); nil → omitted.
             reasoningEffort: settings.suppressModelReasoning ? "none" : nil)
