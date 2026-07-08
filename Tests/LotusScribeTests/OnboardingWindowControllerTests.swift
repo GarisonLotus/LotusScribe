@@ -71,7 +71,7 @@ final class OnboardingWindowControllerTests {
         controller.show()
         defer { controller.window?.close() }
 
-        controller.finish()
+        controller.finish(openAtLogin: false)
 
         #expect(store.onboardingCompleted == false)
         #expect(controller.window?.isVisible == true)
@@ -84,7 +84,7 @@ final class OnboardingWindowControllerTests {
             settings: store, snapshotProvider: { Self.allGranted })
         controller.show()
 
-        controller.finish()
+        controller.finish(openAtLogin: false)
 
         #expect(store.onboardingCompleted == true)
         #expect(controller.window?.isVisible == false)

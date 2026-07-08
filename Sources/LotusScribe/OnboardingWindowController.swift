@@ -73,7 +73,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
                 onSkip: { [weak self] in self?.skip() },
                 onSetupCommit: { [weak self] in self?.commitSetup() },
                 onSetupTest: { [weak self] in self?.testSetupConnection() },
-                onFinish: { [weak self] in self?.finish() })))
+                onFinish: { [weak self] openAtLogin in self?.finish(openAtLogin: openAtLogin) })))
         window.title = "Welcome to LotusScribe"
         // Fixed-size checklist: same macOS 26 fitting-size collapse as the
         // settings window — size the window from the view's constant (R40).
@@ -105,9 +105,12 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
 
     /// Finish is gated all-green (D67). The button is disabled short of
     /// `.done`; this guard keeps the invariant machine-testable and holds
-    /// if a grant is revoked between the last tick and the click.
-    func finish() {
+    /// if a grant is revoked between the last tick and the click. `openAtLogin`
+    /// is the Startup step's choice: true → register the login item now (the
+    /// only path that commits it — Skip never reaches here).
+    func finish(openAtLogin: Bool) {
         guard OnboardingStep.resolve(state.snapshot) == .done else { return }
+        if openAtLogin { LaunchAtLogin.setEnabled(true) }
         complete()
     }
 

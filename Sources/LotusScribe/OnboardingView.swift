@@ -2,8 +2,8 @@ import AppKit
 import AVFoundation
 import SwiftUI
 
-/// First-run onboarding, reskinned to "Lotus Bloom" as a 4-step flow
-/// (DESIGN_SPEC.md §5): Welcome → Permissions → Setup → Try it. The permission logic
+/// First-run onboarding, reskinned to "Lotus Bloom" as a 5-step flow
+/// (DESIGN_SPEC.md §5): Welcome → Permissions → Setup → Try it → Startup. The permission logic
 /// is unchanged from the original single-checklist version — same live
 /// `state.snapshot`, same `OnboardingStep.resolve` highlighting, same real mic
 /// prompt and System-Settings deep links (D68), same Finish gate on all-green
@@ -30,10 +30,18 @@ struct OnboardingView: View {
     let onSkip: () -> Void
     let onSetupCommit: () -> Void
     let onSetupTest: () -> Void
-    let onFinish: () -> Void
+    /// Finish carries the Startup step's choice (default on): true → register
+    /// the login item. Skip never routes through here, so skipping never
+    /// registers (the choice only commits by reaching Finish).
+    let onFinish: (Bool) -> Void
 
-    /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try).
+    /// Which step is on screen (0 Welcome, 1 Permissions, 2 Setup, 3 Try,
+    /// 4 Startup).
     @State private var stepIndex = 0
+
+    /// Startup step's "Open at Login" choice — a buffered default-on toggle,
+    /// committed only when the user taps Finish (onFinish(openAtLogin)).
+    @State private var openAtLogin = true
 
     /// Live label for the try-it prompt/hotkey chip, tracking the persisted
     /// choice so picking a key on this step updates the copy (Phase 9).
@@ -100,7 +108,8 @@ struct OnboardingView: View {
         // D93: Setup inserted before "Try it" so servers can be configured
         // before the user tries dictating (skippable — see navBar case 2).
         case 2: setupStep
-        default: tryItStep
+        case 3: tryItStep
+        default: startupStep
         }
     }
 
@@ -108,7 +117,7 @@ struct OnboardingView: View {
         VStack(spacing: 14) {
             Spacer()
             LotusMark(size: 52)
-            kicker("STEP 1 OF 4")
+            kicker("STEP 1 OF 5")
             Text("Talk. It types.")
                 .font(.lotusDisplay(38))
                 .lineSpacing(3)  // ~1.08 line-height
@@ -125,7 +134,7 @@ struct OnboardingView: View {
 
     private var permissionsStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            kicker("STEP 2 OF 4")
+            kicker("STEP 2 OF 5")
             Text("Grant permissions")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
@@ -168,7 +177,7 @@ struct OnboardingView: View {
     private var setupStep: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                kicker("STEP 3 OF 4")
+                kicker("STEP 3 OF 5")
                 Text("Set up your servers")
                     .font(.lotusDisplay(26))
                     .foregroundStyle(Color.lotusTextPrimary)
@@ -301,7 +310,7 @@ struct OnboardingView: View {
 
     private var tryItStep: some View {
         VStack(spacing: 14) {
-            kicker("STEP 4 OF 4")
+            kicker("STEP 4 OF 5")
             Text("Try it")
                 .font(.lotusDisplay(26))
                 .foregroundStyle(Color.lotusTextPrimary)
@@ -361,11 +370,40 @@ struct OnboardingView: View {
                 .strokeBorder(Color.lotusSurfaceBorder, lineWidth: 1))
     }
 
+    /// Final step: the "Open at Login" choice. A single pre-checked toggle plus
+    /// a plain-language explanation; the value is buffered in `openAtLogin` and
+    /// only commits when Finish fires (onFinish(openAtLogin)). Skip never lands
+    /// here, so skipping onboarding never registers a login item.
+    private var startupStep: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            LotusMark(size: 44)
+            kicker("STEP 5 OF 5")
+            Text("Open at login")
+                .font(.lotusDisplay(26))
+                .foregroundStyle(Color.lotusTextPrimary)
+            Text("LotusScribe lives in your menu bar. Have it start automatically when you log in, so your dictation hotkey is always ready — no need to launch it by hand.")
+                .font(.lotusBody)
+                .foregroundStyle(Color.lotusTextSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            LotusCard {
+                Toggle("Open LotusScribe at login", isOn: $openAtLogin)
+                    .toggleStyle(LotusToggleStyle())
+                    .padding(14)
+            }
+            Text("You can change this anytime in Settings.")
+                .font(.lotusCaption)
+                .foregroundStyle(Color.lotusTextTertiary)
+            Spacer()
+        }
+    }
+
     // MARK: - Progress + navigation
 
     private var progressDots: some View {
         HStack(spacing: 8) {
-            ForEach(0..<4, id: \.self) { i in
+            ForEach(0..<5, id: \.self) { i in
                 Circle()
                     .fill(i == stepIndex
                         ? AnyShapeStyle(Color.lotusAccentText)
@@ -402,11 +440,20 @@ struct OnboardingView: View {
                     stepIndex = 3
                 }
                 .buttonStyle(LotusButtonStyle(.primary))
-            default:
+            case 3:
                 Button("Back") { stepIndex = 2 }
                     .buttonStyle(LotusButtonStyle(.ghost))
                 Spacer()
-                Button("Finish", action: onFinish)
+                Button("Continue") { stepIndex = 4 }
+                    .buttonStyle(LotusButtonStyle(.primary))
+            default:
+                Button("Back") { stepIndex = 3 }
+                    .buttonStyle(LotusButtonStyle(.ghost))
+                Spacer()
+                // Finish commits the Startup choice — onFinish(openAtLogin)
+                // registers the login item only when the toggle is on. Still
+                // gated all-green (D67): the permission grants remain required.
+                Button("Finish") { onFinish(openAtLogin) }
                     .buttonStyle(LotusButtonStyle(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(permissionStep != .done)  // D67: gated all-green

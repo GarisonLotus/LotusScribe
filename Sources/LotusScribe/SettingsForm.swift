@@ -26,6 +26,11 @@ struct SettingsForm: View {
     /// changing it persists + re-applies via LotusAppearance.
     @State private var appearance = LotusAppearance.mode
 
+    /// "Open at Login" mirror. Seeded from the live SMAppService status (the OS
+    /// is the source of truth); flipping it registers/unregisters immediately
+    /// (live write-through, like Appearance/Hotkey — not a draft/Save field).
+    @State private var openAtLogin = LaunchAtLogin.isEnabled
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -35,6 +40,7 @@ struct SettingsForm: View {
                 appCategoriesCard
                 dictionaryCard
                 hotkeyCard
+                startupCard
                 appearanceCard
             }
             .padding(22)
@@ -177,6 +183,31 @@ struct SettingsForm: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HotkeyPicker()
                     Text("Hold to talk. Changes apply immediately.")
+                        .font(.lotusCaption)
+                        .foregroundStyle(Color.lotusTextTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: Startup (live write-through, like Hotkey/Appearance)
+
+    private var startupCard: some View {
+        LotusCard {
+            cardHeader("Startup")
+            cardRow(divider: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle("Open at Login", isOn: $openAtLogin)
+                        .toggleStyle(LotusToggleStyle())
+                        // Register/unregister live. Re-read the real status
+                        // afterward so a swallowed failure snaps the toggle back
+                        // to what actually stuck (LaunchAtLogin never throws).
+                        .onChange(of: openAtLogin) { _, enabled in
+                            LaunchAtLogin.setEnabled(enabled)
+                            openAtLogin = LaunchAtLogin.isEnabled
+                        }
+                    Text("Launch LotusScribe automatically when you log in, so your dictation hotkey is always ready.")
                         .font(.lotusCaption)
                         .foregroundStyle(Color.lotusTextTertiary)
                         .fixedSize(horizontal: false, vertical: true)
