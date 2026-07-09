@@ -106,15 +106,21 @@ Makes the pin real; verifiable via `defaults write` before any UI exists.
 **Deliverable (`AudioRecorder.swift`)**
 - Add `private let devices: AudioInputDeviceEnumerating = CoreAudioDeviceEnumerator()`
   (injectable for future tests; default is the edge).
-- In `start()`, BEFORE `engine.start()` and after the input-format guard: read
+- In `start()`, BEFORE `engine.start()`, in this order: (1) PIN FIRST — read
   `SettingsStore().inputDeviceUID`; if non-nil AND
   `AudioInputDevice.resolvedID(forUID:in: devices.inputDevices())` returns an id,
   set it on `engine.inputNode.auAudioUnit` via `kAudioOutputUnitProperty_CurrentDevice`
   (*engine to confirm the exact call at compile: AUAudioUnit `deviceID` setter vs
   `AudioUnitSetProperty` on `inputNode.audioUnit` — name the property, confirm the
-  signature*). nil/unresolved → do nothing (silent fallback, locked §2). Log the
-  resolved-vs-fallback choice (privacy `.public`), matching the existing
-  `recording started` log idiom.
+  signature*). nil/unresolved/pin-error → do nothing (silent fallback, locked §2/D88).
+  Log the resolved-vs-fallback choice (privacy `.public`), matching the existing
+  `recording started` log idiom. (2) THEN read `inputFormat` from the now-current
+  node. (3) THEN the input-format guard (`sampleRate > 0 && channelCount > 0` →
+  `unusableInputFormat`) runs on this post-pin format. (4) converter + `installTap` +
+  `engine.start()` as today. RATIONALE: `setDeviceID` changes the node's hardware
+  format to the pinned device's native rate; `installTap` MUST use the post-pin
+  format or it raises an uncaught AVAudioEngine NSException (crash) on any
+  sample-rate mismatch — the exact case for external/USB mics.
 - §1B invariant preserved: the device is set as part of `start()`, before the
   engine runs; no swap while running, no new device read in `stop()`.
 

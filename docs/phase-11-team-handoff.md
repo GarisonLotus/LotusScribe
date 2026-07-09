@@ -3,7 +3,7 @@
 > Restarting orchestrator: single entry point. Read this, then the three
 > phase-11 role logs, then verify git state. Phase 0–10 docs are archives.
 
-**Last updated:** 2026-07-08, 11A CLOSED (4-way gate cleared, committed).
+**Last updated:** 2026-07-08, 11B CLOSED (4-way gate cleared, committed).
 
 ## §1. How to use this doc
 
@@ -63,19 +63,27 @@ across reboot/replug), NOT its name. nil/empty UID = follow system.
 
 ## §4. Current state
 
-**Where we are:** **11A CLOSED** — headless device layer (`AudioInputDevice`
-pure + `CoreAudioDeviceEnumerator` edge), `SettingsStore.inputDeviceUID`,
-`InputDeviceSetting`/`.lotusInputDeviceChanged`. 4-way gate cleared: reviewer
-APPROVED-WITH-NOTES, architect NON-OBJECTION + D116 label round-trip, tester
-reproducible-green. **Next: 11B** — `AudioRecorder` pins the input before
-`engine.start()` (silent fallback). The one engineer-to-confirm-at-compile
-item for 11B: the pin call on `inputNode.auAudioUnit`
-(`kAudioOutputUnitProperty_CurrentDevice` vs AUAudioUnit `deviceID` setter).
-**Baseline tests:** 284 tests / 25 suites, 0 failures, `make test` (11A close).
-**Active gate:** none open — 11A committed; 11B not yet dispatched.
-**Open reviewer items from 11A:** R11A-1 (double `inputDevices()` call in
-`defaultInputDevice`), R11A-2 (label copy — RESOLVED by D116), R11A-3 (benign
-TOCTOU in `allDeviceIDs`). All non-blocking.
+**Where we are:** **11B CLOSED** — `AudioRecorder.start()` pins the chosen
+input device (via `AUAudioUnit.setDeviceID`, resolved at compile) BEFORE the
+engine runs; nil/unresolved/pin-error → silent fallback to system default
+(D88). Gate caught + fixed an ordering bug (D117): the tap/converter must read
+`inputFormat` AFTER the pin, else `installTap` crashes on a sample-rate
+mismatch (external mics). Order now: pin → read format → guard → tap → start;
+§1B preserved. 4-way gate cleared: reviewer APPROVED, architect ruled/blessed
+via D117, tester reproducible-green. **Next: 11C** — "Microphone ▸" status-bar
+submenu in `StatusItemController`, rebuilt on open via `NSMenuDelegate`,
+rendering the shared `AudioInputMenuModel`; click writes `InputDeviceSetting.set`.
+**Baseline tests:** 284 tests / 25 suites, 0 failures, `make test` (11B adds
+no tests — edge change).
+**Active gate:** none open — 11B committed; 11C not yet dispatched.
+**Pending HUMAN-AT-SCREEN (deferred, non-blocking):** 11B `defaults write
+com.garisonlotus.LotusScribe inputDeviceUID <UID>` → capture from that device;
+bogus/unplugged UID → silent fallback; cleared → follows system; pin survives
+relaunch. Exercise an EXTERNAL/USB mic at a differing native rate (R11B-1 —
+the D117 fix's real proof).
+**Open reviewer items:** R11A-1 (double `inputDevices()` call), R11A-3 (benign
+TOCTOU in `allDeviceIDs`), R11B-2 (`devices` seam not wired to an initializer —
+spec-sanctioned YAGNI). All non-blocking. (R11A-2 resolved by D116.)
 
 ## §5. Load-bearing constraints (do not break)
 

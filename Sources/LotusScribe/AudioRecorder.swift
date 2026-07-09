@@ -24,6 +24,10 @@ final class AudioRecorder {
 
     private let engine = AVAudioEngine()
 
+    /// Device layer for resolving the pinned input UID at `start()` (11B).
+    /// Typed as the protocol so a test can inject a stub; default is the edge.
+    private let devices: AudioInputDeviceEnumerating = CoreAudioDeviceEnumerator()
+
     // Tap callbacks arrive on an audio thread while stop() runs on the main
     // thread — every `pcm` access goes through `lock`.
     private let lock = NSLock()
@@ -41,6 +45,7 @@ final class AudioRecorder {
         guard !engine.isRunning else { return }
 
         let input = engine.inputNode
+        pinInputDeviceIfChosen(on: input)
         let inputFormat = input.inputFormat(forBus: 0)
         guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
             throw RecorderError.unusableInputFormat
@@ -68,6 +73,29 @@ final class AudioRecorder {
         }
         Self.logger.info(
             "recording started (\(inputFormat.sampleRate, privacy: .public) Hz in)")
+    }
+
+    /// Pins the user-chosen input device before the engine runs (11B, §1B:
+    /// the device is selected as part of start(), never swapped while running).
+    /// The UID is read fresh each start() so a change applies to the NEXT
+    /// dictation. Silent fallback (locked §2): a nil/unresolved UID — or any
+    /// pin error (D88 posture) — leaves the engine on the system default;
+    /// never throws, never aborts the recording.
+    private func pinInputDeviceIfChosen(on input: AVAudioInputNode) {
+        guard
+            let uid = SettingsStore().inputDeviceUID,
+            let deviceID = AudioInputDevice.resolvedID(forUID: uid, in: devices.inputDevices())
+        else {
+            Self.logger.info("input device: system default")
+            return
+        }
+        do {
+            try input.auAudioUnit.setDeviceID(deviceID)
+            Self.logger.info("input device pinned (id \(deviceID, privacy: .public))")
+        } catch {
+            Self.logger.error(
+                "input device pin failed; using system default: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     /// Stops the engine and returns the capture as a 16 kHz/mono/16-bit WAV.
