@@ -13,6 +13,9 @@ final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private var settingsWindowController: SettingsWindowController?
     private var onboardingWindowController: OnboardingWindowController?
+    /// Enumerates live input devices for the "Microphone ▸" submenu; the
+    /// submenu rebuilds from a fresh read on every open (replug reflects live).
+    private let deviceEnumerator = CoreAudioDeviceEnumerator()
 
     /// Current capture phase driving the icon (idle / listening / processing).
     private var state: DictationController.CaptureState = .idle
@@ -29,6 +32,14 @@ final class StatusItemController: NSObject {
         renderIcon()
 
         let menu = NSMenu()
+        // "Microphone ▸" sits above Settings…; its submenu rebuilds on open
+        // (menuNeedsUpdate) so the current input list is always live.
+        let microphoneItem = NSMenuItem(
+            title: "Microphone", action: nil, keyEquivalent: "")
+        let microphoneMenu = NSMenu()
+        microphoneMenu.delegate = self
+        microphoneItem.submenu = microphoneMenu
+        menu.addItem(microphoneItem)
         let settingsItem = NSMenuItem(
             title: "Settings…",
             action: #selector(openSettings),
@@ -49,6 +60,14 @@ final class StatusItemController: NSObject {
             keyEquivalent: "q"
         ))
         statusItem.menu = menu
+    }
+
+    /// Pin the input device for the item the user clicked. `representedObject`
+    /// carries the target UID (nil = System Default); the shared write path
+    /// persists it and posts `.lotusInputDeviceChanged`. The submenu itself
+    /// rebuilds fresh on its next open, so it needs no notification observing.
+    @objc private func selectInputDevice(_ sender: NSMenuItem) {
+        InputDeviceSetting.set(uid: sender.representedObject as? String)
     }
 
     // Lazy: the window is only built on first open; kept so reopening focuses it.
@@ -134,6 +153,42 @@ final class StatusItemController: NSObject {
         guard let image = renderer.nsImage else { return }
         image.isTemplate = false
         statusItem.button?.image = image
+    }
+}
+
+extension StatusItemController: NSMenuDelegate {
+    /// Rebuild the "Microphone ▸" submenu from a fresh device read on every
+    /// open, so replug/unplug reflects live (handoff §3). Renders the shared
+    /// `AudioInputMenuModel` (checkmark + ordering logic tested in 11A): a
+    /// "System Default (<name>)" item, a divider, then one item per device.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let model = AudioInputMenuModel(
+            devices: deviceEnumerator.inputDevices(),
+            defaultDeviceName: deviceEnumerator.defaultInputDevice()?.name,
+            pinnedUID: SettingsStore().inputDeviceUID)
+
+        let defaultItem = NSMenuItem(
+            title: model.defaultLabel,
+            action: #selector(selectInputDevice(_:)),
+            keyEquivalent: "")
+        defaultItem.target = self
+        defaultItem.state = model.defaultIsChecked ? .on : .off
+        defaultItem.representedObject = nil  // nil UID → follow system default
+        menu.addItem(defaultItem)
+
+        menu.addItem(.separator())
+
+        for entry in model.entries {
+            let item = NSMenuItem(
+                title: entry.device.name,
+                action: #selector(selectInputDevice(_:)),
+                keyEquivalent: "")
+            item.target = self
+            item.state = entry.isChecked ? .on : .off
+            item.representedObject = entry.device.uid
+            menu.addItem(item)
+        }
     }
 }
 

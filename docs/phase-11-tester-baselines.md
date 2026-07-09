@@ -26,6 +26,16 @@ DROP (no test broke) and no unexpected increase. Matches reviewer's inlined
 284/25. Count unchanged is the expected, correct result for a no-new-tests edge
 change.
 
+## 11C close
+
+**284 tests / 25 suites, 0 failures.** `make test`, stable across 2 runs (run 1
+5.331s, run 2 5.503s; both 284/0/0), no flakes. 11C is an AppKit UI sub-phase
+(status-bar "Microphone ▸" submenu) that adds NO new unit tests, so the count
+correctly stays at the 11A close baseline of 284/25 — no DROP (no test broke)
+and no unexpected increase. Matches parallel-mode expectation (orchestrator
+collates reviewer count post-hoc). Count unchanged is the expected, correct
+result for a no-new-tests UI sub-phase.
+
 ## Flake registry
 
 - (none carried forward)

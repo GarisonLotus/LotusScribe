@@ -3,7 +3,7 @@
 > Restarting orchestrator: single entry point. Read this, then the three
 > phase-11 role logs, then verify git state. Phase 0–10 docs are archives.
 
-**Last updated:** 2026-07-08, 11B CLOSED (4-way gate cleared, committed).
+**Last updated:** 2026-07-08, 11C CLOSED (4-way gate cleared, committed).
 
 ## §1. How to use this doc
 
@@ -63,7 +63,23 @@ across reboot/replug), NOT its name. nil/empty UID = follow system.
 
 ## §4. Current state
 
-**Where we are:** **11B CLOSED** — `AudioRecorder.start()` pins the chosen
+**Where we are:** **11C CLOSED** — "Microphone ▸" status-bar submenu in
+`StatusItemController`, above Settings…, rebuilt on open via `NSMenuDelegate`
+(`menuNeedsUpdate`), rendering the shared `AudioInputMenuModel`: System Default
+(<name>) + divider + one item per device, checkmark on the active choice,
+`representedObject` carrying the UID (nil = System Default) to an `@objc`
+handler that writes `InputDeviceSetting.set`. 4-way gate cleared (parallel):
+reviewer APPROVED, architect NON-OBJECTION (shape = D113/D116), tester
+reproducible-green. **Next: 11D** — Settings mirror picker (`MicrophonePicker`
++ `SettingsForm` card), live write-through, `.lotusInputDeviceChanged`-synced.
+This is the LAST sub-phase.
+**Baseline tests:** 284 tests / 25 suites, 0 failures (11C adds no tests — UI).
+**Active gate:** none open — 11C committed; 11D not yet dispatched.
+
+---
+_(prior 11B state — retained for context)_
+
+**11B CLOSED** — `AudioRecorder.start()` pins the chosen
 input device (via `AUAudioUnit.setDeviceID`, resolved at compile) BEFORE the
 engine runs; nil/unresolved/pin-error → silent fallback to system default
 (D88). Gate caught + fixed an ordering bug (D117): the tap/converter must read
