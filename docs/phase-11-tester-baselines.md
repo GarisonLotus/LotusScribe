@@ -36,6 +36,20 @@ and no unexpected increase. Matches parallel-mode expectation (orchestrator
 collates reviewer count post-hoc). Count unchanged is the expected, correct
 result for a no-new-tests UI sub-phase.
 
+## 11D close
+
+**284 tests / 25 suites, 0 failures.** `make test`, stable across 2 runs (run 1
+6.303s, run 2 5.807s; both 284/0/0), no flakes. 11D is a SwiftUI Settings UI
+sub-phase (`MicrophonePicker` + card) that adds NO new unit tests, so the count
+correctly stays at the 11A close baseline of 284/25 — no DROP (no test broke)
+and no unexpected increase. Matches parallel-mode expectation (orchestrator
+collates reviewer count post-hoc). Count unchanged is the expected, correct
+result for a no-new-tests UI sub-phase.
+
+**Phase 11 close:** 11D is the last sub-phase. Final Phase 11 tally is 284/25,
+0 failures — +13 over the 271/24 phase-open baseline, all +13 (and the +1 suite,
+`AudioInputDeviceTests`) landing in 11A; 11B/11C/11D each added no tests.
+
 ## Flake registry
 
 - (none carried forward)

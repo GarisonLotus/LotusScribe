@@ -3,7 +3,7 @@
 > Restarting orchestrator: single entry point. Read this, then the three
 > phase-11 role logs, then verify git state. Phase 0–10 docs are archives.
 
-**Last updated:** 2026-07-08, 11C CLOSED (4-way gate cleared, committed).
+**Last updated:** 2026-07-08, **PHASE 11 CODE-COMPLETE** (11A–11D committed).
 
 ## §1. How to use this doc
 
@@ -63,18 +63,37 @@ across reboot/replug), NOT its name. nil/empty UID = follow system.
 
 ## §4. Current state
 
-**Where we are:** **11C CLOSED** — "Microphone ▸" status-bar submenu in
-`StatusItemController`, above Settings…, rebuilt on open via `NSMenuDelegate`
-(`menuNeedsUpdate`), rendering the shared `AudioInputMenuModel`: System Default
-(<name>) + divider + one item per device, checkmark on the active choice,
-`representedObject` carrying the UID (nil = System Default) to an `@objc`
-handler that writes `InputDeviceSetting.set`. 4-way gate cleared (parallel):
-reviewer APPROVED, architect NON-OBJECTION (shape = D113/D116), tester
-reproducible-green. **Next: 11D** — Settings mirror picker (`MicrophonePicker`
-+ `SettingsForm` card), live write-through, `.lotusInputDeviceChanged`-synced.
-This is the LAST sub-phase.
-**Baseline tests:** 284 tests / 25 suites, 0 failures (11C adds no tests — UI).
-**Active gate:** none open — 11C committed; 11D not yet dispatched.
+**Where we are:** **PHASE 11 CODE-COMPLETE.** All four sub-phases committed:
+- **11A** (`13e2222`) — device layer (`AudioInputDevice` pure +
+  `CoreAudioDeviceEnumerator` edge), `inputDeviceUID`, `InputDeviceSetting` /
+  `.lotusInputDeviceChanged`. +13 tests (284/25).
+- **11B** (`7dd0173`) — `AudioRecorder` pins the chosen device before the
+  engine runs (D112); pin-first-then-read-format ordering (D117); silent
+  fallback (D88).
+- **11C** (`c234954`) — "Microphone ▸" status-bar submenu, rebuilt on open.
+- **11D** (final) — Settings `MicrophonePicker` + card, live write-through,
+  `.lotusInputDeviceChanged`-synced; in-menu checkmark kept (D118).
+
+Each sub-phase cleared its 4-way gate. **Tests: 284/25, 0 failures** (all +13
+in 11A; 11B–11D are UI/edge, no new units).
+
+**REMAINING: HUMAN-AT-SCREEN verification (non-blocking, needs the user at the
+machine).** The whole feature builds + all automated gates pass, but the actual
+device switching is hardware/TCC-bound and can't be unit-verified:
+1. **11B core** — pin an EXTERNAL/USB mic whose native rate differs from the
+   built-in (`defaults write com.garisonlotus.LotusScribe inputDeviceUID <UID>`,
+   or pick it in the menu), then dictate → capture comes from that mic, NO
+   crash (R11B-1: this is the D117 fix's real proof).
+2. Bogus/unplugged UID → dictation still works from the system default (silent
+   fallback); clear the key → follows system; pin survives app relaunch.
+3. **11C** — menu "Microphone ▸" lists System Default (resolved name) + all
+   input devices; checkmark on the active choice; clicking pins; reopen after
+   replug shows the new list.
+4. **11D** — Settings Microphone card mirrors the list; picking pins; changing
+   the device in the status-bar submenu while Settings is open updates the
+   Settings picker (and vice-versa) via `.lotusInputDeviceChanged`.
+
+**Active gate:** none open — phase code-complete; awaiting human verification.
 
 ---
 _(prior 11B state — retained for context)_

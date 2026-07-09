@@ -40,6 +40,7 @@ struct SettingsForm: View {
                 appCategoriesCard
                 dictionaryCard
                 hotkeyCard
+                microphoneCard
                 startupCard
                 appearanceCard
             }
@@ -183,6 +184,23 @@ struct SettingsForm: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HotkeyPicker()
                     Text("Hold to talk. Changes apply immediately.")
+                        .font(.lotusCaption)
+                        .foregroundStyle(Color.lotusTextTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: Microphone (Phase 11 — live write-through, like Hotkey)
+
+    private var microphoneCard: some View {
+        LotusCard {
+            cardHeader("Microphone")
+            cardRow(divider: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    MicrophonePicker()
+                    Text("Records from this device. System Default follows macOS.")
                         .font(.lotusCaption)
                         .foregroundStyle(Color.lotusTextTertiary)
                         .fixedSize(horizontal: false, vertical: true)
