@@ -35,14 +35,15 @@ enum HotkeyChord: Equatable {
         return .combo(keyCode: keyCode, modifiers: modifiers)
     }
 
-    /// The persisted `hotkeyChord` string, or the ⌘⌥D default (D106) when it is
+    /// The persisted `hotkeyChord` string, or the ⌃⌘D default when it is
     /// absent or unparseable. Pure — the single fallback site (replaces
     /// AppDelegate's inline `?? .fnHold`; D15/D27: fn is dead on macOS 26).
-    /// D106 (supersedes D105): default is ⌘⌥D — F5 (even ⌘F5) is fully claimed
-    /// by macOS accessibility shortcuts, so keycode 96 never reaches the tap;
-    /// ⌘⌥D is unclaimed and reaches the session tap reliably.
+    /// Default is ⌃⌘D — F5 (even ⌘F5) is fully claimed by macOS accessibility
+    /// shortcuts, so keycode 96 never reaches the tap. Supersedes the ⌘⌥D of
+    /// D106: ⌘⌥D is macOS's built-in Dock auto-hide toggle, so holding it flaps
+    /// the Dock. ⌃⌘D is unclaimed and reaches the session tap reliably.
     static func resolved(from string: String?) -> HotkeyChord {
-        string.flatMap(parse) ?? .combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate])
+        string.flatMap(parse) ?? .combo(keyCode: 2, modifiers: [.maskCommand, .maskControl])
     }
 
     /// Human-readable spelling for UI labels (D89): words joined by " + ",
@@ -130,11 +131,11 @@ enum HotkeyOption: Equatable {
     var chord: HotkeyChord? { HotkeyChord.parse(persisted) }
 
     /// Reconstruct the option from a persisted string. "f1"…"f12" → function
-    /// key; absent/empty → the ⌃⌥D default (D105); everything else (combos,
+    /// key; absent/empty → the ⌃⌘D default; everything else (combos,
     /// "fn") → custom, original casing preserved for display.
     static func from(persisted: String?) -> HotkeyOption {
         guard let lowered = persisted?.lowercased(), !lowered.isEmpty else {
-            return .custom("command+option+d")
+            return .custom("command+control+d")
         }
         if lowered.first == "f", let n = Int(lowered.dropFirst()), (1...12).contains(n) {
             return .functionKey(n)

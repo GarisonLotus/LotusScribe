@@ -216,16 +216,16 @@ final class SettingsStoreTests {
         let store = SettingsStore(defaults: defaults)
         defaults.set("", forKey: "hotkeyChord")  // raw junk write bypasses UI
         #expect(store.hotkeyChord == nil)
-        // D106: absent/empty resolves to the ⌘⌥D default.
+        // Absent/empty resolves to the ⌃⌘D default.
         #expect(HotkeyChord.resolved(from: store.hotkeyChord)
-            == .combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate]))
+            == .combo(keyCode: 2, modifiers: [.maskCommand, .maskControl]))
     }
 
-    @Test func absentHotkeyChordResolvesToCmdOptionD() {
+    @Test func absentHotkeyChordResolvesToCmdControlD() {
         let store = SettingsStore(defaults: defaults)
         #expect(store.hotkeyChord == nil)
         #expect(HotkeyChord.resolved(from: store.hotkeyChord)
-            == .combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate]))
+            == .combo(keyCode: 2, modifiers: [.maskCommand, .maskControl]))
     }
 
     // MARK: - Phase 11: inputDeviceUID (D110)

@@ -109,8 +109,8 @@ final class SettingsStore {
     }
 
     /// Phase 9 (D83): the push-to-talk hotkey as a `HotkeyChord.parse` string
-    /// ("f5", "ctrl+alt+cmd+9", "fn"). Absent/empty → the ⌃⌥D default via
-    /// `HotkeyChord.resolved` (D105). A live write-through setting — the picker
+    /// ("f5", "ctrl+alt+cmd+9", "fn"). Absent/empty → the ⌃⌘D default via
+    /// `HotkeyChord.resolved`. A live write-through setting — the picker
     /// writes here and posts `lotusHotkeyChanged`, NOT a buffered draft field.
     var hotkeyChord: String? {
         get { normalizedString(forKey: "hotkeyChord") }

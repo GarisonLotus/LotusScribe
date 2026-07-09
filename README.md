@@ -40,7 +40,7 @@ Some of the best reading is where reality overruled the plan — e.g. discoverin
 
 ## Features
 
-- **Hold-to-talk** with a configurable hotkey (default **⌘⌥D**). Pick your own chord in Settings; the picker warns about collisions with existing shortcuts.
+- **Hold-to-talk** with a configurable hotkey (default **⌃⌘D**). Pick your own chord in Settings; the picker warns about collisions with existing shortcuts.
 - **Floating HUD pill** with a live gradient waveform driven by your mic — appears bottom-center, never steals focus, shows over fullscreen apps.
 - **LLM cleanup** with three levels — Off / Light / Standard. The model is kept warm so there's no cold-start lag; if it times out, your raw transcript is inserted anyway. It never eats your words.
 - **App-aware tone.** LotusScribe notices the frontmost app and adjusts tone by category — Email, Work Messaging, Personal Messaging, Code, Other. Same sentence comes out formal in Mail, casual in Messages. All categories are user-overridable.

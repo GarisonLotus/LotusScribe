@@ -216,13 +216,14 @@ struct HotkeyStateMachineTests {
         #expect(HotkeyChord.parse(input) == nil)
     }
 
-    @Test func resolvedDefaultsToCmdOptionD() {
-        // D106: absent or unparseable → ⌘⌥D (F5 is fully claimed by macOS
-        // accessibility shortcuts; ⌘⌥D is unclaimed and reaches the tap).
-        let cmdOptD = HotkeyChord.combo(keyCode: 2, modifiers: [.maskCommand, .maskAlternate])
-        #expect(HotkeyChord.resolved(from: nil) == cmdOptD)
-        #expect(HotkeyChord.resolved(from: "") == cmdOptD)
-        #expect(HotkeyChord.resolved(from: "garbage") == cmdOptD)
+    @Test func resolvedDefaultsToCmdControlD() {
+        // Absent or unparseable → ⌃⌘D (F5 is fully claimed by macOS
+        // accessibility shortcuts; ⌘⌥D is the Dock auto-hide toggle; ⌃⌘D is
+        // unclaimed and reaches the tap).
+        let cmdCtrlD = HotkeyChord.combo(keyCode: 2, modifiers: [.maskCommand, .maskControl])
+        #expect(HotkeyChord.resolved(from: nil) == cmdCtrlD)
+        #expect(HotkeyChord.resolved(from: "") == cmdCtrlD)
+        #expect(HotkeyChord.resolved(from: "garbage") == cmdCtrlD)
     }
 
     @Test func resolvedParsesValidStrings() {
@@ -237,9 +238,9 @@ struct HotkeyStateMachineTests {
         #expect(HotkeyOption.custom("ctrl+alt+z").chord == Self.ctrlAltZ)
         #expect(HotkeyOption.from(persisted: "f5") == .functionKey(5))
         #expect(HotkeyOption.from(persisted: "F5") == .functionKey(5))
-        // D106: absent/empty → ⌘⌥D default (a custom chord, not a bare F-key).
-        #expect(HotkeyOption.from(persisted: nil) == .custom("command+option+d"))
-        #expect(HotkeyOption.from(persisted: "") == .custom("command+option+d"))
+        // Absent/empty → ⌃⌘D default (a custom chord, not a bare F-key).
+        #expect(HotkeyOption.from(persisted: nil) == .custom("command+control+d"))
+        #expect(HotkeyOption.from(persisted: "") == .custom("command+control+d"))
         #expect(HotkeyOption.from(persisted: "ctrl+alt+z") == .custom("ctrl+alt+z"))
         #expect(HotkeyOption.from(persisted: "fn") == .custom("fn"))
     }
