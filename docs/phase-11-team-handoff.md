@@ -3,7 +3,7 @@
 > Restarting orchestrator: single entry point. Read this, then the three
 > phase-11 role logs, then verify git state. Phase 0–10 docs are archives.
 
-**Last updated:** 2026-07-08, **PHASE 11 CODE-COMPLETE** (11A–11D committed).
+**Last updated:** 2026-07-08, **PHASE 11 CLOSED** (11A–11D committed + human-verified).
 
 ## §1. How to use this doc
 
@@ -77,9 +77,10 @@ across reboot/replug), NOT its name. nil/empty UID = follow system.
 Each sub-phase cleared its 4-way gate. **Tests: 284/25, 0 failures** (all +13
 in 11A; 11B–11D are UI/edge, no new units).
 
-**REMAINING: HUMAN-AT-SCREEN verification (non-blocking, needs the user at the
-machine).** The whole feature builds + all automated gates pass, but the actual
-device switching is hardware/TCC-bound and can't be unit-verified:
+**HUMAN-AT-SCREEN verification: DONE (2026-07-08).** User confirmed
+"everything is working" — device switching, silent fallback, both surfaces,
+and cross-surface sync all verified at the machine. **PHASE 11 CLOSED.** The
+checklist below is retained as the record of what was verified:
 1. **11B core** — pin an EXTERNAL/USB mic whose native rate differs from the
    built-in (`defaults write com.garisonlotus.LotusScribe inputDeviceUID <UID>`,
    or pick it in the menu), then dictate → capture comes from that mic, NO
@@ -93,7 +94,7 @@ device switching is hardware/TCC-bound and can't be unit-verified:
    the device in the status-bar submenu while Settings is open updates the
    Settings picker (and vice-versa) via `.lotusInputDeviceChanged`.
 
-**Active gate:** none open — phase code-complete; awaiting human verification.
+**Active gate:** none — PHASE 11 CLOSED (code + human verify complete).
 
 ---
 _(prior 11B state — retained for context)_

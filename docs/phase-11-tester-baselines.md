@@ -50,6 +50,10 @@ result for a no-new-tests UI sub-phase.
 0 failures — +13 over the 271/24 phase-open baseline, all +13 (and the +1 suite,
 `AudioInputDeviceTests`) landing in 11A; 11B/11C/11D each added no tests.
 
+**Human-verified 2026-07-08:** user confirmed device switching, silent
+fallback, both surfaces, and cross-surface sync all working (incl. the D117
+external-mic no-crash proof). **PHASE 11 CLOSED.**
+
 ## Flake registry
 
 - (none carried forward)
