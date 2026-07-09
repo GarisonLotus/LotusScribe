@@ -141,6 +141,16 @@ Point the **LLM endpoint** at `http://localhost:11434/v1/chat/completions` and s
 
 > Any OpenAI-compatible server works — [vLLM](https://github.com/vllm-project/vllm), LM Studio, a remote box on your LAN, a cloud endpoint. Local keeps latency low (the whole round-trip targets under ~2 s) and your audio on your own hardware. The commands above are a starting point; treat the upstream projects' docs as the source of truth.
 
+### How the author runs it
+
+The Docker one-liners above are the easy on-ramp. My own setup is heavier, and it's what LotusScribe was actually tuned against:
+
+- **Two [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) units** sitting on my desk, clustered — both the Whisper STT model and the cleanup LLM (**`nvidia/Qwen3.6-35B-A3B-NVFP4`**) are served from them via **[vLLM](https://github.com/vllm-project/vllm)** behind the OpenAI-compatible API LotusScribe expects.
+- **[Traefik](https://traefik.io/traefik/)** as the reverse proxy in front of vLLM, terminating **TLS** so the connection from the Mac to the cluster is **encrypted end-to-end** — not plaintext HTTP over the LAN.
+- **Encryption at rest** on the cluster, so the models and any cached data live on encrypted storage.
+
+None of this is required to use LotusScribe — a single machine running the Docker commands above is plenty. But if you want a properly secured, always-warm, GPU-backed setup, that's the shape of it: real inference boxes, vLLM for throughput, and a TLS-terminating proxy so nothing about your voice or text crosses the wire in the clear.
+
 ---
 
 ## License
